@@ -7,7 +7,7 @@ A modern Flask web application that provides comprehensive football team analysi
 ![Flask](https://img.shields.io/badge/flask-2.0%2B-red.svg)
 ![License](https://img.shields.io/badge/license-MIT-yellow.svg)
 
-## 🎯 Features
+## Features
 
 ### Team Analysis
 
@@ -36,7 +36,7 @@ A modern Flask web application that provides comprehensive football team analysi
 - **Error Handling**: Graceful degradation and user-friendly error messages
 - **API Integration**: Robust API handling with fallback mechanisms
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
@@ -84,7 +84,7 @@ A modern Flask web application that provides comprehensive football team analysi
 6. **Open your browser:**
    Navigate to `http://localhost:5000`
 
-## 📱 Usage
+## Usage
 
 ### Team Analysis Features
 
@@ -105,7 +105,7 @@ A modern Flask web application that provides comprehensive football team analysi
 2. View live standings for 6 major European leagues
 3. Tables update automatically with real-time data
 
-## 📚 Documentation
+## Documentation
 
 For comprehensive technical documentation, please visit our [docs folder](./docs):
 
@@ -114,7 +114,7 @@ For comprehensive technical documentation, please visit our [docs folder](./docs
 - **[System Diagrams](./docs/diagrams.md)** - Visual system architecture and data flow
 - **[Deployment Guide](./docs/deployment.md)** - Multi-platform deployment instructions
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 - **Backend**: Python, Flask
 - **APIs**: Football-data.org, ESPN, SofaScore
@@ -122,7 +122,7 @@ For comprehensive technical documentation, please visit our [docs folder](./docs
 - **Styling**: Custom CSS with dark theme
 - **Data**: JSON REST APIs
 
-## 🔧 Configuration
+## Configuration
 
 ### Environment Variables
 
@@ -173,7 +173,7 @@ python app.py
 
 The application will be available at `http://localhost:5000`
 
-## 🚀 Deployment
+## Deployment
 
 The application supports multiple deployment platforms:
 
@@ -185,36 +185,20 @@ The application supports multiple deployment platforms:
 
 See [Deployment Guide](./docs/deployment.md) for detailed instructions.
 
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature-name`
-3. Commit changes: `git commit -am 'Add feature'`
-4. Push to branch: `git push origin feature-name`
-5. Submit a pull request
-
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - [Football-data.org](https://www.football-data.org/) for comprehensive football data
 - [ESPN](https://www.espn.com/) for live match information
 - [SofaScore](https://www.sofascore.com/) for league table widgets
 - Flask community for excellent documentation and examples
 
-## 📞 Support
-
-If you encounter any issues or have questions:
-
-1. Check the [documentation](./docs)
-2. Search existing [issues](https://github.com/yourusername/soccer-comp/issues)
-3. Create a new issue with detailed information
-
 ---
 
-**Soccer Scanner** - Making football data accessible and beautiful. ⚽
+**Soccer Scanner** - Making football accessible and beautiful. ⚽
 
 ## Usage
 
