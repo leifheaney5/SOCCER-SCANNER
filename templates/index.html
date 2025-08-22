@@ -1,0 +1,2321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Soccer Scanner</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: #0f172a;
+            min-height: 100vh;
+            padding: 20px;
+            color: #e2e8f0;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: #1e293b;
+            border-radius: 8px;
+            border: 1px solid #334155;
+            overflow: hidden;
+        }
+
+        .header {
+            background: #1e293b;
+            color: #ffffff;
+            padding: 24px;
+            text-align: center;
+            border-bottom: 1px solid #334155;
+        }
+
+        .header h1 {
+            font-size: 2.2em;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            font-size: 1em;
+            color: #94a3b8;
+        }
+
+        .season-indicator {
+            margin-top: 12px;
+        }
+
+        .season-badge {
+            background: #334155;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.85em;
+            border: 1px solid #475569;
+            color: #e2e8f0;
+        }
+
+        .content {
+            padding: 32px;
+        }
+
+        .team-selector {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        .team-section {
+            background: #0f172a;
+            padding: 20px;
+            border-radius: 6px;
+            border: 1px solid #334155;
+        }
+
+        .team-section h3 {
+            color: #ffffff;
+            margin-bottom: 12px;
+            font-size: 1.1em;
+            font-weight: 600;
+        }
+
+        select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #475569;
+            border-radius: 6px;
+            font-size: 14px;
+            background: #1e293b;
+            color: #e2e8f0;
+            margin-bottom: 8px;
+        }
+
+        select:focus {
+            outline: none;
+            border-color: #3b82f6;
+            background: #1e293b;
+        }
+
+        .compare-btn {
+            width: 100%;
+            background: #3b82f6;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-top: 16px;
+        }
+
+        .compare-btn:hover {
+            background: #2563eb;
+        }
+
+        .compare-btn:disabled {
+            background: #64748b;
+            cursor: not-allowed;
+        }
+
+        .results {
+            margin-top: 24px;
+            padding: 20px;
+            background: #0f172a;
+            border-radius: 6px;
+            border: 1px solid #334155;
+            border-left: 3px solid #3b82f6;
+            display: none;
+        }
+
+        .no-matches {
+            text-align: center;
+            padding: 32px;
+            background: #0f172a;
+            border: 1px solid #fbbf24;
+            border-radius: 6px;
+            color: #fbbf24;
+        }
+
+        .no-matches h2 {
+            font-size: 1.6em;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        .matches-found {
+            background: #0f172a;
+            border: 1px solid #10b981;
+            border-radius: 6px;
+            padding: 24px;
+        }
+
+        .record-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .record-item {
+            background: #1e293b;
+            padding: 16px;
+            border-radius: 6px;
+            text-align: center;
+            border: 1px solid #334155;
+        }
+
+        .record-item .number {
+            font-size: 2em;
+            font-weight: 600;
+            color: #3b82f6;
+        }
+
+        .record-item .label {
+            color: #94a3b8;
+            font-size: 0.85em;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .matches-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .match-item {
+            background: #1e293b;
+            padding: 12px;
+            margin-bottom: 8px;
+            border-radius: 6px;
+            border-left: 3px solid #3b82f6;
+            border: 1px solid #334155;
+        }
+
+        .match-teams {
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: #ffffff;
+        }
+
+        .match-score {
+            color: #3b82f6;
+            font-size: 1.1em;
+            font-weight: 600;
+        }
+
+        .match-date {
+            color: #94a3b8;
+            font-size: 0.85em;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 32px;
+            color: #94a3b8;
+        }
+
+        .spinner {
+            border: 3px solid #334155;
+            border-top: 3px solid #3b82f6;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: #0f172a;
+            border: 1px solid #ef4444;
+            color: #ef4444;
+            padding: 16px;
+            border-radius: 6px;
+            margin-top: 16px;
+        }
+
+        @media (max-width: 768px) {
+            .team-selector {
+                grid-template-columns: 1fr;
+            }
+            
+            .record-summary {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .record-comparison {
+                flex-direction: column;
+            }
+
+            .timeline-item {
+                min-width: 80px;
+            }
+
+            .timeline-opponent {
+                max-width: 60px;
+                font-size: 0.8em;
+            }
+
+            .timeline-legend {
+                flex-wrap: wrap;
+                gap: 15px;
+            }
+
+            .season-context {
+                padding: 15px;
+            }
+
+            .timeline-section {
+                padding: 20px 15px;
+            }
+        }
+
+        /* Team Analysis Styles */
+        .team-analysis {
+            max-width: 100%;
+        }
+
+        .team-header {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 10px;
+        }
+
+        .team-crest {
+            min-width: 80px;
+            text-align: center;
+            font-size: 3em;
+        }
+
+        .team-details h1 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .team-details p {
+            margin: 5px 0;
+            color: #666;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: #1e293b;
+            padding: 16px;
+            border-radius: 6px;
+            text-align: center;
+            border: 1px solid #334155;
+            border-left: 3px solid #3b82f6;
+        }
+
+        .stat-number {
+            font-size: 1.8em;
+            font-weight: 600;
+            color: #3b82f6;
+            margin-bottom: 4px;
+        }
+
+        .stat-label {
+            color: #94a3b8;
+            font-size: 0.85em;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .form-section {
+            margin-bottom: 24px;
+            padding: 20px;
+            background: #1e293b;
+            border-radius: 6px;
+            border: 1px solid #334155;
+        }
+
+        .form-display {
+            margin-top: 15px;
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+        }
+
+        .record-comparison {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .record-section {
+            flex: 1;
+            background: #1e293b;
+            padding: 20px;
+            border-radius: 6px;
+            border: 1px solid #334155;
+        }
+
+        .record-section h4 {
+            margin-bottom: 15px;
+            color: #ffffff;
+            font-weight: 600;
+        }
+
+        .record-stats {
+            display: flex;
+            gap: 12px;
+        }
+
+        .record-stat {
+            background: #334155;
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-weight: 600;
+            color: #ffffff;
+            font-size: 0.9em;
+        }
+
+        .matches-section {
+            margin-bottom: 24px;
+            background: #1e293b;
+            padding: 20px;
+            border-radius: 6px;
+            border: 1px solid #334155;
+        }
+
+        .matches-section h3 {
+            margin-bottom: 16px;
+            color: #ffffff;
+            font-weight: 600;
+        }
+
+        .match-item.win {
+            border-left-color: #10b981;
+            background: #0f172a;
+        }
+
+        .match-item.loss {
+            border-left-color: #ef4444;
+            background: #0f172a;
+        }
+
+        .match-item.draw {
+            border-left-color: #f59e0b;
+            background: #0f172a;
+        }
+
+        .match-item.upcoming {
+            border-left-color: #3b82f6;
+            background: #0f172a;
+        }
+
+        .competitions-section {
+            background: #1e293b;
+            border-radius: 6px;
+            padding: 20px;
+            margin: 20px 0;
+            border: 1px solid #334155;
+        }
+
+        .competition-category {
+            margin-bottom: 25px;
+        }
+
+        .competition-status-title {
+            font-size: 1.1em;
+            margin-bottom: 15px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-weight: 600;
+        }
+
+        .competition-status-title.active {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a52);
+            color: white;
+        }
+
+        .competition-status-title.upcoming {
+            background: linear-gradient(135deg, #4ecdc4, #44a08d);
+            color: white;
+        }
+
+        .competition-status-title.completed {
+            background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+            color: white;
+        }
+
+        .competition-item {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 12px;
+            border-left: 4px solid #ddd;
+            transition: all 0.3s ease;
+        }
+
+        .competition-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .active-competition {
+            border-left-color: #ff6b6b;
+            background: linear-gradient(135deg, #fff5f5, #ffe0e0);
+        }
+
+        .upcoming-competition {
+            border-left-color: #4ecdc4;
+            background: linear-gradient(135deg, #f0fffe, #e0f7fa);
+        }
+
+        .completed-competition {
+            border-left-color: #95a5a6;
+            background: linear-gradient(135deg, #f8f9fa, #ecf0f1);
+        }
+
+        .competition-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+
+        .competition-emblem {
+            width: 32px;
+            height: 32px;
+            object-fit: contain;
+            border-radius: 4px;
+        }
+
+        .competition-info {
+            flex: 1;
+        }
+
+        .competition-name {
+            display: block;
+            font-weight: 600;
+            font-size: 1.05em;
+            color: #2c3e50;
+        }
+
+        .competition-type {
+            display: block;
+            font-size: 0.85em;
+            color: #7f8c8d;
+            margin-top: 2px;
+        }
+
+        .status-badge {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.75em;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-badge.active {
+            background: #ff6b6b;
+            color: white;
+        }
+
+        .status-badge.upcoming {
+            background: #4ecdc4;
+            color: white;
+        }
+
+        .status-badge.completed {
+            background: #95a5a6;
+            color: white;
+        }
+
+        .competition-details {
+            margin-top: 10px;
+        }
+
+        .match-stats {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 8px;
+            flex-wrap: wrap;
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.9em;
+            color: #5a6c7d;
+        }
+
+        .stat-item i {
+            color: #3498db;
+        }
+
+        .next-match, .starts-info, .first-match, .ended-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9em;
+            color: #2c3e50;
+            margin-top: 5px;
+            padding: 5px 0;
+        }
+
+        .next-match i, .starts-info i, .first-match i, .ended-info i {
+            color: #e74c3c;
+        }
+
+        .no-competitions {
+            text-align: center;
+            padding: 30px;
+            color: #7f8c8d;
+            font-style: italic;
+        }
+
+        .no-competitions i {
+            font-size: 2em;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .more-competitions {
+            text-align: center;
+            padding: 10px;
+            color: #7f8c8d;
+            font-style: italic;
+            border-top: 1px dashed #ddd;
+            margin-top: 10px;
+        }
+
+        .competitions-list {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+
+        .competition-badge {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: bold;
+        }
+
+        /* Season Context Styles */
+        .season-context {
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            border: 1px solid #2196F3;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+
+        .season-info h4 {
+            color: #1976D2;
+            margin-bottom: 8px;
+            font-size: 1.1em;
+        }
+
+        .season-info p {
+            color: #424242;
+            margin: 0;
+            font-size: 0.9em;
+        }
+
+        /* Timeline Styles */
+        .timeline-section {
+            background: #1e293b;
+            padding: 20px;
+            border-radius: 6px;
+            border: 1px solid #334155;
+            margin-bottom: 24px;
+        }
+
+        .timeline-section h3 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .timeline-container {
+            overflow-x: auto;
+            padding: 20px 0;
+        }
+
+        .timeline {
+            display: flex;
+            gap: 15px;
+            min-width: max-content;
+            padding: 0 10px;
+        }
+
+        .timeline-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 100px;
+            position: relative;
+        }
+
+        .timeline-marker {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin-bottom: 10px;
+            border: 3px solid #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            position: relative;
+            z-index: 2;
+        }
+
+        .timeline-item.win .timeline-marker {
+            background: #4CAF50;
+        }
+
+        .timeline-item.loss .timeline-marker {
+            background: #f44336;
+        }
+
+        .timeline-item.draw .timeline-marker {
+            background: #ff9800;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            right: -50%;
+            height: 2px;
+            background: #e0e0e0;
+            z-index: 1;
+        }
+
+        .timeline-item:last-child::before {
+            display: none;
+        }
+
+        .timeline-content {
+            text-align: center;
+            font-size: 0.85em;
+        }
+
+        .timeline-result {
+            font-weight: bold;
+            font-size: 1.2em;
+            margin-bottom: 4px;
+        }
+
+        .timeline-item.win .timeline-result {
+            color: #4CAF50;
+        }
+
+        .timeline-item.loss .timeline-result {
+            color: #f44336;
+        }
+
+        .timeline-item.draw .timeline-result {
+            color: #ff9800;
+        }
+
+        .timeline-score {
+            font-weight: bold;
+            margin-bottom: 2px;
+            color: #333;
+        }
+
+        .timeline-opponent {
+            color: #666;
+            font-size: 0.9em;
+            margin-bottom: 2px;
+            max-width: 80px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .timeline-details {
+            color: #999;
+            font-size: 0.8em;
+        }
+
+        .timeline-legend {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .legend-color.win {
+            background: #4CAF50;
+        }
+
+        .legend-color.loss {
+            background: #f44336;
+        }
+
+        .legend-color.draw {
+            background: #ff9800;
+        }
+
+        /* Squad Highlights Styles */
+        .performers-section {
+            background: #1e293b;
+            padding: 20px;
+            border-radius: 6px;
+            border: 1px solid #334155;
+            margin-bottom: 20px;
+        }
+
+        .performer-category {
+            margin-bottom: 25px;
+        }
+
+        .performer-category h4 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 5px;
+        }
+
+        .performers-list {
+            display: grid;
+            gap: 10px;
+        }
+
+        .performer-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #3498db;
+        }
+
+        .performer-name {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .performer-stat {
+            font-weight: 600;
+            color: #10b981;
+        }
+
+        .performer-position {
+            font-size: 0.85em;
+            color: #94a3b8;
+            font-style: italic;
+        }
+
+        .squad-breakdown {
+            margin-top: 20px;
+        }
+
+        .position-section {
+            margin-bottom: 20px;
+        }
+
+        .position-section h5 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 1em;
+            border-bottom: 1px solid #bdc3c7;
+            padding-bottom: 5px;
+        }
+
+        .players-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 10px;
+        }
+
+        .player-card {
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            border: 1px solid #dee2e6;
+        }
+
+        .player-card .player-name {
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+
+        .player-details {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .nationality, .age {
+            font-size: 0.8em;
+            color: #7f8c8d;
+        }
+
+        .more-players {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px;
+            background: #e9ecef;
+            border-radius: 6px;
+            color: #6c757d;
+            font-style: italic;
+        }
+
+        /* Responsive Design for New Sections */
+        @media (max-width: 768px) {
+            .formation-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .squad-stats {
+                justify-content: center;
+            }
+
+            .players-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .performer-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 5px;
+            }
+
+            .formation-field {
+                padding: 15px;
+                min-height: 150px;
+            }
+
+            .field-background {
+                height: 140px;
+            }
+
+            .player-dot {
+                width: 16px;
+                height: 16px;
+            }
+        }
+
+        /* Navigation Header Styles */
+        .app-header {
+            background: #1e293b;
+            color: white;
+            padding: 20px 0;
+            border-bottom: 1px solid #334155;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .app-title {
+            font-size: 2.2em;
+            font-weight: 600;
+            margin: 0;
+            color: #ffffff;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .nav-link {
+            color: #cbd5e1;
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+            font-weight: 500;
+            font-size: 0.95em;
+        }
+
+        .nav-link:hover {
+            background: #334155;
+            color: #ffffff;
+        }
+
+        .nav-link.active {
+            background: #3b82f6;
+            color: #ffffff;
+        }
+
+        @media (max-width: 768px) {
+            .nav-container {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .app-title {
+                font-size: 2em;
+                text-align: center;
+            }
+
+            .nav-links {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+        }
+
+        /* Player Roster Styles */
+        .player-roster-section {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            margin-bottom: 24px;
+            overflow: hidden;
+        }
+
+        .roster-header {
+            background: #0f172a;
+            padding: 16px 20px;
+            border-bottom: 1px solid #334155;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: background-color 0.2s ease;
+        }
+
+        .roster-header:hover {
+            background: #1e293b;
+        }
+
+        .roster-header h3 {
+            color: #ffffff;
+            margin: 0;
+            font-size: 1.1em;
+            font-weight: 600;
+        }
+
+        .roster-toggle {
+            color: #94a3b8;
+            font-size: 1.2em;
+            transition: transform 0.3s ease;
+        }
+
+        .roster-toggle.expanded {
+            transform: rotate(180deg);
+        }
+
+        .roster-content {
+            display: none;
+            padding: 20px;
+        }
+
+        .roster-content.expanded {
+            display: block;
+        }
+
+        .position-group {
+            margin-bottom: 24px;
+        }
+
+        .position-header {
+            color: #ffffff;
+            font-size: 1em;
+            font-weight: 600;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #334155;
+        }
+
+        .players-grid {
+            display: grid;
+            gap: 12px;
+        }
+
+        .player-card {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            padding: 16px;
+            transition: all 0.2s ease;
+        }
+
+        .player-card:hover {
+            border-color: #475569;
+            background: #1e293b;
+        }
+
+        .player-header {
+            display: flex;
+            align-items: center;
+            justify-content: between;
+            margin-bottom: 12px;
+        }
+
+        .player-number {
+            background: #3b82f6;
+            color: white;
+            width: 28px;
+            height: 28px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.9em;
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
+
+        .player-info {
+            flex: 1;
+        }
+
+        .player-name {
+            color: #ffffff;
+            font-weight: 600;
+            font-size: 1em;
+            margin-bottom: 2px;
+        }
+
+        .player-meta {
+            color: #94a3b8;
+            font-size: 0.85em;
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .player-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .stat-item {
+            text-align: center;
+            background: #1e293b;
+            padding: 8px 4px;
+            border-radius: 4px;
+            border: 1px solid #334155;
+        }
+
+        .stat-value {
+            color: #ffffff;
+            font-weight: 600;
+            font-size: 0.9em;
+            display: block;
+        }
+
+        .stat-label {
+            color: #94a3b8;
+            font-size: 0.75em;
+            margin-top: 2px;
+        }
+
+        .roster-summary {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 4px;
+            padding: 12px;
+            margin-bottom: 16px;
+            display: flex;
+            gap: 24px;
+            flex-wrap: wrap;
+        }
+
+        .summary-item {
+            text-align: center;
+        }
+
+        .summary-number {
+            color: #ffffff;
+            font-weight: 600;
+            font-size: 1.2em;
+            display: block;
+        }
+
+        .summary-label {
+            color: #94a3b8;
+            font-size: 0.85em;
+            margin-top: 2px;
+        }
+
+        /* Squad Summary Styles */
+        .squad-summary {
+            margin-bottom: 16px;
+        }
+
+        .summary-stats {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .summary-stat {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            padding: 12px 16px;
+            text-align: center;
+            color: #e2e8f0;
+            font-size: 0.9em;
+        }
+
+        .summary-stat strong {
+            color: #ffffff;
+            font-size: 1.1em;
+        }
+
+        /* Squad Analytics Styles */
+        .squad-analytics-section {
+            margin-bottom: 24px;
+        }
+
+        .analytics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .analytics-card {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 16px;
+        }
+
+        .analytics-card h4 {
+            color: #ffffff;
+            margin: 0 0 12px 0;
+            font-size: 0.95em;
+            font-weight: 600;
+        }
+
+        .analytics-stat {
+            text-align: center;
+        }
+
+        .stat-value {
+            display: block;
+            color: #10b981;
+            font-size: 1.2em;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .stat-detail {
+            color: #94a3b8;
+            font-size: 0.85em;
+        }
+
+        .depth-breakdown, .age-breakdown {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .depth-item, .age-group {
+            background: #1e293b;
+            border-radius: 4px;
+            padding: 8px;
+            font-size: 0.85em;
+        }
+
+        .depth-item span, .age-group {
+            color: #e2e8f0;
+        }
+
+        .age-label {
+            color: #94a3b8;
+            margin-right: 8px;
+        }
+
+        .age-count {
+            color: #10b981;
+            font-weight: 600;
+        }
+
+        /* Nationality Breakdown Styles */
+        .nationality-breakdown {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+
+        .nationality-breakdown h4 {
+            color: #ffffff;
+            margin: 0 0 12px 0;
+            font-size: 1em;
+            font-weight: 600;
+        }
+
+        .nationality-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 8px;
+        }
+
+        .nationality-item {
+            display: flex;
+            align-items: center;
+            background: #1e293b;
+            border-radius: 4px;
+            padding: 8px 12px;
+            gap: 8px;
+        }
+
+        .nationality-item .flag {
+            font-size: 1.2em;
+            min-width: 20px;
+        }
+
+        .nationality-item .country {
+            color: #e2e8f0;
+            flex: 1;
+            font-size: 0.9em;
+        }
+
+        .nationality-item .count {
+            color: #10b981;
+            font-weight: 600;
+            font-size: 0.9em;
+            background: #065f46;
+            border-radius: 12px;
+            padding: 2px 8px;
+            min-width: 20px;
+            text-align: center;
+        }
+
+        /* Squad Overview Compact Styles */
+        .squad-overview-compact {
+            margin-top: 8px;
+            padding: 8px 12px;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 4px;
+        }
+
+        .squad-overview-compact p {
+            margin: 0;
+            color: #94a3b8;
+            font-size: 0.9em;
+        }
+
+        .squad-overview-compact strong {
+            color: #ffffff;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation Header -->
+    <header class="app-header">
+        <div class="nav-container">
+            <h1 class="app-title">SOCCER SCANNER</h1>
+            <nav class="nav-links">
+                <a href="/" class="nav-link active">Team Analysis</a>
+                <a href="/matches-today" class="nav-link">Upcoming Matches</a>
+                <a href="/league-tables" class="nav-link">League Tables</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="header">
+            <h1>Upcoming Matches</h1>
+            <p>Analyze team performance, stats, and recent matches across top 20 global competitions</p>
+            <div class="season-indicator">
+                <span class="season-badge">Current Season Data • Top 20 Competitions Tracked</span>
+            </div>
+        </div>
+        
+        <div class="content">
+            <div class="team-selector">
+                <div class="team-section">
+                    <h3>Select Competition</h3>
+                    <select id="competitionSelect">
+                        <option value="">Loading competitions...</option>
+                    </select>
+                </div>
+                <div class="team-section">
+                    <h3>Teams will load after selecting competition</h3>
+                </div>
+            </div>
+
+            <div class="team-selector" id="teamSelector" style="display: none;">
+                <div class="team-section" style="grid-column: 1 / -1;">
+                    <h3>Select Team to Analyze</h3>
+                    <select id="teamSelect">
+                        <option value="">Select a team</option>
+                    </select>
+                </div>
+            </div>
+
+            <button class="compare-btn" id="analyzeBtn" onclick="analyzeTeam()" disabled>
+                Analyze Team
+            </button>
+
+            <div id="results" class="results"></div>
+        </div>
+    </div>
+
+    <script>
+        let competitions = [];
+        let teams = [];
+
+        // Load competitions on page load
+        window.addEventListener('load', loadCompetitions);
+
+        async function loadCompetitions() {
+            try {
+                const response = await fetch('/api/competitions');
+                const data = await response.json();
+                
+                if (data.competitions) {
+                    competitions = data.competitions;
+                    populateCompetitions();
+                } else {
+                    showError('Failed to load competitions');
+                }
+            } catch (error) {
+                showError('Error loading competitions: ' + error.message);
+            }
+        }
+
+        function populateCompetitions() {
+            const select = document.getElementById('competitionSelect');
+            select.innerHTML = '<option value="">Select a competition</option>';
+            
+            // Filter for major competitions
+            const majorCompetitions = competitions.filter(comp => 
+                comp.plan === 'TIER_ONE' || comp.plan === 'TIER_TWO'
+            );
+            
+            majorCompetitions.forEach(competition => {
+                const option = document.createElement('option');
+                option.value = competition.id;
+                option.textContent = competition.name;
+                select.appendChild(option);
+            });
+
+            select.addEventListener('change', function() {
+                if (this.value) {
+                    loadTeams(this.value);
+                } else {
+                    document.getElementById('teamSelector').style.display = 'none';
+                    document.getElementById('analyzeBtn').disabled = true;
+                }
+            });
+        }
+
+        async function loadTeams(competitionId) {
+            try {
+                document.getElementById('teamSelector').style.display = 'none';
+                document.getElementById('analyzeBtn').disabled = true;
+                
+                const response = await fetch(`/api/teams/${competitionId}`);
+                const data = await response.json();
+                
+                if (data.teams) {
+                    teams = data.teams;
+                    populateTeams();
+                    document.getElementById('teamSelector').style.display = 'grid';
+                } else {
+                    showError('Failed to load teams for this competition');
+                }
+            } catch (error) {
+                showError('Error loading teams: ' + error.message);
+            }
+        }
+
+        function populateTeams() {
+            const teamSelect = document.getElementById('teamSelect');
+            
+            teamSelect.innerHTML = '<option value="">Select a team</option>';
+            
+            teams.forEach(team => {
+                const option = document.createElement('option');
+                option.value = team.id;
+                option.textContent = team.name;
+                teamSelect.appendChild(option);
+            });
+
+            // Add event listener to enable analyze button
+            teamSelect.addEventListener('change', function() {
+                const teamId = document.getElementById('teamSelect').value;
+                document.getElementById('analyzeBtn').disabled = !teamId;
+            });
+        }
+
+        async function analyzeTeam() {
+            const teamId = document.getElementById('teamSelect').value;
+            const resultsDiv = document.getElementById('results');
+            
+            if (!teamId) {
+                showError('Please select a team to analyze');
+                return;
+            }
+
+            // Show loading
+            resultsDiv.style.display = 'block';
+            resultsDiv.innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Analyzing team...</p>
+                </div>
+            `;
+
+            try {
+                const response = await fetch(`/api/team-analysis/${teamId}`);
+                const data = await response.json();
+                
+                if (data.error) {
+                    showError(data.error);
+                    return;
+                }
+
+                displayTeamAnalysis(data);
+                
+            } catch (error) {
+                showError('Error analyzing team: ' + error.message);
+            }
+        }
+
+        function displayTeamAnalysis(data) {
+            const resultsDiv = document.getElementById('results');
+            const team = data.team_info;
+            const stats = data.stats;
+            const recentMatches = data.recent_matches || [];
+            const upcomingMatches = data.upcoming_matches || [];
+            const topPerformers = data.top_performers || {};
+            const squad = data.squad || [];
+            
+            // Create form display
+            let formHtml = '';
+            if (stats.form && stats.form.length > 0) {
+                formHtml = stats.form.map(result => {
+                    const color = result === 'W' ? '#4CAF50' : result === 'L' ? '#f44336' : '#ff9800';
+                    return `<span style="background: ${color}; color: white; padding: 5px 8px; border-radius: 3px; margin: 2px; font-weight: bold;">${result}</span>`;
+                }).join('');
+            }
+            
+            // Create timeline data for performance visualization
+            const timelineData = createTimelineData(recentMatches, team.id);
+            
+            // Recent matches HTML
+            let recentMatchesHtml = '';
+            recentMatches.slice(0, 5).forEach(match => {
+                const homeTeam = match.homeTeam.name;
+                const awayTeam = match.awayTeam.name;
+                const score = match.score.fullTime;
+                const date = new Date(match.utcDate).toLocaleDateString();
+                const competition = match.competition.name;
+                
+                // Determine result for the team
+                const isHome = match.homeTeam.id === team.id;
+                const teamScore = isHome ? score.home : score.away;
+                const opponentScore = isHome ? score.away : score.home;
+                let resultClass = '';
+                if (teamScore > opponentScore) resultClass = 'win';
+                else if (teamScore < opponentScore) resultClass = 'loss';
+                else resultClass = 'draw';
+                
+                recentMatchesHtml += `
+                    <div class="match-item ${resultClass}">
+                        <div class="match-teams">${homeTeam} vs ${awayTeam}</div>
+                        <div class="match-score">${score.home} - ${score.away}</div>
+                        <div class="match-date">${date} • ${competition}</div>
+                    </div>
+                `;
+            });
+            
+            // Upcoming matches HTML
+            let upcomingMatchesHtml = '';
+            upcomingMatches.slice(0, 3).forEach(match => {
+                const homeTeam = match.homeTeam.name;
+                const awayTeam = match.awayTeam.name;
+                const date = new Date(match.utcDate).toLocaleDateString();
+                const time = new Date(match.utcDate).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                const competition = match.competition.name;
+                
+                upcomingMatchesHtml += `
+                    <div class="match-item upcoming">
+                        <div class="match-teams">${homeTeam} vs ${awayTeam}</div>
+                        <div class="match-date">${date} ${time} • ${competition}</div>
+                    </div>
+                `;
+            });
+
+            resultsDiv.innerHTML = `
+                <div class="team-analysis">
+                    <!-- Season Context Banner -->
+                    <div class="season-context">
+                        <div class="season-info">
+                            <h4>Current Season Analysis</h4>
+                            <p>All statistics and match data reflect the current ${new Date().getFullYear()}-${new Date().getFullYear() + 1} season performance.</p>
+                        </div>
+                    </div>
+
+                    <!-- Team Header -->
+                    <div class="team-header">
+                        <div class="team-crest">
+                            ${team.crest ? `<img src="${team.crest}" alt="${team.name}" style="width: 80px; height: 80px; object-fit: contain;">` : '⚽'}
+                        </div>
+                        <div class="team-details">
+                            <h1>${team.name}</h1>
+                            <p><strong>Founded:</strong> ${team.founded || 'Unknown'}</p>
+                            <p><strong>Venue:</strong> ${team.venue || 'Unknown'}</p>
+                            <p><strong>Colors:</strong> ${team.clubColors || 'Unknown'}</p>
+                            ${topPerformers && topPerformers.squad_summary ? `
+                                <div class="squad-overview-compact">
+                                    <p><strong>Squad:</strong> ${topPerformers.squad_summary.total_players} players • Avg age ${topPerformers.squad_summary.average_age} • Ages ${topPerformers.squad_summary.youngest_age}-${topPerformers.squad_summary.oldest_age} • ${topPerformers.squad_summary.total_nationalities} nationalities</p>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+
+                    <!-- Performance Timeline -->
+                    <div class="timeline-section">
+                        <h3 class="text-white">Performance Timeline (Last 10 Matches)</h3>
+                        <div class="timeline-container">
+                            ${timelineData.html}
+                        </div>
+                        <div class="timeline-legend">
+                            <span class="legend-item"><span class="legend-color win"></span> Win</span>
+                            <span class="legend-item"><span class="legend-color draw"></span> Draw</span>
+                            <span class="legend-item"><span class="legend-color loss"></span> Loss</span>
+                        </div>
+                    </div>
+
+                    <!-- Statistics Grid (Hidden - all stats showing 0) -->
+                    <div class="stats-grid" style="display: none;">
+                        <div class="stat-card">
+                            <div class="stat-number">${stats.wins || 0}</div>
+                            <div class="stat-label">Wins</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number">${stats.draws || 0}</div>
+                            <div class="stat-label">Draws</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number">${stats.losses || 0}</div>
+                            <div class="stat-label">Losses</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number">${stats.win_percentage || 0}%</div>
+                            <div class="stat-label">Win Rate</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number">${stats.goals_for || 0}</div>
+                            <div class="stat-label">Goals For</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number">${stats.goals_against || 0}</div>
+                            <div class="stat-label">Goals Against</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number">${stats.goal_difference || 0}</div>
+                            <div class="stat-label">Goal Difference</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number">${stats.clean_sheets || 0}</div>
+                            <div class="stat-label">Clean Sheets</div>
+                        </div>
+                    </div>
+
+                    <!-- Current Form -->
+                    ${formHtml ? `
+                    <div class="form-section">
+                        <h3>Recent Form (Last 5 matches)</h3>
+                        <div class="form-display">${formHtml}</div>
+                    </div>
+                    ` : ''}
+
+                    <!-- Home vs Away Record -->
+                    <div class="record-comparison">
+                        <div class="record-section">
+                            <h4>Home Record</h4>
+                            <div class="record-stats">
+                                <span class="record-stat">W: ${stats.home_record?.wins || 0}</span>
+                                <span class="record-stat">D: ${stats.home_record?.draws || 0}</span>
+                                <span class="record-stat">L: ${stats.home_record?.losses || 0}</span>
+                            </div>
+                        </div>
+                        <div class="record-section">
+                            <h4>Away Record</h4>
+                            <div class="record-stats">
+                                <span class="record-stat">W: ${stats.away_record?.wins || 0}</span>
+                                <span class="record-stat">D: ${stats.away_record?.draws || 0}</span>
+                                <span class="record-stat">L: ${stats.away_record?.losses || 0}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Matches -->
+                    <div class="matches-section">
+                        <h3>Recent Matches</h3>
+                        <div class="matches-list">
+                            ${recentMatchesHtml || '<p>No recent matches found</p>'}
+                        </div>
+                    </div>
+
+                    <!-- Squad Highlights Section -->
+                    <div class="performers-section">
+                        <h3>Squad Highlights</h3>
+                        <div class="performers-container">
+                            ${createTopPerformersDisplay(topPerformers)}
+                        </div>
+                    </div>
+
+                    <!-- Upcoming Matches -->
+                    ${upcomingMatchesHtml ? `
+                    <div class="matches-section">
+                        <h3>Upcoming Matches</h3>
+                        <div class="matches-list">
+                            ${upcomingMatchesHtml}
+                        </div>
+                    </div>
+                    ` : ''}
+
+                    <!-- Competitions -->
+                    ${data.competitions ? `
+                    <div class="competitions-section">
+                        <h3>Competition Analysis</h3>
+                        
+                        ${data.competitions.active && data.competitions.active.length > 0 ? `
+                            <div class="competition-category">
+                                <h4 class="competition-status-title active">Active Competitions</h4>
+                                ${data.competitions.active.map(comp => `
+                                    <div class="competition-item active-competition">
+                                        <div class="competition-header">
+                                            ${comp.emblem ? `<img src="${comp.emblem}" alt="${comp.name}" class="competition-emblem">` : '<i class="fas fa-trophy"></i>'}
+                                            <div class="competition-info">
+                                                <span class="competition-name">${comp.name}</span>
+                                                <span class="competition-type">${comp.type}</span>
+                                            </div>
+                                            <div class="competition-status">
+                                                <span class="status-badge active">Active</span>
+                                            </div>
+                                        </div>
+                                        <div class="competition-details">
+                                            <div class="match-stats">
+                                                <span class="stat-item">
+                                                    <i class="fas fa-check-circle"></i>
+                                                    ${comp.matches_played || 0} played
+                                                </span>
+                                                <span class="stat-item">
+                                                    <i class="fas fa-clock"></i>
+                                                    ${comp.matches_remaining || 0} remaining
+                                                </span>
+                                            </div>
+                                            ${comp.next_match ? `
+                                                <div class="next-match">
+                                                    <i class="fas fa-calendar-plus"></i>
+                                                    Next: vs ${comp.next_match.opponent?.name || 'TBD'} 
+                                                    (${new Date(comp.next_match.date).toLocaleDateString()})
+                                                </div>
+                                            ` : ''}
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : ''}
+                        
+                        ${data.competitions.upcoming && data.competitions.upcoming.length > 0 ? `
+                            <div class="competition-category">
+                                <h4 class="competition-status-title upcoming">🚀 Upcoming Competitions</h4>
+                                ${data.competitions.upcoming.map(comp => `
+                                    <div class="competition-item upcoming-competition">
+                                        <div class="competition-header">
+                                            ${comp.emblem ? `<img src="${comp.emblem}" alt="${comp.name}" class="competition-emblem">` : '<i class="fas fa-trophy"></i>'}
+                                            <div class="competition-info">
+                                                <span class="competition-name">${comp.name}</span>
+                                                <span class="competition-type">${comp.type}</span>
+                                            </div>
+                                            <div class="competition-status">
+                                                <span class="status-badge upcoming">Upcoming</span>
+                                            </div>
+                                        </div>
+                                        <div class="competition-details">
+                                            <div class="match-stats">
+                                                <span class="stat-item">
+                                                    <i class="fas fa-calendar-check"></i>
+                                                    ${comp.matches_remaining || 0} matches scheduled
+                                                </span>
+                                            </div>
+                                            ${comp.starts ? `
+                                                <div class="starts-info">
+                                                    <i class="fas fa-play-circle"></i>
+                                                    Starts: ${new Date(comp.starts).toLocaleDateString()}
+                                                </div>
+                                            ` : ''}
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : ''}
+                        
+                        ${(!data.competitions.active || data.competitions.active.length === 0) && 
+                          (!data.competitions.upcoming || data.competitions.upcoming.length === 0) ? `
+                            <div class="no-competitions">
+                                <i class="fas fa-info-circle"></i>
+                                No competition data available for this team
+                            </div>
+                        ` : ''}
+                    </div>
+                    ` : stats.competitions && stats.competitions.length > 0 ? `
+                    <div class="competitions-section">
+                        <h3>Active Competitions</h3>
+                        <div class="competitions-list">
+                            ${stats.competitions.map(comp => `<span class="competition-badge">${comp}</span>`).join('')}
+                        </div>
+                    </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        function createTimelineData(matches, teamId) {
+            if (!matches || matches.length === 0) {
+                return { html: '<p>No match data available for timeline</p>' };
+            }
+
+            // Sort matches by date (oldest first for timeline)
+            const sortedMatches = matches.slice().reverse();
+            
+            let timelineHtml = '<div class="timeline">';
+            
+            sortedMatches.forEach((match, index) => {
+                const homeTeam = match.homeTeam;
+                const awayTeam = match.awayTeam;
+                const score = match.score.fullTime;
+                const formattedDate = new Date(match.utcDate).toLocaleDateString('en-US', { 
+                    month: 'short', 
+                    day: 'numeric' 
+                });
+                
+                // Determine result for the team
+                const isHome = homeTeam.id === teamId;
+                const teamScore = isHome ? score.home : score.away;
+                const opponentScore = isHome ? score.away : score.home;
+                const opponent = isHome ? awayTeam.name : homeTeam.name;
+                const venue = isHome ? 'H' : 'A';
+                
+                let result = '';
+                let resultClass = '';
+                if (teamScore > opponentScore) {
+                    result = 'W';
+                    resultClass = 'win';
+                } else if (teamScore < opponentScore) {
+                    result = 'L';
+                    resultClass = 'loss';
+                } else {
+                    result = 'D';
+                    resultClass = 'draw';
+                }
+                
+                timelineHtml += `
+                    <div class="timeline-item ${resultClass}">
+                        <div class="timeline-marker"></div>
+                        <div class="timeline-content">
+                            <div class="timeline-result">${result}</div>
+                            <div class="timeline-score">${teamScore}-${opponentScore}</div>
+                            <div class="timeline-opponent">${opponent}</div>
+                            <div class="timeline-details">${formattedDate} (${venue})</div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            timelineHtml += '</div>';
+            
+            return { html: timelineHtml };
+        }
+
+        function displayMatchResults(data, team1Name, team2Name) {
+            const resultsDiv = document.getElementById('results');
+            const record = data.record;
+            
+            let matchesHtml = '';
+            data.matches.slice(0, 10).forEach(match => {
+                const homeTeam = match.homeTeam.name;
+                const awayTeam = match.awayTeam.name;
+                const score = match.score.fullTime;
+                const date = new Date(match.utcDate).toLocaleDateString();
+                
+                matchesHtml += `
+                    <div class="match-item">
+                        <div class="match-teams">${homeTeam} vs ${awayTeam}</div>
+                        <div class="match-score">${score.home} - ${score.away}</div>
+                        <div class="match-date">${date}</div>
+                    </div>
+                `;
+            });
+
+            resultsDiv.innerHTML = `
+                <div class="matches-found">
+                    <h2>📊 Head-to-Head Record</h2>
+                    <p><strong>${team1Name}</strong> vs <strong>${team2Name}</strong></p>
+                    
+                    <div class="record-summary">
+                        <div class="record-item">
+                            <div class="number">${record.team1_wins}</div>
+                            <div class="label">${team1Name} Wins</div>
+                        </div>
+                        <div class="record-item">
+                            <div class="number">${record.draws}</div>
+                            <div class="label">Draws</div>
+                        </div>
+                        <div class="record-item">
+                            <div class="number">${record.team2_wins}</div>
+                            <div class="label">${team2Name} Wins</div>
+                        </div>
+                        <div class="record-item">
+                            <div class="number">${record.total_matches}</div>
+                            <div class="label">Total Matches</div>
+                        </div>
+                    </div>
+                    
+                    <h3>Recent Matches</h3>
+                    <div class="matches-list">
+                        ${matchesHtml}
+                    </div>
+                    ${data.matches.length > 10 ? `<p style="text-align: center; margin-top: 15px; color: #666;">Showing 10 of ${data.matches.length} total matches</p>` : ''}
+                    ${data.note ? `<p style="text-align: center; margin-top: 15px; color: #666; font-style: italic; background: #f8f9fa; padding: 10px; border-radius: 5px;">${data.note}</p>` : ''}
+                </div>
+            `;
+        }
+
+        function showError(message) {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.style.display = 'block';
+            resultsDiv.innerHTML = `
+                <div class="error">
+                    <strong>Error:</strong> ${message}
+                </div>
+            `;
+        }
+
+        function createTopPerformersDisplay(topPerformers) {
+            if (!topPerformers || Object.keys(topPerformers).length === 0) {
+                return '<p>No squad data available</p>';
+            }
+
+            let html = '';
+
+            // Squad Summary
+            if (topPerformers.squad_summary) {
+                const summary = topPerformers.squad_summary;
+                html += `
+                    <div class="roster-summary">
+                        <div class="summary-item">
+                            <span class="summary-number">${summary.total_players}</span>
+                            <span class="summary-label">Total Players</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-number">${summary.average_age}</span>
+                            <span class="summary-label">Avg Age</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-number">${summary.youngest_age}-${summary.oldest_age}</span>
+                            <span class="summary-label">Age Range</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-number">${summary.total_nationalities}</span>
+                            <span class="summary-label">Nationalities</span>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Squad Analytics Section
+            if (topPerformers.squad_analytics) {
+                const analytics = topPerformers.squad_analytics;
+                html += `
+                    <div class="squad-analytics-section">
+                        <div class="analytics-grid">
+                            ${analytics.top_nationality ? `
+                                <div class="analytics-card">
+                                    <h4>${getFlagEmoji(analytics.top_nationality.country)} Top Nationality</h4>
+                                    <div class="analytics-stat">
+                                        <span class="stat-value">${analytics.top_nationality.country}</span>
+                                        <span class="stat-detail">${analytics.top_nationality.count} players (${analytics.top_nationality.percentage}%)</span>
+                                    </div>
+                                </div>
+                            ` : ''}
+                            
+                            <div class="analytics-card">
+                                <h4>🏟️ Squad Depth</h4>
+                                <div class="depth-breakdown">
+                                    <div class="depth-item">
+                                        <span>🥅 GK: ${analytics.squad_depth.goalkeepers}</span>
+                                    </div>
+                                    <div class="depth-item">
+                                        <span>🛡️ DEF: ${analytics.squad_depth.defenders}</span>
+                                    </div>
+                                    <div class="depth-item">
+                                        <span>⚽ MID: ${analytics.squad_depth.midfielders}</span>
+                                    </div>
+                                    <div class="depth-item">
+                                        <span>🎯 ATT: ${analytics.squad_depth.attackers}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="analytics-card">
+                                <h4>Age Distribution</h4>
+                                <div class="age-breakdown">
+                                    <div class="age-group">
+                                        <span class="age-label">Under 20:</span>
+                                        <span class="age-count">${analytics.age_distribution.under_20}</span>
+                                    </div>
+                                    <div class="age-group">
+                                        <span class="age-label">20-24:</span>
+                                        <span class="age-count">${analytics.age_distribution.age_20_24}</span>
+                                    </div>
+                                    <div class="age-group">
+                                        <span class="age-label">25-29:</span>
+                                        <span class="age-count">${analytics.age_distribution.age_25_29}</span>
+                                    </div>
+                                    <div class="age-group">
+                                        <span class="age-label">30+:</span>
+                                        <span class="age-count">${analytics.age_distribution.age_30_plus}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Nationality Breakdown
+            if (topPerformers.nationality_breakdown) {
+                const nationalities = Object.entries(topPerformers.nationality_breakdown).slice(0, 10);
+                if (nationalities.length > 0) {
+                    html += `
+                        <div class="nationality-breakdown">
+                            <h4>🌍 Nationality Breakdown</h4>
+                            <div class="nationality-grid">
+                                ${nationalities.map(([country, count]) => `
+                                    <div class="nationality-item">
+                                        <span class="flag">${getFlagEmoji(country)}</span>
+                                        <span class="country">${country}</span>
+                                        <span class="count">${count}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+
+            // Full Squad by Position using player cards
+            if (topPerformers.full_squad_by_position) {
+                const positions = topPerformers.full_squad_by_position;
+                const positionOrder = ['Goalkeepers', 'Defenders', 'Midfielders', 'Attackers'];
+                
+                positionOrder.forEach(positionGroup => {
+                    const players = positions[positionGroup];
+                    if (players && players.length > 0) {
+                        const positionIcons = {
+                            'Goalkeepers': '🥅',
+                            'Defenders': '🛡️',
+                            'Midfielders': '⚽',
+                            'Attackers': '🎯'
+                        };
+                        
+                        html += `
+                            <div class="position-group">
+                                <div class="position-header">${positionIcons[positionGroup] || '👤'} ${positionGroup} (${players.length})</div>
+                                <div class="players-grid">
+                                    ${players.map(player => createPlayerCard(player)).join('')}
+                                </div>
+                            </div>
+                        `;
+                    }
+                });
+            }
+
+            return html || '<p>No squad data available</p>';
+        }
+
+        function calculateAge(dateOfBirth) {
+            if (!dateOfBirth) return 'Unknown';
+            const today = new Date();
+            const birthDate = new Date(dateOfBirth);
+            let age = today.getFullYear() - birthDate.getFullYear();
+            const monthDiff = today.getMonth() - birthDate.getMonth();
+            if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+                age--;
+            }
+            return age;
+        }
+
+        // Function to get country flag emoji or image
+        function getFlagEmoji(nationality) {
+            const countryFlags = {
+                // Europe
+                'England':'GB', // Using Union Jack for England
+                'Spain': '🇪🇸',
+                'France': '🇫🇷',
+                'Germany': '🇩🇪',
+                'Italy': '🇮🇹',
+                'Portugal': '🇵🇹',
+                'Netherlands': '🇳🇱',
+                'Belgium': '🇧🇪',
+                'Croatia': '🇭🇷',
+                'Poland': '🇵🇱',
+                'Ukraine': '🇺🇦',
+                'Serbia': '🇷🇸',
+                'Denmark': '🇩🇰',
+                'Austria': '🇦🇹',
+                'Switzerland': '🇨🇭',
+                'Czech Republic': '🇨🇿',
+                'Slovakia': '🇸🇰',
+                'Hungary': '🇭🇺',
+                'Slovenia': '🇸🇮',
+                'Romania': '🇷🇴',
+                'Bulgaria': '🇧🇬',
+                'Greece': '🇬🇷',
+                'Turkey': '🇹🇷',
+                'Norway': '🇳🇴',
+                'Sweden': '🇸🇪',
+                'Finland': '🇫🇮',
+                'Ireland': '🇮🇪',
+                'Scotland': '🇬🇧', // Using Union Jack for Scotland
+                'Wales': '🇬🇧', // Using Union Jack for Wales
+                'Northern Ireland': '🇬🇧',
+                'Iceland': '🇮🇸',
+                'Russia': '🇷🇺',
+                'Belarus': '🇧🇾',
+                'Lithuania': '🇱🇹',
+                'Latvia': '🇱🇻',
+                'Estonia': '🇪🇪',
+                'Moldova': '🇲🇩',
+                'Albania': '🇦🇱',
+                'Montenegro': '🇲🇪',
+                'Bosnia and Herzegovina': '🇧🇦',
+                'North Macedonia': '🇲🇰',
+                'Kosovo': '🇽🇰',
+                
+                // Americas
+                'Brazil': '🇧🇷',
+                'Argentina': '🇦🇷',
+                'Canada': '🇨🇦',
+                'United States': '🇺🇸',
+                'USA': '🇺🇸',
+                'Mexico': '🇲🇽',
+                'Colombia': '🇨🇴',
+                'Uruguay': '🇺🇾',
+                'Chile': '🇨🇱',
+                'Peru': '🇵🇪',
+                'Ecuador': '🇪🇨',
+                'Venezuela': '🇻🇪',
+                'Paraguay': '🇵🇾',
+                'Bolivia': '🇧🇴',
+                'Jamaica': '🇯🇲',
+                'Costa Rica': '🇨🇷',
+                'Panama': '🇵🇦',
+                'Honduras': '🇭🇳',
+                'Guatemala': '🇬🇹',
+                'El Salvador': '🇸🇻',
+                'Nicaragua': '🇳🇮',
+                'Cuba': '🇨🇺',
+                'Dominican Republic': '🇩🇴',
+                'Haiti': '🇭🇹',
+                'Trinidad and Tobago': '🇹🇹',
+                
+                // Asia
+                'Japan': '🇯🇵',
+                'South Korea': '🇰🇷',
+                'China': '🇨🇳',
+                'India': '🇮🇳',
+                'Iran': '🇮🇷',
+                'Saudi Arabia': '🇸🇦',
+                'Iraq': '🇮🇶',
+                'Qatar': '🇶🇦',
+                'UAE': '🇦🇪',
+                'Israel': '🇮🇱',
+                'Jordan': '🇯🇴',
+                'Lebanon': '🇱🇧',
+                'Syria': '🇸🇾',
+                'Yemen': '🇾🇪',
+                'Oman': '🇴🇲',
+                'Kuwait': '🇰🇼',
+                'Bahrain': '🇧🇭',
+                'Afghanistan': '🇦🇫',
+                'Pakistan': '🇵🇰',
+                'Bangladesh': '🇧🇩',
+                'Sri Lanka': '🇱🇰',
+                'Thailand': '🇹🇭',
+                'Vietnam': '🇻🇳',
+                'Malaysia': '🇲🇾',
+                'Singapore': '🇸🇬',
+                'Indonesia': '🇮🇩',
+                'Philippines': '🇵🇭',
+                'Myanmar': '🇲🇲',
+                'Cambodia': '🇰🇭',
+                'Laos': '🇱🇦',
+                'Mongolia': '🇲🇳',
+                'North Korea': '🇰🇵',
+                'Kazakhstan': '🇰🇿',
+                'Uzbekistan': '🇺🇿',
+                'Kyrgyzstan': '🇰🇬',
+                'Tajikistan': '🇹🇯',
+                'Turkmenistan': '🇹🇲',
+                'Azerbaijan': '🇦🇿',
+                'Armenia': '🇦🇲',
+                'Georgia': '🇬🇪',
+                
+                // Africa
+                'South Africa': '🇿🇦',
+                'Nigeria': '🇳🇬',
+                'Ghana': '🇬🇭',
+                'Senegal': '🇸🇳',
+                'Morocco': '🇲🇦',
+                'Egypt': '🇪🇬',
+                'Algeria': '🇩🇿',
+                'Tunisia': '🇹🇳',
+                'Cameroon': '🇨🇲',
+                'Ivory Coast': '🇨🇮',
+                'Mali': '🇲🇱',
+                'Burkina Faso': '🇧🇫',
+                'Guinea': '🇬🇳',
+                'Congo': '🇨🇬',
+                'DR Congo': '🇨🇩',
+                'Kenya': '🇰🇪',
+                'Ethiopia': '🇪🇹',
+                'Tanzania': '🇹🇿',
+                'Uganda': '🇺🇬',
+                'Rwanda': '🇷🇼',
+                'Burundi': '🇧🇮',
+                'Angola': '🇦🇴',
+                'Mozambique': '🇲🇿',
+                'Zambia': '🇿🇲',
+                'Zimbabwe': '🇿🇼',
+                'Botswana': '🇧🇼',
+                'Namibia': '🇳🇦',
+                'Lesotho': '🇱🇸',
+                'Eswatini': '🇸🇿',
+                'Madagascar': '🇲🇬',
+                'Mauritius': '🇲🇺',
+                'Seychelles': '🇸🇨',
+                'Cape Verde': '🇨🇻',
+                'Gambia': '🇬🇲',
+                'Guinea-Bissau': '🇬🇼',
+                'Sierra Leone': '🇸🇱',
+                'Liberia': '🇱🇷',
+                'Togo': '🇹🇬',
+                'Benin': '🇧🇯',
+                'Niger': '🇳🇪',
+                'Chad': '🇹🇩',
+                'Central African Republic': '🇨🇫',
+                'Gabon': '🇬🇦',
+                'Equatorial Guinea': '🇬🇶',
+                'Sao Tome and Principe': '🇸🇹',
+                'Comoros': '🇰🇲',
+                'Djibouti': '🇩🇯',
+                'Eritrea': '🇪🇷',
+                'Somalia': '🇸🇴',
+                'Sudan': '🇸🇩',
+                'South Sudan': '🇸🇸',
+                'Libya': '🇱🇾',
+                
+                // Oceania
+                'Australia': '🇦🇺',
+                'New Zealand': '🇳🇿',
+                'Fiji': '🇫🇯',
+                'Papua New Guinea': '🇵🇬',
+                'Solomon Islands': '🇸🇧',
+                'Vanuatu': '🇻🇺',
+                'Samoa': '🇼🇸',
+                'Tonga': '🇹🇴',
+                'Palau': '🇵🇼',
+                'Marshall Islands': '🇲🇭',
+                'Micronesia': '🇫🇲',
+                'Kiribati': '🇰🇮',
+                'Nauru': '🇳🇷',
+                'Tuvalu': '🇹🇻'
+            };
+            return countryFlags[nationality] || '�';
+        }
+
+        function createPlayerCard(player) {
+            const age = player.age || 'Unknown';
+            const nationality = player.nationality || 'Unknown';
+            
+            return `
+                <div class="player-card">
+                    <div class="player-header">
+                        <div class="player-number">${player.shirtNumber || '--'}</div>
+                        <div class="player-info">
+                            <div class="player-name">${player.name || 'Unknown'}</div>
+                            <div class="player-meta">
+                                <span>Age: ${age}</span>
+                                <span>${getFlagEmoji(nationality)} ${nationality}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>
