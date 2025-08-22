@@ -7,6 +7,11 @@ A modern Flask web application that provides comprehensive football team analysi
 ![Flask](https://img.shields.io/badge/flask-2.0%2B-red.svg)
 ![License](https://img.shields.io/badge/license-MIT-yellow.svg)
 
+
+https://github.com/user-attachments/assets/e3f3b3a0-4b3b-4acf-bee6-9f3e491fda6a
+
+https://github.com/user-attachments/assets/764c560d-b922-482a-9bba-d345ac31a563
+
 <img width="2560" height="1253" alt="Soccer-Scanner-Team-Analysis" src="https://github.com/user-attachments/assets/1bcec5d6-eda5-4030-92b0-f6dcbc47ac06" />
 <img width="2560" height="1253" alt="Soccer-Scanner-League-Tables" src="https://github.com/user-attachments/assets/f42d4bac-695a-4fc0-8b27-4703993dc3ba" />
 
