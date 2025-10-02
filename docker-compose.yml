@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      - FOOTBALL_DATA_API_KEY=${FOOTBALL_DATA_API_KEY}
+      - FLASK_ENV=production
+    restart: unless-stopped
+    volumes:
+      - ./templates:/app/templates:ro
+      - ./static:/app/static:ro

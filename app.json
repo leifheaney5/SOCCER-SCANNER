@@ -1,0 +1,33 @@
+{
+  "name": "Soccer Scanner",
+  "description": "A comprehensive football team analysis and live match tracking web application",
+  "repository": "https://github.com/leifheaney5/SOCCER-SCANNER",
+  "logo": "https://img.shields.io/badge/⚽-Soccer%20Scanner-blue",
+  "keywords": ["flask", "football", "soccer", "sports", "analytics", "python"],
+  "website": "https://github.com/leifheaney5/SOCCER-SCANNER",
+  "success_url": "/",
+  "env": {
+    "FOOTBALL_DATA_API_KEY": {
+      "description": "Your API key from football-data.org (register at https://www.football-data.org/client/register)",
+      "value": "",
+      "required": true
+    },
+    "FLASK_ENV": {
+      "description": "Flask environment mode",
+      "value": "production",
+      "required": false
+    }
+  },
+  "formation": {
+    "web": {
+      "quantity": 1,
+      "size": "basic"
+    }
+  },
+  "image": "heroku/python",
+  "buildpacks": [
+    {
+      "url": "heroku/python"
+    }
+  ]
+}

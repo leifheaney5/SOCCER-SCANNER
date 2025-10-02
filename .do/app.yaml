@@ -1,0 +1,16 @@
+name: soccer-scanner
+services:
+- name: web
+  source_dir: /
+  run_command: gunicorn app:app
+  environment_slug: python
+  instance_count: 1
+  instance_size_slug: basic-xxs
+  http_port: 8080
+  envs:
+  - key: FOOTBALL_DATA_API_KEY
+    scope: RUN_TIME
+    type: SECRET
+  - key: FLASK_ENV
+    value: production
+    scope: RUN_TIME

@@ -183,15 +183,27 @@ The application will be available at `http://localhost:5000`
 
 ## Deployment
 
-The application supports multiple deployment platforms:
+The application is ready to deploy to multiple platforms for external users:
 
-- **Heroku**: One-click deployment ready
-- **Railway**: Simple git-based deployment
+- **Heroku**: One-click deployment with Deploy button
+- **Railway**: Simple git-based deployment (easiest)
+- **Render**: Free tier with auto-deployment
 - **DigitalOcean App Platform**: Scalable cloud deployment
-- **Docker**: Containerized deployment
+- **Docker**: Containerized deployment anywhere
 - **VPS**: Traditional server deployment
 
-See [Deployment Guide](./docs/deployment.md) for detailed instructions.
+**Quick Deploy:**
+- See [DEPLOYMENT.md](./DEPLOYMENT.md) for step-by-step instructions for all platforms
+- See [docs/deployment.md](./docs/deployment.md) for advanced configuration
+
+All deployment files included:
+- `Procfile` - Heroku/Railway configuration
+- `runtime.txt` - Python version specification
+- `Dockerfile` - Container configuration
+- `docker-compose.yml` - Local Docker deployment
+- `app.json` - Heroku one-click deploy
+- `render.yaml` - Render.com configuration
+- `.do/app.yaml` - DigitalOcean App Platform
 
 ## License
 
