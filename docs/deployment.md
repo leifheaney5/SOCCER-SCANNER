@@ -1,8 +1,10 @@
 # Soccer Scanner - Deployment Guide
 
+> 🚀 **Quick Start**: For fast deployment, see [DEPLOYMENT_QUICK_START.md](../DEPLOYMENT_QUICK_START.md)
+
 ## Overview
 
-This guide covers multiple deployment options for the Soccer Scanner application, from local development to production hosting platforms.
+This guide covers multiple deployment options for the Soccer Scanner application, from local development to production hosting platforms. The application is fully configured with deployment files for major platforms (Render, Railway, Heroku, Vercel).
 
 ## Prerequisites
 

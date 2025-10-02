@@ -14,7 +14,8 @@ A modern Python & Flask web application that provides comprehensive football tea
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy)
 [![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/new/template?template=https://github.com/leifheaney5/SOCCER-SCANNER)
 
-📖 **[Quick Deployment Guide](./DEPLOYMENT_QUICK_START.md)** - Get your app live in 5 minutes!
+📖 **[Quick Deployment Guide](./DEPLOYMENT_QUICK_START.md)** - Get your app live in 5 minutes!  
+📊 **[Deployment Status](./DEPLOYMENT_STATUS.md)** - Check platform compatibility
 
 > **Note:** You'll need a free API key from [football-data.org](https://www.football-data.org/client/register) - takes 1 minute to sign up.
 
