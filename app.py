@@ -22,6 +22,11 @@ def get_api_headers():
 def index():
     return render_template('index.html')
 
+@app.route('/health')
+def health_check():
+    """Health check endpoint for deployment platforms"""
+    return jsonify({'status': 'healthy', 'service': 'Soccer Scanner'}), 200
+
 @app.route('/matches-today')
 def matches_today():
     return render_template('matches_today.html')
@@ -1341,4 +1346,8 @@ if __name__ == '__main__':
         print("Warning: Please set your FOOTBALL_DATA_API_KEY in the .env file")
         print("You can get a free API key from https://www.football-data.org/client/register")
     
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    # Use PORT environment variable for production deployment
+    port = int(os.getenv('PORT', 5000))
+    debug = os.getenv('FLASK_ENV', 'development') == 'development'
+    
+    app.run(debug=debug, host='0.0.0.0', port=port)

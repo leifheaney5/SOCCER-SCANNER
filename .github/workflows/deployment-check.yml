@@ -1,0 +1,63 @@
+name: Deployment Check
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  check-deployment-config:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Check deployment configuration files
+      run: |
+        echo "Checking deployment configuration files..."
+        files=("render.yaml" "Procfile" "runtime.txt" "railway.json" "vercel.json")
+        for file in "${files[@]}"; do
+          if [ -f "$file" ]; then
+            echo "✅ $file exists"
+          else
+            echo "❌ $file is missing"
+            exit 1
+          fi
+        done
+    
+    - name: Validate Python syntax
+      run: |
+        python -m py_compile app.py
+        echo "✅ app.py syntax is valid"
+    
+    - name: Check required dependencies
+      run: |
+        echo "Checking required dependencies..."
+        pip freeze | grep -q "gunicorn" && echo "✅ gunicorn installed" || (echo "❌ gunicorn missing" && exit 1)
+        pip freeze | grep -q "Flask" && echo "✅ Flask installed" || (echo "❌ Flask missing" && exit 1)
+        pip freeze | grep -q "requests" && echo "✅ requests installed" || (echo "❌ requests missing" && exit 1)
+    
+    - name: Test app imports
+      run: |
+        python -c "import app; print('✅ App imports successfully')"
+    
+    - name: Summary
+      if: success()
+      run: |
+        echo "🎉 All deployment checks passed!"
+        echo "Your app is ready to deploy to:"
+        echo "  • Render (render.yaml)"
+        echo "  • Railway (railway.json)"
+        echo "  • Heroku (Procfile + runtime.txt)"
+        echo "  • Vercel (vercel.json)"

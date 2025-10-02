@@ -7,6 +7,17 @@ A modern Python & Flask web application that provides comprehensive football tea
 ![Flask](https://img.shields.io/badge/flask-2.0%2B-red.svg)
 ![License](https://img.shields.io/badge/license-MIT-yellow.svg)
 
+## 🌐 Deploy Your Own
+
+**Ready to deploy?** This app is configured for one-click deployment to multiple platforms:
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy)
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/new/template?template=https://github.com/leifheaney5/SOCCER-SCANNER)
+
+📖 **[Quick Deployment Guide](./DEPLOYMENT_QUICK_START.md)** - Get your app live in 5 minutes!
+
+> **Note:** You'll need a free API key from [football-data.org](https://www.football-data.org/client/register) - takes 1 minute to sign up.
+
 
 https://github.com/user-attachments/assets/e3f3b3a0-4b3b-4acf-bee6-9f3e491fda6a
 
@@ -183,15 +194,24 @@ The application will be available at `http://localhost:5000`
 
 ## Deployment
 
-The application supports multiple deployment platforms:
+**🚀 Ready to go live?** This application is fully configured for deployment!
 
-- **Heroku**: One-click deployment ready
-- **Railway**: Simple git-based deployment
-- **DigitalOcean App Platform**: Scalable cloud deployment
-- **Docker**: Containerized deployment
-- **VPS**: Traditional server deployment
+### Quick Deploy (5 minutes)
+- **[Quick Start Guide](./DEPLOYMENT_QUICK_START.md)** - Deploy to Render, Railway, Heroku, or Vercel
 
-See [Deployment Guide](./docs/deployment.md) for detailed instructions.
+### Supported Platforms
+- ✅ **Render** - Recommended (free tier with auto-deploy from GitHub)
+- ✅ **Railway** - Simple deployment with generous free tier
+- ✅ **Heroku** - Traditional PaaS (Procfile included)
+- ✅ **Vercel** - Serverless deployment (vercel.json included)
+
+### Configuration Files Included
+- `render.yaml` - Render configuration
+- `railway.json` - Railway configuration  
+- `Procfile` + `runtime.txt` - Heroku configuration
+- `vercel.json` - Vercel configuration
+
+See [Full Deployment Guide](./docs/deployment.md) for advanced deployment options including Docker and VPS.
 
 ## License
 
