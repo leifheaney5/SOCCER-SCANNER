@@ -3,9 +3,11 @@
 A modern Python & Flask web application that provides comprehensive football team analysis, live match data, and league standings. Built with clean architecture principles and integrating multiple sports APIs for the most complete football data experience.
 
 ![Soccer Scanner](https://img.shields.io/badge/version-1.0.0-blue.svg)
-![Python](https://img.shields.io/badge/python-3.7%2B-green.svg)
+![Python](https://img.shields.io/badge/python-3.11-green.svg)
 ![Flask](https://img.shields.io/badge/flask-2.0%2B-red.svg)
 ![License](https://img.shields.io/badge/license-MIT-yellow.svg)
+![Deploy Ready](https://img.shields.io/badge/deploy-ready-brightgreen.svg)
+![Platforms](https://img.shields.io/badge/platforms-4-orange.svg)
 
 ## 🌐 Deploy Your Own
 
