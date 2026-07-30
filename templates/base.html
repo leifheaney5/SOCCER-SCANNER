@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Soccer Scanner{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+    {% block page_styles %}{% endblock %}
+</head>
+<body>
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    <header class="app-header">
+        <div class="nav-container">
+            <a class="app-title" href="/" aria-label="Soccer Scanner home">SOCCER SCANNER</a>
+            <nav class="nav-links" aria-label="Primary navigation">
+                <a href="/teams" class="nav-link{% if request.path == '/teams' %} active{% endif %}"{% if request.path == '/teams' %} aria-current="page"{% endif %}>Teams</a>
+                <a href="/" class="nav-link{% if request.path in ['/', '/matches-today'] %} active{% endif %}"{% if request.path in ['/', '/matches-today'] %} aria-current="page"{% endif %}>Fixtures</a>
+                <a href="/league-tables" class="nav-link{% if request.path == '/league-tables' %} active{% endif %}"{% if request.path == '/league-tables' %} aria-current="page"{% endif %}>League Tables</a>
+            </nav>
+        </div>
+    </header>
+    <main id="main-content">{% block content %}{% endblock %}</main>
+    {% block page_scripts %}{% endblock %}
+</body>
+</html>

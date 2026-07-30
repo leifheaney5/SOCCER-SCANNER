@@ -28,6 +28,9 @@ https://github.com/user-attachments/assets/764c560d-b922-482a-9bba-d345ac31a563
 ### Live Match Data
 
 - **Today's Matches**: Real-time match data across 10+ competitions
+- **Fixture Discovery**: Search and filter by team, competition, status, and favorites
+- **Fixture Actions**: Detail view, sharing, and calendar export
+- **Adaptive Refresh**: Faster updates while matches are live and provider freshness notices
 - **Multiple Data Sources**: ESPN API primary with Football-data.org fallback
 - **Competition Coverage**: Premier League, La Liga, Bundesliga, Serie A, and more
 
@@ -43,6 +46,8 @@ https://github.com/user-attachments/assets/764c560d-b922-482a-9bba-d345ac31a563
 - **Clean Architecture**: Separation of concerns with modular design
 - **Error Handling**: Graceful degradation and user-friendly error messages
 - **API Integration**: Robust API handling with fallback mechanisms
+- **Efficient Aggregation**: Concurrent provider requests with bounded deadlines
+- **Resilient Caching**: Fresh and stale fixture caching during provider outages
 
 ## Quick Start
 
@@ -222,19 +227,29 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - `GET /api/teams/<competition_id>` - Get teams for a specific competition
 - `GET /api/team-analysis/<team_id>` - Get comprehensive team analysis
 - `GET /api/team/<team_id>` - Get individual team information
-- `GET /api/debug-matches/<team_id>` - Debug endpoint for match data access
+- `GET /api/matches-today?date=YYYY-MM-DD&timezone=Area/City` - Get fixtures for a local calendar date
+- `GET /health/live` - Process liveness check
+- `GET /health/ready` - Application readiness check
 
 ## Project Structure
 
 ```
 soccer-comp/
-├── app.py              # Main Flask application
+├── app.py              # Lightweight development entry point
+├── soccer_scanner/
+│   ├── __init__.py     # Application factory and dependency wiring
+│   ├── config.py       # Environment-backed configuration
+│   ├── routes/         # Page and JSON API blueprints
+│   └── services/       # Provider clients, caching, and domain logic
+├── tests/              # Route and service regression tests
 ├── requirements.txt    # Python dependencies
 ├── .env               # Environment variables (API key)
 ├── README.md          # This file
 ├── templates/
-│   └── index.html     # Main web interface
-└── static/            # Static assets (currently empty)
+│   ├── base.html      # Shared accessible application shell
+│   ├── index.html     # Team analysis interface
+│   └── matches_today.html # Fixture discovery interface
+└── static/            # Cacheable page CSS and JavaScript modules
 ```
 
 ## Free API Limitations

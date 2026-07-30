@@ -187,7 +187,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - `GET /api/teams/<competition_id>` - Get teams for a specific competition
 - `GET /api/team-analysis/<team_id>` - Get comprehensive team analysis
 - `GET /api/team/<team_id>` - Get individual team information
-- `GET /api/debug-matches/<team_id>` - Debug endpoint for match data access
+- `GET /api/matches-today?date=YYYY-MM-DD&timezone=Area/City` - Get fixtures for a local calendar date
 
 ## Project Structure
 
