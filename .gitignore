@@ -74,6 +74,7 @@ test-results/
 *-reference-*.png
 *-after-*.png
 *-final-*.png
+*-production-*.png
 *-accessibility.md
 
 # Jupyter Notebook
