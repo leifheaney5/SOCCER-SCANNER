@@ -9,6 +9,15 @@ A modern Flask web application that provides comprehensive football team analysi
 
 ## Features
 
+### Fixtures Workspace
+
+- Scores are hidden by default and are not rendered into text or attributes until revealed.
+- The reveal preference uses `soccer-scanner:reveal-scores` in local storage.
+- Date, competition, status, and team-search filters synchronize with the URL.
+- Match context uses a sticky desktop panel and an accessible sheet below the desktop breakpoint.
+- Team intelligence is fetched on demand, cached per team, and degrades to limited-data or retry states.
+- Provider responses can surface fresh, partial, stale, empty, or unavailable fixture states without raw errors.
+
 ### Team Analysis
 
 - **Comprehensive Team Data**: Founded date, venue, colors, and crest
@@ -80,6 +89,17 @@ A modern Flask web application that provides comprehensive football team analysi
 
 6. **Open your browser:**
    Navigate to `http://localhost:5000`
+
+### Verification
+
+```bash
+PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest -q
+npm test
+```
+
+The browser suite covers score privacy and persistence, crests, filtering, degraded data,
+match context, team intelligence, focus management, reduced motion, landscape mobile, and
+horizontal overflow from 320px through 1440px.
 
 ## 📱 Usage
 

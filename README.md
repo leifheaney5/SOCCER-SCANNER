@@ -25,14 +25,14 @@ https://github.com/user-attachments/assets/764c560d-b922-482a-9bba-d345ac31a563
 - **Match History**: Recent match results with detailed information
 - **Squad Management**: Complete player roster with positions and details
 
-### Live Match Data
+### Fixtures Dashboard
 
-- **Today's Matches**: Real-time match data across 10+ competitions
-- **Fixture Discovery**: Search and filter by team, competition, status, and favorites
-- **Fixture Actions**: Detail view, sharing, and calendar export
-- **Adaptive Refresh**: Faster updates while matches are live and provider freshness notices
-- **Multiple Data Sources**: ESPN API primary with Football-data.org fallback
-- **Competition Coverage**: Premier League, La Liga, Bundesliga, Serie A, and more
+- **Spoiler-safe by default**: Scores are omitted from the DOM until the global reveal control is enabled
+- **Fast fixture scanning**: Competition groups, paired team identities, crests, match states, and a compact featured fixture
+- **Shareable filters**: Date, team, competition, and status state are reflected in the URL
+- **Responsive match context**: A sticky desktop panel becomes an accessible dialog sheet on narrower screens
+- **Team intelligence**: Team data is fetched only on request, cached per team, and shown in a retryable drawer
+- **Resilient providers**: ESPN and Football-data.org responses support partial, stale, empty, and unavailable states
 
 ### League Tables
 
@@ -98,6 +98,12 @@ https://github.com/user-attachments/assets/764c560d-b922-482a-9bba-d345ac31a563
 6. **Open your browser:**
    Navigate to `http://localhost:5000`
 
+### Score privacy
+
+Scores start hidden for first-time visitors. The preference is stored locally under
+`soccer-scanner:reveal-scores`; clearing that entry restores the hidden default.
+This rule also applies to featured fixtures, match context, and team recent results.
+
 For production, run the WSGI entry point instead of Flask's development server:
 
 ```bash
@@ -113,11 +119,12 @@ gunicorn --bind 0.0.0.0:5000 --workers 2 --timeout 30 wsgi:app
 3. Click "Analyze Team" to view comprehensive analysis
 4. Explore team stats, squad details, and match history
 
-### Live Matches
+### Fixtures Dashboard
 
-1. Navigate to "Upcoming Matches" tab
-2. View live match data from multiple competitions
-3. Access SofaScore links for detailed match information
+1. Open `/` or the compatibility route `/matches-today`
+2. Move between dates or filter by team, competition, and match status
+3. Select a fixture to inspect match context and open team intelligence
+4. Use “Reveal scores” only when you want score-bearing views to render results
 
 ### League Standings
 
@@ -141,6 +148,18 @@ For comprehensive technical documentation, please visit our [docs folder](./docs
 - **Frontend**: HTML5, CSS3, JavaScript (Vanilla)
 - **Styling**: Custom CSS with dark theme
 - **Data**: JSON REST APIs
+
+## Tests
+
+Install the browser test dependency and Chromium once, then run both suites:
+
+```bash
+pip install -r requirements.txt
+npm install
+npx playwright install chromium
+PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest -q
+npm test
+```
 
 ## Configuration
 
