@@ -1,25 +1,9 @@
 {% extends "base.html" %}
 {% block title %}Fixtures | Soccer Scanner{% endblock %}
-{% block page_styles %}<link rel="stylesheet" href="{{ url_for('static', filename='css/fixtures.css', v='20260803-dashboard') }}">{% endblock %}
+{% block page_styles %}<link rel="stylesheet" href="{{ url_for('static', filename='css/fixtures.css', v='suite-1') }}">{% endblock %}
 {% block content %}
-<div class="dashboard-shell">
-  <section class="dashboard-hero" aria-labelledby="page-title">
-    <p class="eyebrow">Matchday intelligence</p><h1 id="page-title">Fixtures, with context.</h1>
-    <p>Scan the day. Open the detail only when it matters.</p>
-    <div class="date-controls" aria-label="Choose fixture date">
-      <button id="previous-date" type="button">Yesterday</button><button id="today-date" type="button">Today</button>
-      <input id="dashboard-date" type="date" aria-label="Fixture date"><button id="next-date" type="button">Tomorrow</button>
-    </div>
-  </section>
-  <section class="dashboard-controls" aria-label="Filter fixtures">
-    <input id="fixture-search" type="search" placeholder="Search a team or competition" aria-label="Search fixtures">
-    <select id="competition-filter" aria-label="Competition"><option value="">All competitions</option></select>
-    <select id="status-filter" aria-label="Match status"><option value="">All statuses</option><option value="live">Live</option><option value="upcoming">Upcoming</option><option value="finished">Finished</option></select>
-  </section>
-  <p id="dashboard-status" class="dashboard-status" role="status"></p>
-  <section id="spotlight" class="spotlight is-hidden" aria-label="Next match"></section>
-  <section><div id="fixture-stream" class="fixture-stream" aria-live="polite"></div></section>
-</div>
-<dialog id="team-drawer" class="team-drawer" aria-labelledby="team-drawer-title"><button id="close-team-drawer" type="button" aria-label="Close team details">Close</button><div id="team-drawer-content"><h2 id="team-drawer-title">Team intelligence</h2></div></dialog>
-{% endblock %}
-{% block page_scripts %}<script src="{{ url_for('static', filename='js/fixtures.js', v='20260803-dashboard') }}" defer></script>{% endblock %}
+<div class="suite-shell">
+ <section class="workspace-bar" aria-label="Fixture controls"><strong>FIXTURES</strong><div class="date-controls"><button id="previous-date" type="button">‹</button><button id="today-date" type="button">Today</button><input id="dashboard-date" type="date" aria-label="Fixture date"><button id="next-date" type="button">›</button></div><input id="fixture-search" type="search" placeholder="Search teams" aria-label="Search fixtures"><select id="competition-filter" aria-label="Competition"><option value="">All competitions</option></select><select id="status-filter" aria-label="Status"><option value="">All matches</option><option value="live">Live</option><option value="upcoming">Upcoming</option><option value="finished">Finished</option></select></section>
+ <div class="workspace-grid"><aside class="suite-rail"><p class="rail-label">MATCHDAY</p><h1>Today’s board</h1><p id="dashboard-status" role="status">Loading fixtures</p><button id="today-date-rail" type="button">Return to today</button><hr><p class="rail-label">PRODUCT SUITE</p><a href="https://select-xi.pro/" target="_blank" rel="noopener">Select XI</a></aside><main class="fixture-board"><section id="spotlight" class="spotlight is-hidden" aria-label="Selected fixture"></section><div id="fixture-stream" class="fixture-stream" aria-live="polite"></div></main><aside class="context-rail"><p class="rail-label">MATCH CONTEXT</p><div id="context-empty"><h2>Select a fixture</h2><p>Choose a match to inspect its teams, form, venue, and matchday context.</p></div><div id="context-selected" class="is-hidden"><h2 id="context-title"></h2><p id="context-meta"></p><button id="context-home" type="button"></button><button id="context-away" type="button"></button></div></aside></div>
+</div><dialog id="team-drawer" class="team-drawer" aria-labelledby="team-drawer-title"><button id="close-team-drawer" type="button">Close</button><div id="team-drawer-content"><h2 id="team-drawer-title">Team intelligence</h2></div></dialog>
+{% endblock %}{% block page_scripts %}<script src="{{ url_for('static', filename='js/fixtures.js', v='suite-1') }}" defer></script>{% endblock %}
