@@ -47,6 +47,8 @@ class SoccerScannerRoutesTest(unittest.TestCase):
         self.assertIn("default-src 'self'", live.headers['Content-Security-Policy'])
         self.assertIn("script-src 'self'", live.headers['Content-Security-Policy'])
         self.assertNotIn("script-src 'self' 'unsafe-inline'", live.headers['Content-Security-Policy'])
+        self.assertNotIn("style-src 'self' 'unsafe-inline'", live.headers['Content-Security-Policy'])
+        self.assertIn("object-src 'none'", live.headers['Content-Security-Policy'])
 
     def test_pages_use_shared_layout_and_external_assets(self):
         fixtures = self.client.get('/').get_data(as_text=True)
@@ -57,8 +59,13 @@ class SoccerScannerRoutesTest(unittest.TestCase):
             self.assertIn('href="#main-content"', page)
             self.assertIn('/static/css/base.css', page)
             self.assertNotIn('<style>', page)
+            self.assertNotIn(' style=', page)
+            self.assertIn('/static/js/dom.js', page)
         self.assertIn('/static/js/fixtures.js', fixtures)
         self.assertIn('/static/js/teams.js', teams)
+        self.assertIn('/static/js/standings.js', standings)
+        self.assertEqual(standings.count('<iframe'), 1)
+        self.assertIn('id="league-selector"', standings)
 
         static_asset = self.client.get('/static/css/base.css')
         self.assertEqual(static_asset.status_code, 200)

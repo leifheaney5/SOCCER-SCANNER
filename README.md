@@ -38,6 +38,7 @@ https://github.com/user-attachments/assets/764c560d-b922-482a-9bba-d345ac31a563
 
 - **Live Standings**: Real-time league tables via SofaScore widgets
 - **Major European Leagues**: Premier League, La Liga, Bundesliga, Serie A, Ligue 1, Liga Portugal
+- **Efficient Loading**: Select and lazy-load one league table at a time
 - **Professional Integration**: Official SofaScore embed widgets
 
 ### Technical Features
@@ -53,7 +54,7 @@ https://github.com/user-attachments/assets/764c560d-b922-482a-9bba-d345ac31a563
 
 ### Prerequisites
 
-- Python 3.7 or higher
+- Python 3.9 or higher
 - Free API key from [football-data.org](https://www.football-data.org/client/register)
 
 ### Installation
@@ -96,6 +97,12 @@ https://github.com/user-attachments/assets/764c560d-b922-482a-9bba-d345ac31a563
 
 6. **Open your browser:**
    Navigate to `http://localhost:5000`
+
+For production, run the WSGI entry point instead of Flask's development server:
+
+```bash
+gunicorn --bind 0.0.0.0:5000 --workers 2 --timeout 30 wsgi:app
+```
 
 ## Usage
 

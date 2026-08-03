@@ -1202,3 +1202,6 @@
 }
 .skip-link:focus { transform: translateY(0); }
 .app-title { text-decoration: none; }
+.dialog-actions { margin-top: 20px; }
+.provider-logo { height: 24px; vertical-align: middle; margin-right: 8px; }
+.league-logo { width: 32px; height: 32px; border-radius: 4px; }

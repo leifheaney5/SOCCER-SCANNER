@@ -22,7 +22,7 @@ let competitions = [];
 
         function populateCompetitions() {
             const select = document.getElementById('competitionSelect');
-            select.innerHTML = '<option value="">Select a competition</option>';
+            safeDOM.setHTML(select, '<option value="">Select a competition</option>');
             
             // Filter for major competitions
             const majorCompetitions = competitions.filter(comp => 
@@ -40,7 +40,7 @@ let competitions = [];
                 if (this.value) {
                     loadTeams(this.value);
                 } else {
-                    document.getElementById('teamSelector').style.display = 'none';
+                    document.getElementById('teamSelector').classList.add('is-hidden');
                     document.getElementById('analyzeBtn').disabled = true;
                 }
             });
@@ -48,7 +48,7 @@ let competitions = [];
 
         async function loadTeams(competitionId) {
             try {
-                document.getElementById('teamSelector').style.display = 'none';
+                document.getElementById('teamSelector').classList.add('is-hidden');
                 document.getElementById('analyzeBtn').disabled = true;
                 
                 const response = await fetch(`/api/teams/${competitionId}`);
@@ -57,7 +57,7 @@ let competitions = [];
                 if (data.teams) {
                     teams = data.teams;
                     populateTeams();
-                    document.getElementById('teamSelector').style.display = 'grid';
+                    document.getElementById('teamSelector').classList.remove('is-hidden');
                 } else {
                     showError('Failed to load teams for this competition');
                 }
@@ -66,23 +66,18 @@ let competitions = [];
             }
         }
 
-        function populateTeams() {
+        function populateTeams(query = '') {
             const teamSelect = document.getElementById('teamSelect');
             
-            teamSelect.innerHTML = '<option value="">Select a team</option>';
+            safeDOM.setHTML(teamSelect, '<option value="">Select a team</option>');
             
-            teams.forEach(team => {
+            teams.filter(team => team.name.toLowerCase().includes(query.toLowerCase())).forEach(team => {
                 const option = document.createElement('option');
                 option.value = team.id;
                 option.textContent = team.name;
                 teamSelect.appendChild(option);
             });
 
-            // Add event listener to enable analyze button
-            teamSelect.addEventListener('change', function() {
-                const teamId = document.getElementById('teamSelect').value;
-                document.getElementById('analyzeBtn').disabled = !teamId;
-            });
         }
 
         async function analyzeTeam() {
@@ -95,13 +90,13 @@ let competitions = [];
             }
 
             // Show loading
-            resultsDiv.style.display = 'block';
-            resultsDiv.innerHTML = `
+            resultsDiv.classList.add('is-visible');
+            safeDOM.setHTML(resultsDiv, `
                 <div class="loading">
                     <div class="spinner"></div>
                     <p>Analyzing team...</p>
                 </div>
-            `;
+            `);
 
             try {
                 const response = await fetch(`/api/team-analysis/${teamId}`);
@@ -184,7 +179,7 @@ let competitions = [];
                 `;
             });
 
-            resultsDiv.innerHTML = `
+            safeDOM.setHTML(resultsDiv, `
                 <div class="team-analysis">
                     <!-- Season Context Banner -->
                     <div class="season-context">
@@ -410,7 +405,7 @@ let competitions = [];
                     </div>
                     ` : ''}
                 </div>
-            `;
+            `);
         }
 
         function createTimelineData(matches, teamId) {
@@ -490,7 +485,7 @@ let competitions = [];
                 `;
             });
 
-            resultsDiv.innerHTML = `
+            safeDOM.setHTML(resultsDiv, `
                 <div class="matches-found">
                     <h2>📊 Head-to-Head Record</h2>
                     <p><strong>${team1Name}</strong> vs <strong>${team2Name}</strong></p>
@@ -521,17 +516,17 @@ let competitions = [];
                     ${data.matches.length > 10 ? `<p style="text-align: center; margin-top: 15px; color: #666;">Showing 10 of ${data.matches.length} total matches</p>` : ''}
                     ${data.note ? `<p style="text-align: center; margin-top: 15px; color: #666; font-style: italic; background: #f8f9fa; padding: 10px; border-radius: 5px;">${data.note}</p>` : ''}
                 </div>
-            `;
+            `);
         }
 
         function showError(message) {
             const resultsDiv = document.getElementById('results');
-            resultsDiv.style.display = 'block';
-            resultsDiv.innerHTML = `
+            resultsDiv.classList.add('is-visible');
+            safeDOM.setHTML(resultsDiv, `
                 <div class="error">
                     <strong>Error:</strong> ${message}
                 </div>
-            `;
+            `);
         }
 
         function createTopPerformersDisplay(topPerformers) {
@@ -899,3 +894,7 @@ let competitions = [];
         }
 
         document.getElementById('analyzeBtn').addEventListener('click', analyzeTeam);
+        document.getElementById('teamSearch').addEventListener('input', event => populateTeams(event.target.value));
+        document.getElementById('teamSelect').addEventListener('change', event => {
+            document.getElementById('analyzeBtn').disabled = !event.target.value;
+        });

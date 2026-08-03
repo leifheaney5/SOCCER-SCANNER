@@ -180,9 +180,9 @@ const params = new URLSearchParams(window.location.search);
                     notice.textContent = data.stale
                         ? 'Showing cached fixture data while live providers recover.'
                         : 'Some competitions may be missing because a data provider is degraded.';
-                    notice.style.display = 'block';
+                    notice.classList.remove('is-hidden');
                 } else {
-                    notice.style.display = 'none';
+                    notice.classList.add('is-hidden');
                 }
                 renderFilteredFixtures();
             } catch (error) {
@@ -206,12 +206,12 @@ const params = new URLSearchParams(window.location.search);
             const contentDiv = document.getElementById('matches-content');
             const statsDiv = document.getElementById('daily-stats');
 
-            loadingDiv.style.display = 'none';
-            containerDiv.style.display = 'block';
+            loadingDiv.classList.add('is-hidden');
+            containerDiv.classList.remove('is-hidden');
 
             if (!data.matches || data.matches.length === 0) {
                 const filteredEmpty = fixturePayload && fixturePayload.matches.length > 0;
-                contentDiv.innerHTML = `
+                safeDOM.setHTML(contentDiv, `
                     <div class="no-matches">
                         <div class="no-matches-icon"></div>
                         <h2>${filteredEmpty ? 'No fixtures match these filters' : 'No Fixtures Found'}</h2>
@@ -225,16 +225,16 @@ const params = new URLSearchParams(window.location.search);
                             <small>Tracking: Premier League, La Liga, Bundesliga, Serie A, Ligue 1, Champions League, Europa League, Conference League, Eredivisie, Primeira Liga, Pro League, Austrian Bundesliga, Süper Lig, Scottish Premiership, Championship, Segunda División, 2. Bundesliga, Serie B, Brasileirão, Liga Profesional</small>
                         </div>
                     </div>
-                `;
-                statsDiv.innerHTML = `
+                `);
+                safeDOM.setHTML(statsDiv, `
                     <div class="stats-header">
                         <h3>Today's Overview</h3>
                     </div>
                     <div class="no-stats">
                         <p>No match statistics available for today</p>
                     </div>
-                `;
-                statsDiv.style.display = 'block';
+                `);
+                statsDiv.classList.remove('is-hidden');
                 return;
             }
 
@@ -248,7 +248,7 @@ const params = new URLSearchParams(window.location.search);
             // Display daily statistics if available
             if (data.match_statistics) {
                 displayDailyStatistics(data.match_statistics, data.source_stats);
-                statsDiv.style.display = 'block';
+                statsDiv.classList.remove('is-hidden');
             }
 
             let html = '';
@@ -354,7 +354,7 @@ const params = new URLSearchParams(window.location.search);
 
             html += `</div>`;
             
-            contentDiv.innerHTML = html;
+            safeDOM.setHTML(contentDiv, html);
         }
 
         function displayDailyStatistics(stats, sourceStats) {
@@ -388,7 +388,7 @@ const params = new URLSearchParams(window.location.search);
                 </div>
             `;
             
-            statsDiv.innerHTML = html;
+            safeDOM.setHTML(statsDiv, html);
         }
 
         function getEnhancedPriority(competitionName, match) {
@@ -581,9 +581,9 @@ const params = new URLSearchParams(window.location.search);
             const loadingDiv = document.getElementById('loading');
             const containerDiv = document.getElementById('matches-container');
             const notice = document.getElementById('data-notice');
-            loadingDiv.style.display = 'none';
-            containerDiv.style.display = 'block';
-            notice.style.display = 'block';
+            loadingDiv.classList.add('is-hidden');
+            containerDiv.classList.remove('is-hidden');
+            notice.classList.remove('is-hidden');
             notice.textContent = `Unable to refresh fixtures: ${message}`;
         }
 

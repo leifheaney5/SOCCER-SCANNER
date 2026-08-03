@@ -33,7 +33,7 @@
                 <option value="favorites">Favorites only</option>
             </select>
         </section>
-        <div id="data-notice" class="data-notice" role="status" style="display:none;"></div>
+        <div id="data-notice" class="data-notice is-hidden" role="status"></div>
 
         <div id="loading" class="loading">
             <div class="spinner"></div>
@@ -49,14 +49,14 @@
                 <div id="dialog-teams" class="dialog-teams"></div>
                 <div id="dialog-score"></div>
                 <div id="dialog-meta" class="dialog-meta"></div>
-                <div class="fixture-actions" style="margin-top:20px;">
+                <div class="fixture-actions dialog-actions">
                     <button id="calendar-action" class="date-button" type="button">Add to calendar</button>
                     <button id="share-action" class="date-button" type="button">Share</button>
                 </div>
             </div>
         </dialog>
 
-        <div id="matches-container" class="matches-container" style="display: none;">
+        <div id="matches-container" class="matches-container is-hidden">
             <div class="priority-legend">
                 <h3>Match Priority Guide</h3>
                 <div class="priority-items">
@@ -75,7 +75,7 @@
                 </div>
             </div>
             
-            <div id="daily-stats" class="daily-stats" style="display: none;">
+            <div id="daily-stats" class="daily-stats is-hidden">
                 <!-- Daily statistics will be populated here -->
             </div>
             
@@ -85,7 +85,7 @@
         <!-- League Links -->
         <div class="sofascore-widgets">
             <div class="sofascore-header">
-                <h3><img src="https://www.sofascore.com/static/images/sofascore-logo.svg" alt="SofaScore" style="height:24px;vertical-align:middle;margin-right:8px;"> SofaScore Hotlinks</h3>
+                <h3><img class="provider-logo" src="https://www.sofascore.com/static/images/sofascore-logo.svg" alt="SofaScore"> SofaScore Hotlinks</h3>
                 <p>Quick access to top European leagues and competitions</p>
             </div>
             <div class="sofascore-links-grid">
@@ -106,7 +106,7 @@
                     <div class="link-arrow">→</div>
                 </a>
                 <a href="https://www.sofascore.com/tournament/football/england/premier-league/17" target="_blank" rel="noopener noreferrer" class="sofascore-link">
-                    <div class="link-icon"><img src="https://api.sofascore.app/api/v1/unique-tournament/17/image" alt="Premier League" style="height:32px;width:32px;border-radius:4px;"></div>
+                    <div class="link-icon"><img class="league-logo" src="https://api.sofascore.app/api/v1/unique-tournament/17/image" alt="Premier League"></div>
                     <div class="link-content">
                         <h4>Premier League</h4>
                         <p>Standings, fixtures & results</p>

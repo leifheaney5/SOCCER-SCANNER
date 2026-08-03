@@ -3,6 +3,12 @@
             padding: 0;
             box-sizing: border-box;
         }
+.team-section-full { grid-column: 1 / -1; }
+.team-search {
+    width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #475569;
+    border-radius: 6px; background: #1e293b; color: #e2e8f0; font: inherit;
+}
+.team-search:focus-visible { outline: 2px solid #3b82f6; outline-offset: 2px; }
 
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
@@ -1352,3 +1358,4 @@
         .squad-overview-compact strong {
             color: #ffffff;
         }
+.results.is-visible { display: block; }

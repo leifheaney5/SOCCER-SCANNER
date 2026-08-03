@@ -53,9 +53,10 @@ def create_app(config=None):
         response.headers.setdefault(
             'Content-Security-Policy',
             "default-src 'self'; script-src 'self'; "
-            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+            "style-src 'self' https://fonts.googleapis.com; "
             "font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; "
-            "connect-src 'self'; frame-src https://widgets.sofascore.com",
+            "connect-src 'self'; frame-src https://widgets.sofascore.com; "
+            "object-src 'none'; base-uri 'self'; form-action 'self'",
         )
         return response
     return app

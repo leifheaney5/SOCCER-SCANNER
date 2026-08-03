@@ -104,9 +104,10 @@ the HTML templates.
 
 ### 3. League Tables Flow
 1. User accesses league tables page
-2. SofaScore widgets embedded directly
-3. Live data streams from SofaScore servers
-4. No backend processing required
+2. User selects one configured competition
+3. The selected SofaScore table is lazy-loaded into a single iframe
+4. Changing competition replaces the current embed instead of loading every table
+5. No backend processing is required
 
 ## Security Considerations
 

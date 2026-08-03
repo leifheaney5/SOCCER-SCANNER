@@ -26,9 +26,10 @@
                 </div>
             </div>
 
-            <div class="team-selector" id="teamSelector" style="display: none;">
-                <div class="team-section" style="grid-column: 1 / -1;">
+            <div class="team-selector is-hidden" id="teamSelector">
+                <div class="team-section team-section-full">
                     <h3>Select Team to Analyze</h3>
+                    <input id="teamSearch" class="team-search" type="search" placeholder="Search loaded teams" aria-label="Search loaded teams">
                     <select id="teamSelect">
                         <option value="">Select a team</option>
                     </select>

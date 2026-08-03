@@ -5,99 +5,37 @@
 
 {% block content %}
 <div class="container">
-        <div class="page-header">
-            <h1>League Tables</h1>
-            <p>Live standings and comprehensive league information from top competitions worldwide</p>
-        </div>
-
-        <!-- SofaScore League Tables Widget -->
-        <div class="sofascore-widgets">
-            <div class="sofascore-header">
-                <h3>Top European League Standings</h3>
-                <p>Live standings from Europe's elite leagues powered by SofaScore</p>
-            </div>
-            <div class="widgets-grid">
-                <div class="widget-container">
-                    <div class="widget-title">Premier League 25/26</div>
-                    <!-- Premier League Widget -->
-                    <iframe 
-                        id="sofa-standings-embed-1-76986" 
-                        src="https://widgets.sofascore.com/embed/tournament/1/season/76986/standings/Premier%20League%2025%2F26?widgetTitle=Premier%20League%2025%2F26&showCompetitionLogo=true" 
-                        style="height:600px!important;width:100%!important;" 
-                        frameborder="0" 
-                        scrolling="no"
-                        title="Premier League Standings">
-                    </iframe>
-                </div>
-                
-                <div class="widget-container">
-                    <div class="widget-title">🇪🇸 La Liga 25/26</div>
-                    <!-- La Liga Widget -->
-                    <iframe 
-                        id="sofa-standings-embed-2-76986" 
-                        src="https://widgets.sofascore.com/embed/tournament/36/season/77559/standings/LaLiga%2025%2F26?widgetTitle=LaLiga%2025%2F26&showCompetitionLogo=true" 
-                        style="height:600px!important;width:100%!important;" 
-                        frameborder="0" 
-                        scrolling="no"
-                        title="La Liga Standings">
-                    </iframe>
-                </div>
-                
-                <div class="widget-container">
-                    <div class="widget-title">🇩🇪 Bundesliga 25/26</div>
-                    <!-- Bundesliga Widget -->
-                    <iframe 
-                        id="sofa-standings-embed-3-76986" 
-                        src="https://widgets.sofascore.com/embed/tournament/42/season/77333/standings/Bundesliga%2025%2F26?widgetTitle=Bundesliga%2025%2F26&showCompetitionLogo=true" 
-                        style="height:600px!important;width:100%!important;" 
-                        frameborder="0" 
-                        scrolling="no"
-                        title="Bundesliga Standings">
-                    </iframe>
-                </div>
-                
-                <div class="widget-container">
-                    <div class="widget-title">🇮🇹 Serie A 25/26</div>
-                    <!-- Serie A Widget -->
-                    <iframe 
-                        id="sofa-standings-embed-4-76986" 
-                        src="https://widgets.sofascore.com/embed/tournament/33/season/76457/standings/Serie%20A%2025%2F26?widgetTitle=Serie%20A%2025%2F26&showCompetitionLogo=true" 
-                        style="height:600px!important;width:100%!important;" 
-                        frameborder="0" 
-                        scrolling="no"
-                        title="Serie A Standings">
-                    </iframe>
-                </div>
-                
-                <div class="widget-container">
-                    <div class="widget-title">🇫🇷 Ligue 1 25/26</div>
-                    <!-- Ligue 1 Widget -->
-                    <iframe 
-                        id="sofa-standings-embed-5-76986" 
-                        src="https://widgets.sofascore.com/embed/tournament/4/season/77356/standings/Ligue%201%2025%2F26?widgetTitle=Ligue%201%2025%2F26&showCompetitionLogo=true" 
-                        style="height:600px!important;width:100%!important;" 
-                        frameborder="0" 
-                        scrolling="no"
-                        title="Ligue 1 Standings">
-                    </iframe>
-                </div>
-                
-                <div class="widget-container">
-                    <div class="widget-title">🇵🇹 Liga Portugal 25/26</div>
-                    <!-- Liga Portugal Widget -->
-                    <iframe 
-                        id="sofa-standings-embed-52-77806" 
-                        src="https://widgets.sofascore.com/embed/tournament/52/season/77806/standings/Liga%20Portugal%2025%2F26?widgetTitle=Liga%20Portugal%2025%2F26&showCompetitionLogo=true" 
-                        style="height:600px!important;width:100%!important;" 
-                        frameborder="0" 
-                        scrolling="no"
-                        title="Liga Portugal Standings">
-                    </iframe>
-                </div>
-            </div>
-            <div style="font-size:12px;font-family:Arial,sans-serif;text-align:center;padding:15px;background:#374151;color:#94a3b8;">
-                All league standings provided by <a target="_blank" rel="noopener noreferrer" href="https://www.sofascore.com/" style="color:#3b82f6;">SofaScore</a>
-            </div>
-        </div>
+    <div class="page-header">
+        <h1>League Tables</h1>
+        <p>Select a competition to load its latest available standings.</p>
     </div>
+
+    <section class="sofascore-widgets" aria-labelledby="standings-heading">
+        <div class="sofascore-header">
+            <h2 id="standings-heading">European League Standings</h2>
+            <p>One table is loaded at a time to keep this page fast.</p>
+        </div>
+        <div class="standings-controls">
+            <label for="league-selector">Competition</label>
+            <select id="league-selector" class="league-selector">
+                <option value="https://widgets.sofascore.com/embed/tournament/1/season/76986/standings/Premier%20League%2025%2F26?widgetTitle=Premier%20League%2025%2F26&amp;showCompetitionLogo=true">Premier League 2025/26</option>
+                <option value="https://widgets.sofascore.com/embed/tournament/36/season/77559/standings/LaLiga%2025%2F26?widgetTitle=LaLiga%2025%2F26&amp;showCompetitionLogo=true">La Liga 2025/26</option>
+                <option value="https://widgets.sofascore.com/embed/tournament/42/season/77333/standings/Bundesliga%2025%2F26?widgetTitle=Bundesliga%2025%2F26&amp;showCompetitionLogo=true">Bundesliga 2025/26</option>
+                <option value="https://widgets.sofascore.com/embed/tournament/33/season/76457/standings/Serie%20A%2025%2F26?widgetTitle=Serie%20A%2025%2F26&amp;showCompetitionLogo=true">Serie A 2025/26</option>
+                <option value="https://widgets.sofascore.com/embed/tournament/4/season/77356/standings/Ligue%201%2025%2F26?widgetTitle=Ligue%201%2025%2F26&amp;showCompetitionLogo=true">Ligue 1 2025/26</option>
+                <option value="https://widgets.sofascore.com/embed/tournament/52/season/77806/standings/Liga%20Portugal%2025%2F26?widgetTitle=Liga%20Portugal%2025%2F26&amp;showCompetitionLogo=true">Liga Portugal 2025/26</option>
+            </select>
+        </div>
+        <div id="standings-status" class="standings-status" role="status">Loading Premier League standings…</div>
+        <div class="widget-container active-widget">
+            <iframe id="standings-frame" class="sofascore-iframe" title="Premier League standings" loading="lazy"></iframe>
+        </div>
+        <footer class="standings-provider">
+            Standings provided by <a target="_blank" rel="noopener noreferrer" href="https://www.sofascore.com/">SofaScore</a>.
+            <a id="standings-fallback" target="_blank" rel="noopener noreferrer" href="https://www.sofascore.com/">Open directly</a>
+        </footer>
+    </section>
+</div>
 {% endblock %}
+
+{% block page_scripts %}<script src="{{ url_for('static', filename='js/standings.js') }}" defer></script>{% endblock %}

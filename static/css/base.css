@@ -12,3 +12,4 @@
 }
 .skip-link:focus { transform: translateY(0); }
 .app-title { color: #ffffff; text-decoration: none; }
+.is-hidden { display: none; }
