@@ -68,6 +68,7 @@ class SoccerScannerRoutesTest(unittest.TestCase):
         for page in (fixtures, teams, standings):
             self.assertIn('href="#main-content"', page)
             self.assertIn('/static/css/base.css', page)
+            self.assertIn('/static/favicon.svg', page)
             self.assertNotIn('<style>', page)
             self.assertNotIn(' style=', page)
             self.assertIn('/static/js/dom.js', page)
@@ -81,6 +82,11 @@ class SoccerScannerRoutesTest(unittest.TestCase):
         self.assertEqual(static_asset.status_code, 200)
         self.assertIn('max-age=3600', static_asset.headers['Cache-Control'])
         static_asset.close()
+
+        favicon = self.client.get('/static/favicon.svg')
+        self.assertEqual(favicon.status_code, 200)
+        self.assertEqual(favicon.mimetype, 'image/svg+xml')
+        favicon.close()
 
     @patch('soccer_scanner.services.football_data.FootballDataClient.get')
     @patch('soccer_scanner.services.fixtures.requests.get')

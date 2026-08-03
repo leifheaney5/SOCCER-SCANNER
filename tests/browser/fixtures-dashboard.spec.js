@@ -376,3 +376,125 @@ test('team drawer exposes provider retry and limited-data states', async ({page}
     await expect(drawer).toContainText('Limited team data');
     await expect(drawer).toContainText('River Plate');
 });
+
+test('visual tokens, type roles, and reduced motion match the product contract', async ({page}) => {
+    await page.emulateMedia({reducedMotion: 'reduce'});
+    await page.setViewportSize({width: 1440, height: 1000});
+    await mockFixtures(page);
+    await page.goto('/?date=2026-08-03');
+    await expect(page.locator('#fixture-result-count')).toContainText('13 matches');
+
+    const styles = await page.evaluate(() => {
+        const root = getComputedStyle(document.documentElement);
+        const body = getComputedStyle(document.body);
+        const header = getComputedStyle(document.querySelector('.app-header'));
+        const score = getComputedStyle(document.querySelector('.score-display--kickoff'));
+        const card = getComputedStyle(document.querySelector('.fixture-card'));
+        const liveDot = getComputedStyle(document.querySelector('.live-dot'));
+        const context = getComputedStyle(document.querySelector('#match-context'));
+        return {
+            tokens: {
+                bgPrimary: root.getPropertyValue('--bg-primary').trim(),
+                bgSecondary: root.getPropertyValue('--bg-secondary').trim(),
+                bgCard: root.getPropertyValue('--bg-card').trim(),
+                accent: root.getPropertyValue('--accent-primary').trim(),
+                border: root.getPropertyValue('--border-color').trim(),
+            },
+            bodyBackground: body.backgroundColor,
+            bodyFont: body.fontFamily,
+            headerPosition: header.position,
+            scoreFont: score.fontFamily,
+            transitionDuration: card.transitionDuration,
+            animationName: liveDot.animationName,
+            contextPosition: context.position,
+        };
+    });
+    expect(styles.tokens).toEqual({
+        bgPrimary: '#000000',
+        bgSecondary: '#0a0a0a',
+        bgCard: '#141414',
+        accent: '#7CFF00',
+        border: '#2a2a2a',
+    });
+    expect(styles.bodyBackground).toBe('rgb(0, 0, 0)');
+    expect(styles.bodyFont).toContain('Inter');
+    expect(styles.headerPosition).toBe('sticky');
+    expect(styles.scoreFont).toContain('IBM Plex Mono');
+    expect(styles.transitionDuration).toBe('0s');
+    expect(styles.animationName).toBe('none');
+    expect(styles.contextPosition).toBe('sticky');
+});
+
+for (const width of [320, 375, 430, 768, 1024, 1280, 1440]) {
+    test(`dashboard has no horizontal overflow at ${width}px`, async ({page}) => {
+        await page.setViewportSize({width, height: width < 600 ? 800 : 900});
+        await mockFixtures(page);
+        await page.goto('/?date=2026-08-03');
+        await expect(page.locator('#fixture-result-count')).toContainText('13 matches');
+
+        const measurements = await page.evaluate(() => {
+            const targetIds = ['previous-date', 'today-date', 'next-date', 'filter-toggle', 'score-toggle'];
+            return {
+                documentWidth: document.documentElement.scrollWidth,
+                viewportWidth: document.documentElement.clientWidth,
+                bodyWidth: document.body.scrollWidth,
+                targets: targetIds.map(id => {
+                    const box = document.getElementById(id).getBoundingClientRect();
+                    return {id, width: box.width, height: box.height};
+                }),
+                cardOverflow: [...document.querySelectorAll('.fixture-card')].some(card => card.scrollWidth > card.clientWidth),
+                contextDisplay: getComputedStyle(document.getElementById('match-context')).display,
+                filterToggleDisplay: getComputedStyle(document.getElementById('filter-toggle')).display,
+                secondaryDisplay: getComputedStyle(document.getElementById('secondary-filters')).display,
+            };
+        });
+        expect(measurements.documentWidth).toBeLessThanOrEqual(measurements.viewportWidth);
+        expect(measurements.bodyWidth).toBeLessThanOrEqual(measurements.viewportWidth);
+        expect(measurements.cardOverflow).toBe(false);
+        if (width < 1100) expect(measurements.contextDisplay).toBe('none');
+        else expect(measurements.contextDisplay).not.toBe('none');
+
+        if (width <= 767) {
+            expect(measurements.filterToggleDisplay).not.toBe('none');
+            expect(measurements.secondaryDisplay).toBe('none');
+            for (const target of measurements.targets) {
+                expect(target.height, `${target.id} height`).toBeGreaterThanOrEqual(44);
+                expect(target.width, `${target.id} width`).toBeGreaterThanOrEqual(44);
+            }
+            await expect(page.locator('.fixture-card').first().locator('.fixture-mobile-meta')).toBeVisible();
+            await page.locator('#filter-toggle').click();
+            await expect(page.locator('#secondary-filters')).toBeVisible();
+        } else {
+            expect(measurements.filterToggleDisplay).toBe('none');
+            expect(measurements.secondaryDisplay).not.toBe('none');
+        }
+        await expect(page.locator('.fixture-card').first().locator('.details-button')).toBeVisible();
+    });
+}
+
+test('narrow mobile keeps the featured score between the teams and the date legible', async ({page}) => {
+    await page.setViewportSize({width: 375, height: 812});
+    await mockFixtures(page);
+    await page.goto('/?date=2026-08-03');
+    await expect(page.locator('#fixture-result-count')).toContainText('13 matches');
+
+    const layout = await page.locator('#featured-match').evaluate(featured => {
+        const [home, away] = featured.querySelectorAll('.team-identity--featured');
+        const score = featured.querySelector('.score-display--featured');
+        const date = document.getElementById('dashboard-date');
+        const homeBox = home.getBoundingClientRect();
+        const scoreBox = score.getBoundingClientRect();
+        const awayBox = away.getBoundingClientRect();
+        const dateBox = date.getBoundingClientRect();
+        return {
+            homeX: homeBox.x,
+            scoreX: scoreBox.x,
+            awayX: awayBox.x,
+            dateWidth: dateBox.width,
+        };
+    });
+
+    expect(layout.homeX).toBeLessThan(layout.scoreX);
+    expect(layout.scoreX).toBeLessThan(layout.awayX);
+    expect(layout.dateWidth).toBeGreaterThanOrEqual(130);
+});

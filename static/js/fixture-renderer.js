@@ -152,7 +152,8 @@ function createFixtureCard(match, revealed, selectedId = null) {
 
     const action = node('div', 'fixture-action');
     action.append(createDetailsButton(match));
-    card.append(status, createTeamRows(match), createScoreNode(match, revealed), action);
+    const mobileMeta = node('span', 'fixture-mobile-meta', match?.competition?.name || 'Competition');
+    card.append(status, createTeamRows(match), createScoreNode(match, revealed), mobileMeta, action);
     return card;
 }
 

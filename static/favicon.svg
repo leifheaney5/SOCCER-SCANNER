@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Soccer Scanner">
+  <rect width="64" height="64" rx="12" fill="#000"/>
+  <path d="M17 16h30v8H25v6h17a7 7 0 0 1 7 7v4a7 7 0 0 1-7 7H15v-8h26v-6H24a7 7 0 0 1-7-7V16Z" fill="#7cff00"/>
+  <path d="M11 11h10v3h-7v7h-3V11Zm42 0v10h-3v-7h-7v-3h10ZM11 53V43h3v7h7v3H11Zm42 0H43v-3h7v-7h3v10Z" fill="#f2f2f2"/>
+</svg>
