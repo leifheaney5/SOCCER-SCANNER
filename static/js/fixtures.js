@@ -21,6 +21,7 @@ import {
     renderSummary,
 } from './fixture-renderer.js';
 import {createMatchContext} from './match-context.js';
+import {createTeamDrawer} from './team-drawer.js';
 
 const byId = id => document.getElementById(id);
 const state = createState(window.location.search);
@@ -32,6 +33,7 @@ let selectedFixtureId = null;
 let activeRequestController = null;
 let requestSequence = 0;
 let matchContext = null;
+let teamDrawer = null;
 
 function syncUrl() {
     const query = state.toSearchParams().toString();
@@ -85,6 +87,7 @@ function reflectCurrentResults() {
     byId('fixture-result-count').textContent = `${summary.total} ${summary.total === 1 ? 'match' : 'matches'}`;
     byId('dashboard-status').textContent = `${summary.total} fixtures shown`;
     matchContext?.rerender();
+    teamDrawer?.rerender();
 }
 
 async function loadFixtures() {
@@ -189,6 +192,12 @@ function bindEvents() {
 }
 
 function init() {
+    teamDrawer = createTeamDrawer({
+        dialog: byId('team-drawer'),
+        content: byId('team-drawer-content'),
+        closeButton: byId('close-team-drawer'),
+        getRevealed: () => scoresRevealed,
+    });
     matchContext = createMatchContext({
         panel: byId('match-context'),
         panelContent: byId('match-context-content'),
@@ -196,7 +205,7 @@ function init() {
         dialogContent: byId('match-context-dialog-content'),
         closeButton: byId('close-match-context'),
         getRevealed: () => scoresRevealed,
-        onTeam: () => {},
+        onTeam: (team, trigger) => teamDrawer.open(team, trigger),
     });
     syncControls();
     bindEvents();

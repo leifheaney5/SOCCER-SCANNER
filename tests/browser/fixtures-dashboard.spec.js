@@ -1,5 +1,5 @@
 import {expect, test} from '@playwright/test';
-import {emptyFixturePayload, fixturePayload} from './test-data.js';
+import {emptyFixturePayload, fixturePayload, teamPayload} from './test-data.js';
 
 async function mockFixtures(page, payload = fixturePayload) {
     await page.route('**/api/matches-today**', route => route.fulfill({
@@ -272,4 +272,107 @@ test('mobile match sheet traps interaction, closes, and restores fixture focus',
     });
     await expect(dialog).not.toBeVisible();
     await expect(page.locator('[data-fixture-id="live-secret"] .details-button')).toBeFocused();
+});
+
+test('team drawer renders complete intelligence, protects scores, caches, and restores focus', async ({page}) => {
+    await page.setViewportSize({width: 1280, height: 900});
+    await mockFixtures(page);
+    let teamRequests = 0;
+    await page.route('**/api/team-analysis/*', async route => {
+        teamRequests += 1;
+        await new Promise(resolve => setTimeout(resolve, 350));
+        await route.fulfill({contentType: 'application/json', body: JSON.stringify(teamPayload)});
+    });
+    await page.goto('/?date=2026-08-03');
+    await expect(page.locator('#fixture-result-count')).toContainText('13 matches');
+    await page.locator('.fixture-card[data-fixture-id="live-secret"] .details-button').click();
+
+    const trigger = page.locator('#match-context').getByRole('button', {name: 'Open Arsenal intelligence'});
+    await trigger.click();
+    const drawer = page.locator('#team-drawer');
+    await expect(drawer).toBeVisible();
+    await expect(page.locator('#close-team-drawer')).toBeFocused();
+    await expect(drawer.locator('[data-skeleton="team"]')).toHaveCount(4);
+    await expect(drawer).toContainText('Arsenal');
+    await expect(drawer).toContainText('Founded 1886');
+    await expect(drawer).toContainText('Emirates Stadium');
+    await expect(drawer).toContainText('Red / White');
+    await expect(drawer).toContainText('10 played');
+    await expect(drawer).toContainText('6 wins');
+    await expect(drawer).toContainText('2 draws');
+    await expect(drawer).toContainText('2 losses');
+    await expect(drawer).toContainText('22 goals for');
+    await expect(drawer).toContainText('11 goals against');
+    await expect(drawer).toContainText('+11 goal difference');
+    await expect(drawer.locator('.form-result')).toHaveCount(5);
+    await expect(drawer.getByLabel('Win').first()).toHaveText('W');
+    await expect(drawer.getByLabel('Draw')).toHaveText('D');
+    await expect(drawer.getByLabel('Loss')).toHaveText('L');
+    await expect(drawer).toContainText('Chelsea');
+    await expect(drawer).toContainText('Liverpool');
+    await expect(drawer).toContainText('2 players');
+    await expect(drawer).toContainText('4-3-3');
+    await expect(drawer.getByText('Score hidden', {exact: true})).toBeVisible();
+
+    const hiddenLeaks = await drawer.evaluate(element => {
+        const content = `${element.textContent} ${[...element.querySelectorAll('*')].flatMap(child => [...child.attributes].map(attribute => attribute.value)).join(' ')}`;
+        return ['97', '96'].filter(secret => new RegExp(`\\b${secret}\\b`).test(content));
+    });
+    expect(hiddenLeaks).toEqual([]);
+
+    await page.keyboard.press('Escape');
+    await expect(drawer).not.toBeVisible();
+    await expect(trigger).toBeFocused();
+    await trigger.click();
+    await expect(drawer).toContainText('Arsenal');
+    expect(teamRequests).toBe(1);
+    await page.locator('#close-team-drawer').click();
+
+    await page.locator('#score-toggle').click();
+    await page.locator('#match-context').getByRole('button', {name: 'Open Arsenal intelligence'}).click();
+    await expect(drawer.getByText('97 – 96', {exact: true})).toBeVisible();
+});
+
+test('team drawer exposes provider retry and limited-data states', async ({page}) => {
+    await page.setViewportSize({width: 1280, height: 900});
+    await mockFixtures(page);
+    let arsenalAttempts = 0;
+    await page.route('**/api/team-analysis/*', route => {
+        const teamId = route.request().url().split('/').at(-1);
+        if (teamId === 'live-secret-home') {
+            arsenalAttempts += 1;
+            return arsenalAttempts === 1
+                ? route.fulfill({status: 502, contentType: 'application/json', body: JSON.stringify({error: 'raw provider failure'})})
+                : route.fulfill({contentType: 'application/json', body: JSON.stringify(teamPayload)});
+        }
+        return route.fulfill({
+            contentType: 'application/json',
+            body: JSON.stringify({
+                team_info: {id: teamId, name: 'River Plate', crest: null},
+                squad: [],
+                formation_data: {},
+                recent_matches: [],
+                upcoming_matches: [],
+                stats: {},
+                top_performers: {},
+                competition_analysis: {},
+            }),
+        });
+    });
+    await page.goto('/?date=2026-08-03');
+    await expect(page.locator('#fixture-result-count')).toContainText('13 matches');
+    await page.locator('.fixture-card[data-fixture-id="live-secret"] .details-button').click();
+
+    await page.locator('#match-context').getByRole('button', {name: 'Open Arsenal intelligence'}).click();
+    const drawer = page.locator('#team-drawer');
+    await expect(drawer.getByRole('heading', {name: 'Team intelligence unavailable'})).toBeVisible();
+    await expect(drawer).not.toContainText('raw provider failure');
+    await drawer.getByRole('button', {name: 'Retry'}).click();
+    await expect(drawer).toContainText('Emirates Stadium');
+    expect(arsenalAttempts).toBe(2);
+    await page.locator('#close-team-drawer').click();
+
+    await page.locator('#match-context').getByRole('button', {name: 'Open River Plate intelligence'}).click();
+    await expect(drawer).toContainText('Limited team data');
+    await expect(drawer).toContainText('River Plate');
 });
