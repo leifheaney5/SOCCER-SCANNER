@@ -83,6 +83,9 @@ test('hidden scores never enter DOM content and reveal consistently', async ({pa
         ));
     });
     expect(hiddenLeaks).toEqual([]);
+    const accessibilityTree = await page.locator('body').ariaSnapshot();
+    expect(accessibilityTree).not.toMatch(/\b97\b|\b96\b|\b95\b|\b94\b/);
+    expect(accessibilityTree).toContain('Score hidden');
 
     await page.locator('#score-toggle').click();
     await expect(page.getByText('97 – 96', {exact: true})).toHaveCount(2);
@@ -116,7 +119,15 @@ test('fixtures render paired identities, crest fallbacks, groups, and live-first
     await expect(page.locator('.fixture-card .team-crest')).toHaveCount(26);
     await expect(page.locator('.fixture-card img.team-crest-image').first()).toHaveAttribute('loading', 'lazy');
     await expect(page.locator('.fixture-card img.team-crest-image').first()).toHaveAttribute('decoding', 'async');
-    await expect(page.locator('[data-fixture-id="missing-score"] .crest-fallback')).toHaveCount(2);
+    await expect(page.locator('.competition-group .competition-emblem img.team-crest-image')).toHaveCount(5);
+    const crestFallbacks = page.locator('[data-fixture-id="missing-score"] .crest-fallback');
+    await expect(crestFallbacks).toHaveCount(2);
+    await expect(crestFallbacks.nth(0)).toHaveText('UT');
+    await expect(crestFallbacks.nth(1)).toHaveText('FU');
+    await expect(page.locator('[data-fixture-id="half-time"] .fixture-status-label')).toHaveText('HT');
+    await expect(page.locator('[data-fixture-id="half-time"] .score-display')).toContainText('Score hidden');
+    await expect(page.locator('[data-fixture-id="postponed"] .fixture-status-label')).toHaveText('POSTPONED');
+    await expect(page.locator('[data-fixture-id="postponed"] .score-display')).toHaveText('Postponed');
     await expect(page.locator('.fixture-card').first()).not.toContainText(' vs ');
 });
 
