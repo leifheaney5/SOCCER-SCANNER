@@ -1,5 +1,5 @@
 import {expect, test} from '@playwright/test';
-import {fixturePayload} from './test-data.js';
+import {emptyFixturePayload, fixturePayload} from './test-data.js';
 
 async function mockFixtures(page, payload = fixturePayload) {
     await page.route('**/api/matches-today**', route => route.fulfill({
@@ -115,4 +115,102 @@ test('fixtures render paired identities, crest fallbacks, groups, and live-first
     await expect(page.locator('.fixture-card img.team-crest-image').first()).toHaveAttribute('decoding', 'async');
     await expect(page.locator('[data-fixture-id="missing-score"] .crest-fallback')).toHaveCount(2);
     await expect(page.locator('.fixture-card').first()).not.toContainText(' vs ');
+});
+
+test('date navigation, search, status, competition, and clear controls stay in sync', async ({page}) => {
+    const requestedDates = [];
+    await page.route('**/api/matches-today**', route => {
+        const url = new URL(route.request().url());
+        requestedDates.push(url.searchParams.get('date'));
+        return route.fulfill({contentType: 'application/json', body: JSON.stringify(fixturePayload)});
+    });
+    await page.goto('/?date=2026-08-03');
+    await expect(page.locator('#fixture-result-count')).toContainText('13 matches');
+
+    await page.locator('#previous-date').click();
+    await expect(page.locator('#dashboard-date')).toHaveValue('2026-08-02');
+    await expect.poll(() => requestedDates).toContain('2026-08-02');
+    await page.locator('#next-date').click();
+    await expect(page.locator('#dashboard-date')).toHaveValue('2026-08-03');
+    await page.locator('#today-date').click();
+    await expect(page.locator('#dashboard-date')).toHaveValue('2026-08-03');
+
+    await page.locator('#fixture-search').fill('Celtic');
+    await expect(page.locator('#fixture-result-count')).toContainText('1 match');
+    await expect(page.locator('#clear-search')).toBeVisible();
+    await page.locator('#clear-search').click();
+    await expect(page.locator('#fixture-result-count')).toContainText('13 matches');
+
+    await page.locator('#status-live').click();
+    await expect(page.locator('#fixture-result-count')).toContainText('2 matches');
+    await page.locator('#competition-filter').selectOption('Premier League');
+    await expect(page.locator('#fixture-result-count')).toContainText('1 match');
+    await expect(page.locator('#active-filter-count')).toHaveText('2');
+    await expect(page.locator('#clear-filters')).toBeVisible();
+    await page.locator('#clear-filters').click();
+    await expect(page.locator('#fixture-result-count')).toContainText('13 matches');
+    await expect.poll(() => page.evaluate(() => location.search)).toBe('?date=2026-08-03');
+});
+
+test('empty date, filtered empty, provider error retry, partial, and stale states are distinct', async ({page}) => {
+    await mockFixtures(page, emptyFixturePayload);
+    await page.goto('/?date=2026-08-03');
+    const emptyState = page.locator('.dashboard-state--empty');
+    await expect(emptyState.getByRole('heading', {name: 'No matches scheduled'})).toBeVisible();
+    await expect(emptyState.getByRole('button', {name: 'Previous day'})).toBeVisible();
+    await expect(emptyState.getByRole('button', {name: 'Next day'})).toBeVisible();
+
+    await page.unroute('**/api/matches-today**');
+    await mockFixtures(page);
+    await page.goto('/?date=2026-08-03&q=NoSuchClub');
+    await expect(page.getByRole('heading', {name: 'No fixtures match these filters'})).toBeVisible();
+    await page.getByRole('button', {name: 'Clear filters'}).last().click();
+    await expect(page.locator('#fixture-result-count')).toContainText('13 matches');
+
+    await page.unroute('**/api/matches-today**');
+    let attempts = 0;
+    await page.route('**/api/matches-today**', route => {
+        attempts += 1;
+        return attempts === 1
+            ? route.fulfill({status: 502, contentType: 'application/json', body: JSON.stringify({error: 'provider unavailable'})})
+            : route.fulfill({contentType: 'application/json', body: JSON.stringify(fixturePayload)});
+    });
+    await page.goto('/?date=2026-08-03');
+    await expect(page.getByRole('heading', {name: 'Football data is temporarily unavailable'})).toBeVisible();
+    await page.getByRole('button', {name: 'Retry'}).click();
+    await expect(page.locator('#fixture-result-count')).toContainText('13 matches');
+    expect(attempts).toBe(2);
+
+    await expect(page.locator('#data-notice')).toContainText('Showing saved fixture data');
+    await page.unroute('**/api/matches-today**');
+    await mockFixtures(page, {...fixturePayload, stale: false, partial: true});
+    await page.reload();
+    await expect(page.locator('#data-notice')).toContainText('Some fixture sources are delayed');
+});
+
+test('a superseded slow date response cannot replace the latest date', async ({page}) => {
+    await page.route('**/api/matches-today**', async route => {
+        const requested = new URL(route.request().url()).searchParams.get('date');
+        if (requested === '2026-08-03') {
+            await new Promise(resolve => setTimeout(resolve, 800));
+            await route.fulfill({contentType: 'application/json', body: JSON.stringify(fixturePayload)});
+            return;
+        }
+        const latest = {
+            ...emptyFixturePayload,
+            date: '2026-08-04',
+            matches: [fixturePayload.matches.find(match => match.id === 'upcoming')],
+            total_matches: 1,
+        };
+        await route.fulfill({contentType: 'application/json', body: JSON.stringify(latest)});
+    });
+
+    await page.goto('/?date=2026-08-03', {waitUntil: 'domcontentloaded'});
+    await page.locator('#dashboard-date').fill('2026-08-04');
+    await page.locator('#dashboard-date').dispatchEvent('change');
+    await expect(page.locator('#fixture-result-count')).toContainText('1 match');
+    await page.waitForTimeout(1_000);
+    await expect(page.locator('#selected-date-label')).toContainText('August 4');
+    await expect(page.locator('#fixture-stream')).toContainText('Celtic');
+    await expect(page.locator('#fixture-stream')).not.toContainText('Arsenal');
 });

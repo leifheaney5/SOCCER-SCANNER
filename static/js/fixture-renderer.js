@@ -279,6 +279,38 @@ export function renderFixtureStream(container, groups, options) {
     container.replaceChildren(...groups.map(group => createCompetitionGroup(group, options)));
 }
 
+export function renderEmptyState(container, {filtered = false} = {}) {
+    const state = node('div', 'dashboard-state dashboard-state--empty');
+    if (filtered) {
+        state.append(
+            node('h3', '', 'No fixtures match these filters'),
+            node('p', '', 'Try another team, competition, or match status.'),
+        );
+        const clear = node('button', 'control-button', 'Clear filters');
+        clear.type = 'button';
+        clear.dataset.action = 'clear-filters';
+        state.append(clear);
+    } else {
+        state.append(
+            node('h3', '', 'No matches scheduled'),
+            node('p', '', 'There are no tracked fixtures on this date. Try an adjacent day.'),
+        );
+        const actions = node('div', 'empty-actions');
+        const previous = node('button', 'control-button', 'Previous day');
+        previous.type = 'button';
+        previous.dataset.action = 'shift-date';
+        previous.dataset.days = '-1';
+        const next = node('button', 'control-button', 'Next day');
+        next.type = 'button';
+        next.dataset.action = 'shift-date';
+        next.dataset.days = '1';
+        actions.append(previous, next);
+        state.append(actions);
+    }
+    container.replaceChildren(state);
+    container.setAttribute('aria-busy', 'false');
+}
+
 export function renderRequestError(container, onRetry) {
     const state = node('div', 'dashboard-state dashboard-state--error');
     state.append(

@@ -13,6 +13,7 @@ import {
 } from './score-preference.js';
 import {
     renderFeatured,
+    renderEmptyState,
     renderFixtureStream,
     renderLoading,
     renderNotice,
@@ -27,6 +28,8 @@ let scoresRevealed = readScorePreference();
 let searchTimer = null;
 const expandedGroups = new Set();
 let selectedFixtureId = null;
+let activeRequestController = null;
+let requestSequence = 0;
 
 function syncUrl() {
     const query = state.toSearchParams().toString();
@@ -68,28 +71,45 @@ function reflectCurrentResults() {
     renderSummary(byId('daily-summary'), payload.matches, payload);
     renderNotice(byId('data-notice'), payload);
     renderFeatured(byId('featured-match'), matches, scoresRevealed);
-    renderFixtureStream(byId('fixture-stream'), groupMatches(matches), {
-        revealed: scoresRevealed,
-        expandedGroups,
-        selectedId: selectedFixtureId,
-    });
+    if (matches.length === 0) {
+        renderEmptyState(byId('fixture-stream'), {filtered: payload.matches.length > 0});
+    } else {
+        renderFixtureStream(byId('fixture-stream'), groupMatches(matches), {
+            revealed: scoresRevealed,
+            expandedGroups,
+            selectedId: selectedFixtureId,
+        });
+    }
     byId('fixture-result-count').textContent = `${summary.total} ${summary.total === 1 ? 'match' : 'matches'}`;
     byId('dashboard-status').textContent = `${summary.total} fixtures shown`;
 }
 
 async function loadFixtures() {
+    activeRequestController?.abort();
+    activeRequestController = new AbortController();
+    const requestId = ++requestSequence;
     byId('dashboard-status').textContent = 'Loading fixtures';
     renderLoading(byId('fixture-stream'));
+    byId('fixture-result-count').textContent = 'Loading';
+    byId('featured-match').hidden = true;
+    byId('featured-match').replaceChildren();
+    byId('data-notice').hidden = true;
     try {
         const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
-        const response = await fetch(`/api/matches-today?date=${encodeURIComponent(state.date)}&timezone=${encodeURIComponent(timezone)}`);
+        const requestedDate = state.date;
+        const response = await fetch(`/api/matches-today?date=${encodeURIComponent(requestedDate)}&timezone=${encodeURIComponent(timezone)}`, {
+            signal: activeRequestController.signal,
+        });
         if (!response.ok) throw new Error('Fixture request failed');
-        payload = await response.json();
+        const nextPayload = await response.json();
+        if (requestId !== requestSequence) return;
+        payload = {...nextPayload, date: requestedDate};
         if (!Array.isArray(payload.matches)) payload.matches = [];
         populateCompetitions(payload.matches);
         syncControls();
         reflectCurrentResults();
-    } catch {
+    } catch (error) {
+        if (error?.name === 'AbortError' || requestId !== requestSequence) return;
         byId('dashboard-status').textContent = 'Football data is temporarily unavailable';
         renderRequestError(byId('fixture-stream'), loadFixtures);
     }
@@ -148,6 +168,10 @@ function bindEvents() {
         } else if (action.dataset.action === 'select-fixture') {
             selectedFixtureId = action.dataset.fixtureId;
             reflectCurrentResults();
+        } else if (action.dataset.action === 'clear-filters') {
+            applyFilter({competition: '', status: 'all', query: ''});
+        } else if (action.dataset.action === 'shift-date') {
+            chooseDate(shiftDate(state.date, Number(action.dataset.days)));
         }
     };
     byId('fixture-stream').addEventListener('click', fixtureAction);
