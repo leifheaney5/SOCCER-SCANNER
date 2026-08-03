@@ -73,6 +73,8 @@ test-results/
 *-before-*.png
 *-reference-*.png
 *-after-*.png
+*-final-*.png
+*-accessibility.md
 
 # Jupyter Notebook
 .ipynb_checkpoints
