@@ -66,6 +66,13 @@ coverage.xml
 *.cover
 .hypothesis/
 .pytest_cache/
+.playwright-mcp/
+node_modules/
+playwright-report/
+test-results/
+*-before-*.png
+*-reference-*.png
+*-after-*.png
 
 # Jupyter Notebook
 .ipynb_checkpoints

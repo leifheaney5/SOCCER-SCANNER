@@ -11,12 +11,22 @@ class SoccerScannerRoutesTest(unittest.TestCase):
 
     def test_fixture_dashboard_is_home_page(self):
         response = self.client.get('/')
+        html = response.get_data(as_text=True)
 
         self.assertEqual(response.status_code, 200)
-        self.assertIn(b'id="dashboard-date"', response.data)
-        self.assertIn(b'id="fixture-stream"', response.data)
-        self.assertIn(b'id="team-drawer"', response.data)
-        self.assertNotIn(b'>Teams</a>', response.data)
+        for element_id in (
+            'dashboard-date', 'fixture-stream', 'team-drawer', 'score-toggle',
+            'daily-summary', 'featured-match', 'match-context',
+            'match-context-dialog', 'dashboard-status', 'data-notice',
+        ):
+            self.assertIn(f'id="{element_id}"', html)
+        self.assertIn('aria-label="Primary navigation"', html)
+        self.assertIn('aria-current="page"', html)
+        self.assertIn('href="https://select-xi.pro/"', html)
+        self.assertIn('aria-labelledby="team-drawer-title"', html)
+        self.assertIn('aria-labelledby="match-context-dialog-title"', html)
+        self.assertNotIn('class="suite-rail"', html)
+        self.assertNotIn('>Teams</a>', html)
 
     def test_team_analysis_has_a_stable_route(self):
         response = self.client.get('/teams')

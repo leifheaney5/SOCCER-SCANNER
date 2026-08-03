@@ -1,9 +1,136 @@
 {% extends "base.html" %}
+
 {% block title %}Fixtures | Soccer Scanner{% endblock %}
-{% block page_styles %}<link rel="stylesheet" href="{{ url_for('static', filename='css/fixtures.css', v='suite-1') }}">{% endblock %}
+{% block page_styles %}<link rel="stylesheet" href="{{ url_for('static', filename='css/fixtures.css', v='overhaul-1') }}">{% endblock %}
+
+{% block header_actions %}
+<button id="score-toggle" class="score-toggle" type="button" aria-pressed="false" aria-label="Reveal scores">
+    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M3 3l18 18M10.6 10.7a2 2 0 0 0 2.7 2.7M9.9 4.2A10.7 10.7 0 0 1 12 4c5.5 0 9 5.2 9 5.2a15 15 0 0 1-2.1 2.6M6.6 6.6C4.4 8 3 10 3 10s3.5 5 9 5c1.2 0 2.3-.2 3.3-.6"/>
+    </svg>
+    <span data-score-toggle-label>Reveal scores</span>
+</button>
+{% endblock %}
+
 {% block content %}
-<div class="suite-shell">
- <section class="workspace-bar" aria-label="Fixture controls"><strong>FIXTURES</strong><div class="date-controls"><button id="previous-date" type="button">‹</button><button id="today-date" type="button">Today</button><input id="dashboard-date" type="date" aria-label="Fixture date"><button id="next-date" type="button">›</button></div><input id="fixture-search" type="search" placeholder="Search teams" aria-label="Search fixtures"><select id="competition-filter" aria-label="Competition"><option value="">All competitions</option></select><select id="status-filter" aria-label="Status"><option value="">All matches</option><option value="live">Live</option><option value="upcoming">Upcoming</option><option value="finished">Finished</option></select></section>
- <div class="workspace-grid"><aside class="suite-rail"><p class="rail-label">MATCHDAY</p><h1>Today’s board</h1><p id="dashboard-status" role="status">Loading fixtures</p><button id="today-date-rail" type="button">Return to today</button><hr><p class="rail-label">PRODUCT SUITE</p><a href="https://select-xi.pro/" target="_blank" rel="noopener">Select XI</a></aside><main class="fixture-board"><section id="spotlight" class="spotlight is-hidden" aria-label="Selected fixture"></section><div id="fixture-stream" class="fixture-stream" aria-live="polite"></div></main><aside class="context-rail"><p class="rail-label">MATCH CONTEXT</p><div id="context-empty"><h2>Select a fixture</h2><p>Choose a match to inspect its teams, form, venue, and matchday context.</p></div><div id="context-selected" class="is-hidden"><h2 id="context-title"></h2><p id="context-meta"></p><button id="context-home" type="button"></button><button id="context-away" type="button"></button></div></aside></div>
-</div><dialog id="team-drawer" class="team-drawer" aria-labelledby="team-drawer-title"><button id="close-team-drawer" type="button">Close</button><div id="team-drawer-content"><h2 id="team-drawer-title">Team intelligence</h2></div></dialog>
-{% endblock %}{% block page_scripts %}<script src="{{ url_for('static', filename='js/fixtures.js', v='suite-1') }}" defer></script>{% endblock %}
+<div class="dashboard-shell">
+    <section class="daily-heading" aria-labelledby="page-title">
+        <div>
+            <p class="eyebrow">Matchday ledger</p>
+            <h1 id="page-title">Fixtures</h1>
+            <p id="selected-date-label" class="selected-date">Selected date</p>
+        </div>
+        <div id="daily-summary" class="daily-summary" aria-label="Daily fixture summary">
+            <span class="summary-primary">Loading matches</span>
+        </div>
+    </section>
+
+    <section class="filter-toolbar" aria-label="Fixture filters">
+        <div class="date-controls" aria-label="Choose fixture date">
+            <button id="previous-date" class="icon-button" type="button" aria-label="Previous day">
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+            </button>
+            <button id="today-date" class="control-button" type="button">Today</button>
+            <label class="date-picker-wrap">
+                <span class="sr-only">Fixture date</span>
+                <input id="dashboard-date" type="date" aria-label="Fixture date">
+            </label>
+            <button id="next-date" class="icon-button" type="button" aria-label="Next day">
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+            </button>
+        </div>
+
+        <button id="filter-toggle" class="filter-toggle" type="button" aria-expanded="false" aria-controls="secondary-filters">
+            Filters <span id="active-filter-count" class="filter-count" hidden>0</span>
+        </button>
+
+        <div id="secondary-filters" class="secondary-filters">
+            <label class="search-control">
+                <span class="sr-only">Search teams</span>
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+                <input id="fixture-search" type="search" placeholder="Search teams" autocomplete="off">
+                <button id="clear-search" type="button" aria-label="Clear team search" hidden>
+                    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg>
+                </button>
+            </label>
+
+            <label class="select-control">
+                <span class="sr-only">Competition</span>
+                <select id="competition-filter" aria-label="Competition">
+                    <option value="">All competitions</option>
+                </select>
+            </label>
+
+            <div class="status-filters" role="group" aria-label="Match status">
+                <button id="status-all" type="button" data-status="all" aria-pressed="true">All</button>
+                <button id="status-live" type="button" data-status="live" aria-pressed="false">Live</button>
+                <button id="status-upcoming" type="button" data-status="upcoming" aria-pressed="false">Upcoming</button>
+                <button id="status-finished" type="button" data-status="finished" aria-pressed="false">Finished</button>
+            </div>
+
+            <button id="clear-filters" class="clear-filters" type="button" hidden>Clear filters</button>
+        </div>
+    </section>
+
+    <p id="dashboard-status" class="sr-only" role="status" aria-live="polite">Loading fixtures</p>
+    <div id="data-notice" class="data-notice" role="status" hidden></div>
+
+    <div class="dashboard-layout">
+        <div class="fixture-column">
+            <section id="featured-match" class="featured-match" aria-label="Featured match" hidden></section>
+            <section aria-labelledby="fixture-stream-title">
+                <div class="section-heading">
+                    <div>
+                        <p class="eyebrow">All competitions</p>
+                        <h2 id="fixture-stream-title">Match schedule</h2>
+                    </div>
+                    <p id="fixture-result-count" class="result-count">Loading</p>
+                </div>
+                <div id="fixture-stream" class="fixture-stream" aria-busy="true">
+                    {% for index in range(6) %}
+                    <article class="fixture-skeleton" data-skeleton="fixture" aria-hidden="true">
+                        <span class="skeleton skeleton-time"></span>
+                        <span class="skeleton skeleton-teams"></span>
+                        <span class="skeleton skeleton-score"></span>
+                    </article>
+                    {% endfor %}
+                </div>
+            </section>
+        </div>
+
+        <aside id="match-context" class="match-context" aria-labelledby="match-context-title">
+            <p class="eyebrow">Match context</p>
+            <div id="match-context-content">
+                <h2 id="match-context-title">Select a fixture</h2>
+                <p>Choose a match to inspect the kickoff, venue, competition, and both teams.</p>
+            </div>
+        </aside>
+    </div>
+</div>
+
+<dialog id="match-context-dialog" class="sheet-dialog" aria-labelledby="match-context-dialog-title">
+    <div class="dialog-frame">
+        <div class="dialog-header">
+            <h2 id="match-context-dialog-title">Match context</h2>
+            <button id="close-match-context" class="icon-button" type="button" aria-label="Close match context">
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg>
+            </button>
+        </div>
+        <div id="match-context-dialog-content"></div>
+    </div>
+</dialog>
+
+<dialog id="team-drawer" class="team-drawer" aria-labelledby="team-drawer-title">
+    <div class="dialog-frame">
+        <div class="dialog-header">
+            <h2 id="team-drawer-title">Team intelligence</h2>
+            <button id="close-team-drawer" class="icon-button" type="button" aria-label="Close team intelligence">
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg>
+            </button>
+        </div>
+        <div id="team-drawer-content"></div>
+    </div>
+</dialog>
+{% endblock %}
+
+{% block page_scripts %}<script type="module" src="{{ url_for('static', filename='js/fixtures.js', v='overhaul-1') }}"></script>{% endblock %}
