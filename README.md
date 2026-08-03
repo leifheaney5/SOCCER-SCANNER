@@ -28,6 +28,9 @@ https://github.com/user-attachments/assets/764c560d-b922-482a-9bba-d345ac31a563
 ### Live Match Data
 
 - **Today's Matches**: Real-time match data across 10+ competitions
+- **Fixture Discovery**: Search and filter by team, competition, status, and favorites
+- **Fixture Actions**: Detail view, sharing, and calendar export
+- **Adaptive Refresh**: Faster updates while matches are live and provider freshness notices
 - **Multiple Data Sources**: ESPN API primary with Football-data.org fallback
 - **Competition Coverage**: Premier League, La Liga, Bundesliga, Serie A, and more
 
@@ -35,6 +38,7 @@ https://github.com/user-attachments/assets/764c560d-b922-482a-9bba-d345ac31a563
 
 - **Live Standings**: Real-time league tables via SofaScore widgets
 - **Major European Leagues**: Premier League, La Liga, Bundesliga, Serie A, Ligue 1, Liga Portugal
+- **Efficient Loading**: Select and lazy-load one league table at a time
 - **Professional Integration**: Official SofaScore embed widgets
 
 ### Technical Features
@@ -43,12 +47,14 @@ https://github.com/user-attachments/assets/764c560d-b922-482a-9bba-d345ac31a563
 - **Clean Architecture**: Separation of concerns with modular design
 - **Error Handling**: Graceful degradation and user-friendly error messages
 - **API Integration**: Robust API handling with fallback mechanisms
+- **Efficient Aggregation**: Concurrent provider requests with bounded deadlines
+- **Resilient Caching**: Fresh and stale fixture caching during provider outages
 
 ## Quick Start
 
 ### Prerequisites
 
-- Python 3.7 or higher
+- Python 3.9 or higher
 - Free API key from [football-data.org](https://www.football-data.org/client/register)
 
 ### Installation
@@ -91,6 +97,12 @@ https://github.com/user-attachments/assets/764c560d-b922-482a-9bba-d345ac31a563
 
 6. **Open your browser:**
    Navigate to `http://localhost:5000`
+
+For production, run the WSGI entry point instead of Flask's development server:
+
+```bash
+gunicorn --bind 0.0.0.0:5000 --workers 2 --timeout 30 wsgi:app
+```
 
 ## Usage
 
@@ -222,19 +234,29 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - `GET /api/teams/<competition_id>` - Get teams for a specific competition
 - `GET /api/team-analysis/<team_id>` - Get comprehensive team analysis
 - `GET /api/team/<team_id>` - Get individual team information
-- `GET /api/debug-matches/<team_id>` - Debug endpoint for match data access
+- `GET /api/matches-today?date=YYYY-MM-DD&timezone=Area/City` - Get fixtures for a local calendar date
+- `GET /health/live` - Process liveness check
+- `GET /health/ready` - Application readiness check
 
 ## Project Structure
 
 ```
 soccer-comp/
-├── app.py              # Main Flask application
+├── app.py              # Lightweight development entry point
+├── soccer_scanner/
+│   ├── __init__.py     # Application factory and dependency wiring
+│   ├── config.py       # Environment-backed configuration
+│   ├── routes/         # Page and JSON API blueprints
+│   └── services/       # Provider clients, caching, and domain logic
+├── tests/              # Route and service regression tests
 ├── requirements.txt    # Python dependencies
 ├── .env               # Environment variables (API key)
 ├── README.md          # This file
 ├── templates/
-│   └── index.html     # Main web interface
-└── static/            # Static assets (currently empty)
+│   ├── base.html      # Shared accessible application shell
+│   ├── index.html     # Team analysis interface
+│   └── matches_today.html # Fixture discovery interface
+└── static/            # Cacheable page CSS and JavaScript modules
 ```
 
 ## Free API Limitations

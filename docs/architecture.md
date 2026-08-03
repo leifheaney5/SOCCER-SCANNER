@@ -37,15 +37,19 @@ Soccer Scanner is a modern web application that provides comprehensive football 
 └─────────────────────────────────────────┘
 ```
 
+All pages extend a shared Jinja application shell. Page-specific CSS and
+JavaScript are served as cacheable static assets instead of being embedded in
+the HTML templates.
+
 ### Backend Architecture
 
 ```
 ┌─────────────────────────────────────────┐
 │            Flask Application             │
 ├─────────────────────────────────────────┤
-│  Route Handlers:                        │
-│  • / (Team Analysis)                    │
-│  • /matches-today                       │
+│  Blueprint Route Handlers:              │
+│  • / (Fixtures)                         │
+│  • /teams (Team Analysis)               │
 │  • /league-tables                       │
 │  • /api/* (Data Endpoints)              │
 ├─────────────────────────────────────────┤
@@ -55,10 +59,10 @@ Soccer Scanner is a modern web application that provides comprehensive football 
 │  • Match data transformation            │
 │  • Performance timeline generation      │
 ├─────────────────────────────────────────┤
-│  Data Access:                           │
-│  • Football-data.org API client         │
-│  • ESPN API integration                 │
-│  • Error handling & fallbacks           │
+│  Service Layer:                         │
+│  • Football-data.org session client     │
+│  • Concurrent ESPN fixture aggregation  │
+│  • TTL caching, normalization, fallback │
 └─────────────────────────────────────────┘
 ```
 
@@ -90,16 +94,20 @@ Soccer Scanner is a modern web application that provides comprehensive football 
 
 ### 2. Live Matches Flow
 1. User navigates to matches page
-2. Primary API call to ESPN for today's matches
-3. If ESPN fails, fallback to Football-data.org
-4. Data processed and formatted for display
-5. Real-time updates via periodic API calls
+2. Browser sends the selected date and IANA timezone
+3. Backend translates the local day into its covering UTC provider dates
+4. Primary API calls retrieve ESPN fixtures for those dates
+5. If ESPN fails, fallback to Football-data.org
+6. Fixtures are filtered back to the user's local calendar date
+7. Data is processed and formatted for display
+8. Real-time updates run via adaptive periodic API calls
 
 ### 3. League Tables Flow
 1. User accesses league tables page
-2. SofaScore widgets embedded directly
-3. Live data streams from SofaScore servers
-4. No backend processing required
+2. User selects one configured competition
+3. The selected SofaScore table is lazy-loaded into a single iframe
+4. Changing competition replaces the current embed instead of loading every table
+5. No backend processing is required
 
 ## Security Considerations
 
@@ -121,21 +129,23 @@ Soccer Scanner is a modern web application that provides comprehensive football 
 ## Performance Optimizations
 
 ### Frontend Optimizations
-- Minified CSS and JavaScript
-- Efficient DOM manipulation
-- Lazy loading of non-critical content
-- Responsive image handling
+- Responsive layouts for desktop and mobile
+- Date state persisted in the fixture URL
+- Periodic fixture refreshes
+- Shared template shell with external, cacheable page assets
+- Strict same-origin script policy without inline script execution
 
 ### Backend Optimizations
-- Efficient API call batching
-- Data transformation optimization
-- Memory-efficient data structures
-- Error handling without performance impact
+- Concurrent, deadline-bounded ESPN competition requests
+- Persistent HTTP sessions with connection/read timeouts
+- Centralized fixture normalization and deduplication
+- Partial provider-health reporting
 
 ### Caching Strategy
-- Browser caching for static assets
-- API response caching (future enhancement)
-- Template caching in Flask
+- Thread-safe, size-bounded fixture response cache
+- Fresh and stale cache windows for provider outage fallback
+- Per-date request coalescing to prevent duplicate upstream work
+- Shared Redis caching remains a future multi-worker enhancement
 
 ## Scalability Considerations
 
@@ -186,7 +196,7 @@ python app.py
 - Graceful degradation when APIs are unavailable
 - User-friendly error messages
 - Fallback data sources
-- Retry logic with exponential backoff
+- Partial provider-health metadata and stale fixture fallback
 
 ### Frontend Error Handling
 - Loading states for better UX
