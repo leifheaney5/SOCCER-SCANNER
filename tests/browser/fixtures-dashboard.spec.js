@@ -49,16 +49,19 @@ test('score preference defaults hidden and persists after reload', async ({page}
     const toggle = page.locator('#score-toggle');
     await expect(toggle).toHaveAttribute('aria-pressed', 'false');
     await expect(toggle).toHaveAccessibleName('Reveal scores');
+    await expect(toggle.locator('svg')).toHaveAttribute('data-icon', 'eye-off');
     await expect.poll(() => page.evaluate(() => localStorage.getItem('soccer-scanner:reveal-scores'))).toBeNull();
 
     await toggle.click();
     await expect(toggle).toHaveAttribute('aria-pressed', 'true');
     await expect(toggle).toHaveAccessibleName('Hide scores');
+    await expect(toggle.locator('svg')).toHaveAttribute('data-icon', 'eye');
     await expect.poll(() => page.evaluate(() => localStorage.getItem('soccer-scanner:reveal-scores'))).toBe('true');
 
     await page.reload();
     await expect(toggle).toHaveAttribute('aria-pressed', 'true');
     await expect(toggle).toHaveAccessibleName('Hide scores');
+    await expect(toggle.locator('svg')).toHaveAttribute('data-icon', 'eye');
 });
 
 test('hidden scores never enter DOM content and reveal consistently', async ({page}) => {
@@ -261,6 +264,11 @@ test('mobile match sheet traps interaction, closes, and restores fixture focus',
     await expect(page.locator('#close-match-context')).toBeFocused();
     await expect(dialog).toContainText('Score hidden');
 
+    await page.keyboard.press('Shift+Tab');
+    expect(await dialog.evaluate(element => element.contains(document.activeElement))).toBe(true);
+    await page.keyboard.press('Tab');
+    expect(await dialog.evaluate(element => element.contains(document.activeElement))).toBe(true);
+
     await page.keyboard.press('Escape');
     await expect(dialog).not.toBeVisible();
     await expect(page.locator('body')).not.toHaveClass(/dialog-open/);
@@ -313,6 +321,11 @@ test('team drawer renders complete intelligence, protects scores, caches, and re
     await expect(drawer).toContainText('2 players');
     await expect(drawer).toContainText('4-3-3');
     await expect(drawer.getByText('Score hidden', {exact: true})).toBeVisible();
+
+    await page.keyboard.press('Shift+Tab');
+    expect(await drawer.evaluate(element => element.contains(document.activeElement))).toBe(true);
+    await page.keyboard.press('Tab');
+    expect(await drawer.evaluate(element => element.contains(document.activeElement))).toBe(true);
 
     const hiddenLeaks = await drawer.evaluate(element => {
         const content = `${element.textContent} ${[...element.querySelectorAll('*')].flatMap(child => [...child.attributes].map(attribute => attribute.value)).join(' ')}`;
@@ -497,4 +510,24 @@ test('narrow mobile keeps the featured score between the teams and the date legi
     expect(layout.homeX).toBeLessThan(layout.scoreX);
     expect(layout.scoreX).toBeLessThan(layout.awayX);
     expect(layout.dateWidth).toBeGreaterThanOrEqual(130);
+});
+
+test('landscape mobile remains scroll-safe and match details stay operable', async ({page}) => {
+    await page.setViewportSize({width: 812, height: 375});
+    await mockFixtures(page);
+    await page.goto('/?date=2026-08-03');
+    await expect(page.locator('#fixture-result-count')).toContainText('13 matches');
+
+    const overflow = await page.evaluate(() => ({
+        documentWidth: document.documentElement.scrollWidth,
+        viewportWidth: document.documentElement.clientWidth,
+    }));
+    expect(overflow.documentWidth).toBeLessThanOrEqual(overflow.viewportWidth);
+
+    const details = page.locator('[data-fixture-id="live-secret"] .details-button');
+    await details.click();
+    await expect(page.locator('#match-context-dialog')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(page.locator('#match-context-dialog')).not.toBeVisible();
+    await expect(details).toBeFocused();
 });
