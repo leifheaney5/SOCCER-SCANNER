@@ -2,114 +2,138 @@
 
 ## Goal
 
-Transform Soccer Scanner from three separate utility pages into a sleek, minimal fixtures-first dashboard. The primary user job is to scan today’s and upcoming football fixtures quickly, then reveal team form and league context only when it improves a match decision.
+Turn Soccer Scanner into a production-quality fixture-scanning workspace that belongs to the same product family as Select XI while keeping the Flask, Jinja, vanilla JavaScript, provider, cache, API, and compatibility-route architecture intact.
 
-## Product scope
+The page has one primary job: help a supporter scan a matchday quickly without accidentally seeing results. Team and match intelligence remain available as contextual, on-demand detail.
 
-### Primary journey
+## Chosen approach
 
-The root route is the only primary product surface. It presents a date-led fixture stream, lets users narrow it by competition, and gives every match a clear state: live, upcoming, or finished. A user can choose a date, filter the stream, open a match, and inspect just enough context without leaving the dashboard.
+Replace the compressed all-purpose fixture script with focused ES modules and rebuild the fixture template around a two-column desktop workspace. Do not restore the legacy feature-heavy renderer: it interpolated provider content into HTML, mixed unrelated responsibilities, and exposed scores by default. Do not extend the current minified source: it directly conflicts with the maintainability requirements.
 
-### Secondary context
-
-- Selecting a team opens an in-page team intelligence drawer or sheet; it shows club identity, season record, recent results, and form.
-- Each competition group exposes a compact standings preview only when standings data is available. A “Full standings” action expands the relevant view in place rather than navigating to a top-level tab.
-- Existing `/teams` and `/league-tables` routes remain available as compatibility routes, but are removed from primary navigation and visually redirect users toward the fixtures dashboard.
-
-### Out of scope
-
-- Accounts, saved teams, notifications, betting information, social feeds, and a new backend data provider.
-- Replacing the existing Flask API contract.
-- Adding a JavaScript framework or a large animation library.
-
-## Information architecture
-
-```text
-Soccer Scanner
-└── Fixtures dashboard (/)
-    ├── Command header: brand, date controls, competition filter, team search
-    ├── Match spotlight: the nearest live or next priority match
-    ├── Fixture stream: competition groups with match cards
-    ├── League pulse: contextual standings snapshot per competition
-    └── Team intelligence drawer: opened from a team name or search result
-
-Compatibility routes
-├── /matches-today → fixtures dashboard
-├── /teams → team intelligence entry point with dashboard return action
-└── /league-tables → standings entry point with dashboard return action
-```
+The fixture API stays unchanged. The browser owns filter state, score preference, grouping, rendering, focus management, and request cancellation. Backend payload changes are unnecessary because the normalized payload already includes crests, scores, competition identity, venue, status, source, matchday/season metadata, provider health, cache state, and last-updated time.
 
 ## Visual direction
 
-The visual language takes the useful qualities of Select XI—compact analytical controls, strong hierarchy, dark workspace surfaces, deliberate information density, and no decorative clutter—without copying its formation-builder UI.
+### Palette
 
-- Canvas: near-black navy/charcoal background with layered, slightly lighter panels.
-- Accent: a single field-green interaction color. Reserve amber/red for status and validation only.
-- Typography: retain Inter initially; use a tight display scale, tabular numerals for time and scores, and muted metadata.
-- Layout: a centered desktop workspace with a narrow context rail; a single-column flow on mobile.
-- Components: rounded but restrained cards, hairline borders, quiet shadows, compact filter pills, and real team crests where source data supplies them.
-- Content tone: direct labels such as “Today”, “Next up”, “Live”, “Form”, and “Standings”; no marketing copy or emojis.
+- Canvas: `#000000`
+- Secondary surface: `#0a0a0a`
+- Card surface: `#141414`
+- Raised surface: `#1a1a1a`
+- Border: `#2a2a2a`
+- Primary text: `#ffffff`
+- Secondary text: `#a0a0b0`
+- Muted text: `#6a6a7a`
+- Interaction lime: `#7cff00`, with `#a8ff4d` for hover/focus
+- Status colors: success `#22c55e`, warning `#f59e0b`, danger `#ef4444`
 
-## Dashboard behaviour
+Lime marks active, selected, live, focused, and actionable states. It is not used as a body-text color or large background wash.
 
-### Header and filters
+### Type and spacing
 
-The fixed header contains the Soccer Scanner wordmark, desktop navigation limited to the fixtures workspace, and a compact date switcher. The date switcher offers Yesterday, Today, Tomorrow, and a calendar input. A competition filter and a searchable team command control refine the already-loaded fixture data; the URL stores the selected date and competition so the view can be shared and refreshed.
+- Inter is the interface face.
+- IBM Plex Mono is the data face for scores, kickoff times, dates, match counts, and status codes.
+- Orbitron is limited to the two-part Soccer Scanner wordmark.
+- The spacing system uses 4 px increments.
+- Controls use 6 px radii; match cards and larger controls use 10 px; modal sheets use 16 px only on mobile.
 
-### Match spotlight
+### Signature: the matchday ledger
 
-Above the stream, show one featured event: a live match first, otherwise the nearest upcoming match. It has the competition, kickoff/status, both teams, score when available, and a subtle action to open context. If the selected date has no fixtures, replace this with an intentional empty state and a nearby-date action rather than a blank panel.
+The fixture stream reads like a digital matchday ledger. Each row has a stable mono status/time rail, paired home/away identity rows, a fixed score cell, and a details action. This creates a recognizable soccer-specific scanning rhythm without copying Select XI's formation-builder layout. The date summary above the stream functions as the ledger heading, and competition headers act as restrained dividers rather than oversized cards.
 
-### Fixture stream
+### Layout
 
-Group matches by competition. Each group has its logo/name, match count, and a collapsible league-pulse trigger. Match cards expose time/status, home and away names/crests, score, and an accessible disclosure control. The expanded card may show venue, matchday, and links to the two team drawers, but does not create a second navigation layer.
+```text
++-----------------------------------------------------------------------+
+| Wordmark | Fixtures | Select XI               [eye] Reveal scores     |
++-----------------------------------------------------------------------+
+| Fixtures                                    Mon, Aug 3                |
+| 42 matches   3 live   18 upcoming   21 finished   Updated 14:32      |
++-----------------------------------------------------------------------+
+| <  Today  >  [date] | Search | Competition | All Live Up Finished    |
++-----------------------------------------------+-----------------------+
+| Compact featured match                        | Match context         |
+| Competition group                             | (sticky, 320 px)      |
+| 18:30 | home row | score/hidden | details     |                       |
+|       | away row |              |             |                       |
++-----------------------------------------------+-----------------------+
+```
 
-### Team intelligence
+The centered shell is at most 1,400 px wide. The fixture stream dominates; an optional 320 px context panel appears only from 1,100 px upward. Below that width, match context is a modal bottom sheet. There is no permanent left rail. Mobile keeps date navigation visible, moves secondary filters into an expandable panel, and reflows fixture cards into status/score, team, and metadata/action rows without horizontal overflow.
 
-Desktop uses a right-side drawer; mobile uses a bottom sheet. Opening it preserves the selected fixture position and moves focus to the sheet heading. The sheet requests the existing team-analysis endpoint only after opening, displays a loading skeleton, then renders season record, form sequence, recent matches, and clear provider-error recovery. Closing restores focus to the initiating club control.
+## Component boundaries
 
-### League pulse
+- `fixture-state.js`: URL-backed date, competition, status, and query state; date arithmetic; status normalization; summary counts; featured-match selection; filter/group functions.
+- `score-preference.js`: one configurable default, localStorage persistence under `soccer-scanner:reveal-scores`, accessible toggle state, and score-value validation.
+- `crest.js`: safe image nodes with explicit dimensions, async/lazy behavior, initials fallback, and error replacement.
+- `fixture-renderer.js`: skeleton, degraded/empty/error states, summary, feature card, competition groups, fixture cards, and spoiler-safe score nodes using DOM construction and `textContent` only.
+- `match-context.js`: selected-fixture rendering, desktop sticky panel, responsive dialog/sheet behavior, Escape handling, focus restoration, and team-intelligence launch actions.
+- `team-drawer.js`: cached team-analysis fetches, loading/retry/partial states, identity, season record, form, recent/upcoming matches, squad summary, focus trap, Escape, restoration, and score-preference rerendering.
+- `fixtures.js`: application controller, request abort/stale-response protection, delegated event wiring, debounced search, filter/date coordination, URL synchronization, and orchestration only.
 
-The dashboard only fetches/embeds standings on user request. A compact preview shows the relevant teams’ positions plus a small top-of-table context. Full standings appear in the same contextual panel and retain the existing provider attribution. This prevents an embedded standings view from dominating the fixtures experience or loading needlessly.
+Each module exports its public functions so Node or browser tests can exercise real production behavior. Provider-derived text is never interpolated into HTML.
 
-## Interaction and motion
+## Score privacy invariant
 
-Motion clarifies state changes; it never exists solely for decoration.
+The default is controlled by one constant and is `false` for first-time visitors. Toggling updates all score-bearing surfaces and persists the preference.
 
-- Dashboard sections fade and rise once on first render, staggered by a maximum of 40 ms between sections.
-- Date and competition changes cross-fade the fixture stream while announcing loading state to screen readers.
-- Match expansion uses an opacity/height transition; drawers and sheets use a transform plus opacity transition.
-- Live status uses a low-contrast pulse that stops under `prefers-reduced-motion`.
-- Hover and keyboard focus use border/accent changes and a maximum 2 px lift; touch devices get no hover-dependent affordance.
-- `prefers-reduced-motion: reduce` disables transitions and animations except immediate state visibility changes.
+When scores are hidden, the renderer must not create score values in visible text, visually hidden text, ARIA labels, titles, tooltips, data attributes, or any other DOM content. Live and finished matches render only a neutral `Score hidden` label with an eye-off icon. Upcoming matches render kickoff time. Team recent-match results use the same rule. Team order, emphasis, and accessible names do not encode the winner.
 
-## Technical architecture
+When scores are revealed, valid live/finished values from `score.fullTime.home` and `.away` appear as tabular numerals. Malformed or missing values render `Score unavailable`. Postponed, cancelled, and suspended states never imply a score.
 
-Keep Flask and vanilla JavaScript. Consolidate duplicated page-specific layout into a dashboard stylesheet and small focused ES modules:
+## Data and interaction flow
 
-- a state/query module for date, competition, and selected-team state;
-- a fixtures-rendering module that creates DOM nodes rather than interpolating HTML;
-- a team-drawer module that requests and displays existing analysis data;
-- a standings-context module that lazy-loads contextual standings;
-- a motion/focus module that centralises reduced-motion and dialog focus behaviour.
+1. The controller reads URL filters and the persisted score preference before the first fixture render.
+2. It requests `/api/matches-today` with the selected local date and IANA timezone. A newer date request aborts the older request and stale responses are ignored.
+3. The renderer updates competition choices, summary counts, the featured match, grouped fixture cards, and the state announcement.
+4. Filter changes update the URL with `history.replaceState` and rerender the already-loaded payload. Search is debounced; date changes fetch again while preserving the surrounding shell.
+5. Selecting a fixture updates the desktop context panel or opens the responsive context sheet. Selecting a team lazily requests `/api/team-analysis/<id>` and caches successful responses for the session.
+6. Changing score visibility rerenders every score-bearing surface from in-memory data without refetching.
 
-Backend route compatibility remains intact. Extend the fixture payload only if the frontend cannot derive the required match status, competition grouping, and team identifiers from the existing response; any extension must be additive and covered by API tests.
+## State treatment
 
-## Accessibility and resilience
+- Initial and date-change loading use fixture-shaped skeleton rows.
+- An empty provider result says `No matches scheduled` and offers adjacent date navigation.
+- A filter-empty result says `No fixtures match these filters` and offers `Clear filters`.
+- A failed request says `Football data is temporarily unavailable` and offers `Retry`.
+- Partial and stale payloads show distinct inline notices plus last-updated time without raw provider exceptions.
+- Missing crests become initial-based neutral shields; missing venue/matchday/stage values are omitted or described as unavailable.
+- Team-analysis failures keep the drawer open with retry. A response with missing sections is explicitly marked `Limited team data` while rendering everything available.
 
-- Use semantic headings, buttons for disclosures, labelled controls, and a `main` landmark.
-- Maintain the existing skip link and provide visible `:focus-visible` states on every interactive control.
-- Implement the drawer/sheet as an accessible dialog with focus trap, Escape close, focus restoration, and scroll containment.
-- Provide text equivalents for status, scores, and colour-coded form.
-- Preserve usable loading, empty, partial-data, and provider-failure states.
-- Keep existing provider attribution and avoid fetching team analysis or standings until requested.
+## Accessibility and motion
+
+- Keep the skip link, logical headings, semantic controls, visible `:focus-visible`, 44 px mobile targets, and live status/result-count announcements.
+- The score control is a labelled pressed button with eye/eye-off SVG and an accurate state description.
+- Dialogs use native `dialog`, trap focus, close on Escape/backdrop, lock background scrolling, respect safe-area insets, and restore focus.
+- Competition disclosure buttons expose `aria-expanded` and `aria-controls`.
+- Form sequences include text (`W`, `D`, `L`) and never rely on color alone.
+- Motion is 150–250 ms and limited to controls, selection, sheets, loading opacity, and a restrained live dot. `prefers-reduced-motion: reduce` removes nonessential animation and smooth scrolling.
+
+## Performance and security
+
+- No runtime framework, icon library, or animation dependency.
+- Fixture crests below the featured match use `loading="lazy"`, `decoding="async"`, fixed width/height, and `object-fit: contain`.
+- Render only changed dashboard sections and use one delegated listener per interactive region.
+- Team analysis is lazy, cached, and not duplicated in flight.
+- All icons are inline SVG generated from trusted local templates.
+- Provider content is assigned with `textContent`; no provider-derived `innerHTML` or `insertAdjacentHTML` is allowed.
+- Existing CSP and cache headers remain intact.
+
+## Testing and verification
+
+- Python route tests verify the semantic shell, compatibility routes, CSP-safe external assets, and unchanged API behavior.
+- Playwright browser tests intercept fixture/team endpoints with complete representative payloads and cover hidden-by-default scores, persistence, DOM absence, revealed scores, upcoming states, crests/fallbacks, grouping, filters, URL state, date controls, loading, retry, partial/stale notices, match context, drawer rendering, keyboard close/focus restoration, reduced motion, and overflow at all requested widths.
+- The full Python suite, Playwright suite, compile check, and `git diff --check` must pass.
+- Manual screenshots and accessibility snapshots are inspected at 320, 375, 430, 768, 1,024, 1,280, and 1,440 px. Browser assertions check `scrollWidth <= clientWidth` at each width and verify score literals are absent while hidden.
 
 ## Acceptance criteria
 
-1. `/` is a fixtures-first dashboard with no primary Teams or League Tables navigation tabs.
-2. A user can choose a date, filter by competition, and understand live/upcoming/finished fixture states without leaving `/`.
-3. A user can open and close accessible team intelligence context from a fixture, with keyboard focus restored on close.
-4. Standings are contextual and lazy-loaded, not a default competing surface.
-5. The dashboard works from 320 px to desktop widths, has no horizontal page overflow, and honours reduced-motion settings.
-6. Existing `/teams`, `/league-tables`, and `/matches-today` paths continue to return successful responses.
-7. Existing API and backend tests remain green; new tests cover dashboard filtering, DOM state, keyboard interaction, and reduced-motion handling.
+1. The visual canvas, surfaces, type roles, density, borders, and lime accent align with Select XI without copying its builder layout.
+2. The header, summary, unified toolbar, fixture stream, featured match, competition grouping, and responsive context surface are complete and functional.
+3. Every team identity has a crest or intentional fallback, and every fixture uses separate home/away rows.
+4. Scores are hidden by default, absent from all DOM content while hidden, consistently revealed on request, and persisted across reloads.
+5. The match context and team-intelligence drawer render meaningful existing provider data and implement accessible modal behavior.
+6. Loading, empty, filtered-empty, provider-error, partial, stale, missing-crest, missing-score, and team-analysis error states are intentional and actionable.
+7. URL state survives refresh and sharing; outdated requests and duplicate analysis requests are controlled.
+8. The page has no horizontal overflow and remains usable from 320 px through 1,440 px, including keyboard and reduced-motion modes.
+9. Existing Flask/API/provider/cache/compatibility architecture is preserved, all tests pass, and primary source files remain readable and modular.
