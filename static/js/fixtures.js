@@ -20,6 +20,7 @@ import {
     renderRequestError,
     renderSummary,
 } from './fixture-renderer.js';
+import {createMatchContext} from './match-context.js';
 
 const byId = id => document.getElementById(id);
 const state = createState(window.location.search);
@@ -30,6 +31,7 @@ const expandedGroups = new Set();
 let selectedFixtureId = null;
 let activeRequestController = null;
 let requestSequence = 0;
+let matchContext = null;
 
 function syncUrl() {
     const query = state.toSearchParams().toString();
@@ -82,6 +84,7 @@ function reflectCurrentResults() {
     }
     byId('fixture-result-count').textContent = `${summary.total} ${summary.total === 1 ? 'match' : 'matches'}`;
     byId('dashboard-status').textContent = `${summary.total} fixtures shown`;
+    matchContext?.rerender();
 }
 
 async function loadFixtures() {
@@ -124,6 +127,8 @@ function applyFilter(patch) {
 
 function chooseDate(date) {
     state.set({date});
+    selectedFixtureId = null;
+    matchContext?.reset();
     syncControls();
     syncUrl();
     loadFixtures();
@@ -168,6 +173,11 @@ function bindEvents() {
         } else if (action.dataset.action === 'select-fixture') {
             selectedFixtureId = action.dataset.fixtureId;
             reflectCurrentResults();
+            const match = payload?.matches?.find(item => String(item.id) === selectedFixtureId);
+            const replacement = byId('fixture-stream').querySelector(
+                `.details-button[data-fixture-id="${CSS.escape(selectedFixtureId)}"]`,
+            );
+            if (match && replacement) matchContext.open(match, replacement);
         } else if (action.dataset.action === 'clear-filters') {
             applyFilter({competition: '', status: 'all', query: ''});
         } else if (action.dataset.action === 'shift-date') {
@@ -179,6 +189,15 @@ function bindEvents() {
 }
 
 function init() {
+    matchContext = createMatchContext({
+        panel: byId('match-context'),
+        panelContent: byId('match-context-content'),
+        dialog: byId('match-context-dialog'),
+        dialogContent: byId('match-context-dialog-content'),
+        closeButton: byId('close-match-context'),
+        getRevealed: () => scoresRevealed,
+        onTeam: () => {},
+    });
     syncControls();
     bindEvents();
     loadFixtures();

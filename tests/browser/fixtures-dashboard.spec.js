@@ -214,3 +214,62 @@ test('a superseded slow date response cannot replace the latest date', async ({p
     await expect(page.locator('#fixture-stream')).toContainText('Celtic');
     await expect(page.locator('#fixture-stream')).not.toContainText('Arsenal');
 });
+
+test('desktop fixture selection populates complete spoiler-safe match context', async ({page}) => {
+    await page.setViewportSize({width: 1280, height: 900});
+    await mockFixtures(page);
+    await page.goto('/?date=2026-08-03');
+    await expect(page.locator('#fixture-result-count')).toContainText('13 matches');
+
+    const card = page.locator('.fixture-card[data-fixture-id="live-secret"]');
+    await card.getByRole('button', {name: /Open match details/}).click();
+    await expect(card).toHaveClass(/is-selected/);
+    await expect(page.locator('.fixture-card.is-selected')).toHaveCount(1);
+
+    const context = page.locator('#match-context');
+    await expect(context).toContainText('Premier League');
+    await expect(context).toContainText('Live now');
+    await expect(context).toContainText('Monday, August 3');
+    await expect(context).toContainText('Scanner Stadium');
+    await expect(context).toContainText('Matchday 4');
+    await expect(context).toContainText('Regular season');
+    await expect(context).toContainText('ESPN');
+    await expect(context).toContainText('Score hidden');
+    await expect(context.locator('.team-crest')).toHaveCount(2);
+    await expect(context.getByRole('button', {name: 'Open Arsenal intelligence'})).toBeVisible();
+    await expect(context.getByRole('button', {name: 'Open River Plate intelligence'})).toBeVisible();
+    await expect(page.locator('#match-context-dialog')).not.toBeVisible();
+
+    const hiddenContext = await context.textContent();
+    expect(hiddenContext).not.toMatch(/\b97\b|\b96\b/);
+    await page.locator('#score-toggle').click();
+    await expect(context.getByText('97 – 96', {exact: true})).toBeVisible();
+});
+
+test('mobile match sheet traps interaction, closes, and restores fixture focus', async ({page}) => {
+    await page.setViewportSize({width: 430, height: 800});
+    await mockFixtures(page);
+    await page.goto('/?date=2026-08-03');
+    await expect(page.locator('#fixture-result-count')).toContainText('13 matches');
+
+    const details = page.locator('[data-fixture-id="live-secret"] .details-button');
+    await details.click();
+    const dialog = page.locator('#match-context-dialog');
+    await expect(dialog).toBeVisible();
+    await expect(dialog).toHaveAttribute('open', '');
+    await expect(page.locator('body')).toHaveClass(/dialog-open/);
+    await expect(page.locator('#close-match-context')).toBeFocused();
+    await expect(dialog).toContainText('Score hidden');
+
+    await page.keyboard.press('Escape');
+    await expect(dialog).not.toBeVisible();
+    await expect(page.locator('body')).not.toHaveClass(/dialog-open/);
+    await expect(page.locator('[data-fixture-id="live-secret"] .details-button')).toBeFocused();
+
+    await page.locator('[data-fixture-id="live-secret"] .details-button').click();
+    await page.locator('#match-context-dialog').evaluate(element => {
+        element.dispatchEvent(new MouseEvent('click', {bubbles: true}));
+    });
+    await expect(dialog).not.toBeVisible();
+    await expect(page.locator('[data-fixture-id="live-secret"] .details-button')).toBeFocused();
+});
