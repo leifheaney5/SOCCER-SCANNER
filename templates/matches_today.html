@@ -1,124 +1,25 @@
 {% extends "base.html" %}
-
-{% block title %}Fixtures - Soccer Scanner{% endblock %}
+{% block title %}Fixtures | Soccer Scanner{% endblock %}
 {% block page_styles %}<link rel="stylesheet" href="{{ url_for('static', filename='css/fixtures.css') }}">{% endblock %}
-
 {% block content %}
-<div class="container">
-        <div class="page-header">
-                    <h1 id="page-title">Fixtures</h1>
-            <p>Find live and upcoming matches by date</p>
-            <div class="date-indicator" id="current-date"></div>
-            <div class="date-navigation" aria-label="Choose fixture date">
-                <button class="date-button" id="previous-date" type="button">← Previous</button>
-                <button class="date-button" id="today-date" type="button">Today</button>
-                <input class="date-picker" id="date-picker" type="date" aria-label="Fixture date">
-                <button class="date-button" id="next-date" type="button">Next →</button>
-            </div>
-        </div>
-
-        <section class="fixture-tools" aria-label="Filter fixtures">
-            <input id="fixture-search" class="fixture-control" type="search" placeholder="Search team or competition" aria-label="Search fixtures">
-            <select id="competition-filter" class="fixture-control" aria-label="Filter by competition">
-                <option value="">All competitions</option>
-            </select>
-            <select id="status-filter" class="fixture-control" aria-label="Filter by match status">
-                <option value="">All statuses</option>
-                <option value="live">Live</option>
-                <option value="upcoming">Upcoming</option>
-                <option value="finished">Finished</option>
-            </select>
-            <select id="favorites-filter" class="fixture-control" aria-label="Filter favorites">
-                <option value="">All fixtures</option>
-                <option value="favorites">Favorites only</option>
-            </select>
-        </section>
-        <div id="data-notice" class="data-notice is-hidden" role="status"></div>
-
-        <div id="loading" class="loading">
-            <div class="spinner"></div>
-            <h2>Loading Matches...</h2>
-            <p>Fetching upcoming matches from top competitions</p>
-        </div>
-        <dialog id="fixture-dialog" class="fixture-dialog" aria-labelledby="dialog-title">
-            <div class="dialog-content">
-                <div class="dialog-header">
-                    <h2 id="dialog-title">Fixture details</h2>
-                    <button id="close-dialog" class="fixture-action" type="button" aria-label="Close fixture details">✕</button>
-                </div>
-                <div id="dialog-teams" class="dialog-teams"></div>
-                <div id="dialog-score"></div>
-                <div id="dialog-meta" class="dialog-meta"></div>
-                <div class="fixture-actions dialog-actions">
-                    <button id="calendar-action" class="date-button" type="button">Add to calendar</button>
-                    <button id="share-action" class="date-button" type="button">Share</button>
-                </div>
-            </div>
-        </dialog>
-
-        <div id="matches-container" class="matches-container is-hidden">
-            <div class="priority-legend">
-                <h3>Match Priority Guide</h3>
-                <div class="priority-items">
-                    <div class="priority-item">
-                        <div class="priority-dot priority-high"></div>
-                        <span>High Priority (Top Leagues & Big Clubs)</span>
-                    </div>
-                    <div class="priority-item">
-                        <div class="priority-dot priority-medium"></div>
-                        <span>Medium Priority (Major Competitions)</span>
-                    </div>
-                    <div class="priority-item">
-                        <div class="priority-dot priority-low"></div>
-                        <span>Lower Priority (Other Matches)</span>
-                    </div>
-                </div>
-            </div>
-            
-            <div id="daily-stats" class="daily-stats is-hidden">
-                <!-- Daily statistics will be populated here -->
-            </div>
-            
-            <div id="matches-content"></div>
-        </div>
-
-        <!-- League Links -->
-        <div class="sofascore-widgets">
-            <div class="sofascore-header">
-                <h3><img class="provider-logo" src="https://www.sofascore.com/static/images/sofascore-logo.svg" alt="SofaScore"> SofaScore Hotlinks</h3>
-                <p>Quick access to top European leagues and competitions</p>
-            </div>
-            <div class="sofascore-links-grid">
-                <a href="https://www.sofascore.com/football/livescore" target="_blank" rel="noopener noreferrer" class="sofascore-link live">
-                    <div class="link-icon">🔴</div>
-                    <div class="link-content">
-                        <h4>Live Matches</h4>
-                        <p>Real-time scores and live commentary</p>
-                    </div>
-                    <div class="link-arrow">→</div>
-                </a>
-                <a href="https://www.sofascore.com/football" target="_blank" rel="noopener noreferrer" class="sofascore-link">
-                    <div class="link-icon">📅</div>
-                    <div class="link-content">
-                        <h4>Today's Fixtures</h4>
-                        <p>All scheduled matches for today</p>
-                    </div>
-                    <div class="link-arrow">→</div>
-                </a>
-                <a href="https://www.sofascore.com/tournament/football/england/premier-league/17" target="_blank" rel="noopener noreferrer" class="sofascore-link">
-                    <div class="link-icon"><img class="league-logo" src="https://api.sofascore.app/api/v1/unique-tournament/17/image" alt="Premier League"></div>
-                    <div class="link-content">
-                        <h4>Premier League</h4>
-                        <p>Standings, fixtures & results</p>
-                    </div>
-                    <div class="link-arrow">→</div>
-                </a>
-            </div>
-            <div class="sofascore-footer">
-                <p>📱 <strong>Powered by SofaScore</strong> - Click any section above for detailed live scores, match statistics, and real-time updates</p>
-            </div>
-        </div>
+<div class="dashboard-shell">
+  <section class="dashboard-hero" aria-labelledby="page-title">
+    <p class="eyebrow">Matchday intelligence</p><h1 id="page-title">Fixtures, with context.</h1>
+    <p>Scan the day. Open the detail only when it matters.</p>
+    <div class="date-controls" aria-label="Choose fixture date">
+      <button id="previous-date" type="button">Yesterday</button><button id="today-date" type="button">Today</button>
+      <input id="dashboard-date" type="date" aria-label="Fixture date"><button id="next-date" type="button">Tomorrow</button>
     </div>
+  </section>
+  <section class="dashboard-controls" aria-label="Filter fixtures">
+    <input id="fixture-search" type="search" placeholder="Search a team or competition" aria-label="Search fixtures">
+    <select id="competition-filter" aria-label="Competition"><option value="">All competitions</option></select>
+    <select id="status-filter" aria-label="Match status"><option value="">All statuses</option><option value="live">Live</option><option value="upcoming">Upcoming</option><option value="finished">Finished</option></select>
+  </section>
+  <p id="dashboard-status" class="dashboard-status" role="status"></p>
+  <section id="spotlight" class="spotlight is-hidden" aria-label="Next match"></section>
+  <section><div id="fixture-stream" class="fixture-stream" aria-live="polite"></div></section>
+</div>
+<dialog id="team-drawer" class="team-drawer" aria-labelledby="team-drawer-title"><button id="close-team-drawer" type="button" aria-label="Close team details">Close</button><div id="team-drawer-content"><h2 id="team-drawer-title">Team intelligence</h2></div></dialog>
 {% endblock %}
-
 {% block page_scripts %}<script src="{{ url_for('static', filename='js/fixtures.js') }}" defer></script>{% endblock %}

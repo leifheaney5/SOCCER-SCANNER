@@ -13,10 +13,10 @@ class SoccerScannerRoutesTest(unittest.TestCase):
         response = self.client.get('/')
 
         self.assertEqual(response.status_code, 200)
-        self.assertIn(b'<h1 id="page-title">Fixtures</h1>', response.data)
-        self.assertIn(b'id="fixture-search"', response.data)
-        self.assertIn(b'id="status-filter"', response.data)
-        self.assertIn(b'id="fixture-dialog"', response.data)
+        self.assertIn(b'id="dashboard-date"', response.data)
+        self.assertIn(b'id="fixture-stream"', response.data)
+        self.assertIn(b'id="team-drawer"', response.data)
+        self.assertNotIn(b'>Teams</a>', response.data)
 
     def test_team_analysis_has_a_stable_route(self):
         response = self.client.get('/teams')
