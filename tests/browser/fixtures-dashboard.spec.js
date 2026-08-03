@@ -60,3 +60,59 @@ test('score preference defaults hidden and persists after reload', async ({page}
     await expect(toggle).toHaveAttribute('aria-pressed', 'true');
     await expect(toggle).toHaveAccessibleName('Hide scores');
 });
+
+test('hidden scores never enter DOM content and reveal consistently', async ({page}) => {
+    await mockFixtures(page);
+    await page.goto('/?date=2026-08-03');
+    await expect(page.locator('#fixture-result-count')).toContainText('13 matches');
+
+    await expect(page.getByText('Score hidden', {exact: true}).first()).toBeVisible();
+    await expect(page.getByText('07:45 PM', {exact: true})).toBeVisible();
+    const hiddenLeaks = await page.evaluate(() => {
+        const secrets = ['97', '96', '95', '94'];
+        const text = document.documentElement.textContent || '';
+        const attributes = [...document.querySelectorAll('*')].flatMap(element => (
+            [...element.attributes].map(attribute => attribute.value)
+        )).join(' ');
+        return secrets.filter(secret => (
+            new RegExp(`\\b${secret}\\b`).test(text)
+            || new RegExp(`\\b${secret}\\b`).test(attributes)
+        ));
+    });
+    expect(hiddenLeaks).toEqual([]);
+
+    await page.locator('#score-toggle').click();
+    await expect(page.getByText('97 – 96', {exact: true})).toHaveCount(2);
+    await expect(page.getByText('97 – 96', {exact: true}).first()).toBeVisible();
+    await expect(page.getByText('95 – 94', {exact: true})).toBeVisible();
+    await expect(page.getByText('Score unavailable', {exact: true})).toBeVisible();
+    await expect(page.getByText('07:45 PM', {exact: true})).toBeVisible();
+});
+
+test('fixtures render paired identities, crest fallbacks, groups, and live-first feature', async ({page}) => {
+    await mockFixtures(page);
+    await page.goto('/?date=2026-08-03');
+    await expect(page.locator('#fixture-result-count')).toContainText('13 matches');
+
+    const featured = page.locator('#featured-match');
+    await expect(featured).toContainText('Live now');
+    await expect(featured).toContainText('Arsenal');
+    await expect(featured).toContainText('River Plate');
+    await expect(featured.locator('.team-crest')).toHaveCount(2);
+
+    await expect(page.locator('.competition-group')).toHaveCount(5);
+    const premier = page.locator('.competition-group', {hasText: 'Premier League'});
+    await expect(premier).toContainText('England');
+    await expect(premier).toContainText('9 matches');
+    await expect(premier.getByRole('button', {name: 'Show all 9 matches'})).toHaveAttribute('aria-expanded', 'false');
+    await expect(page.locator('.fixture-card')).toHaveCount(10);
+    await premier.getByRole('button', {name: 'Show all 9 matches'}).click();
+    await expect(page.locator('.fixture-card')).toHaveCount(13);
+
+    await expect(page.locator('.fixture-card .team-row')).toHaveCount(26);
+    await expect(page.locator('.fixture-card .team-crest')).toHaveCount(26);
+    await expect(page.locator('.fixture-card img.team-crest-image').first()).toHaveAttribute('loading', 'lazy');
+    await expect(page.locator('.fixture-card img.team-crest-image').first()).toHaveAttribute('decoding', 'async');
+    await expect(page.locator('[data-fixture-id="missing-score"] .crest-fallback')).toHaveCount(2);
+    await expect(page.locator('.fixture-card').first()).not.toContainText(' vs ');
+});

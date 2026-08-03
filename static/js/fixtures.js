@@ -1,6 +1,7 @@
 import {
     createState,
     filterMatches,
+    groupMatches,
     shiftDate,
     summarizeMatches,
     todayLocal,
@@ -10,12 +11,22 @@ import {
     syncScoreToggle,
     writeScorePreference,
 } from './score-preference.js';
+import {
+    renderFeatured,
+    renderFixtureStream,
+    renderLoading,
+    renderNotice,
+    renderRequestError,
+    renderSummary,
+} from './fixture-renderer.js';
 
 const byId = id => document.getElementById(id);
 const state = createState(window.location.search);
 let payload = null;
 let scoresRevealed = readScorePreference();
 let searchTimer = null;
+const expandedGroups = new Set();
+let selectedFixtureId = null;
 
 function syncUrl() {
     const query = state.toSearchParams().toString();
@@ -54,12 +65,21 @@ function reflectCurrentResults() {
     if (!payload) return;
     const matches = filterMatches(payload.matches, state);
     const summary = summarizeMatches(matches);
+    renderSummary(byId('daily-summary'), payload.matches, payload);
+    renderNotice(byId('data-notice'), payload);
+    renderFeatured(byId('featured-match'), matches, scoresRevealed);
+    renderFixtureStream(byId('fixture-stream'), groupMatches(matches), {
+        revealed: scoresRevealed,
+        expandedGroups,
+        selectedId: selectedFixtureId,
+    });
     byId('fixture-result-count').textContent = `${summary.total} ${summary.total === 1 ? 'match' : 'matches'}`;
     byId('dashboard-status').textContent = `${summary.total} fixtures shown`;
 }
 
 async function loadFixtures() {
     byId('dashboard-status').textContent = 'Loading fixtures';
+    renderLoading(byId('fixture-stream'));
     try {
         const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
         const response = await fetch(`/api/matches-today?date=${encodeURIComponent(state.date)}&timezone=${encodeURIComponent(timezone)}`);
@@ -71,6 +91,7 @@ async function loadFixtures() {
         reflectCurrentResults();
     } catch {
         byId('dashboard-status').textContent = 'Football data is temporarily unavailable';
+        renderRequestError(byId('fixture-stream'), loadFixtures);
     }
 }
 
@@ -115,7 +136,22 @@ function bindEvents() {
         scoresRevealed = !scoresRevealed;
         writeScorePreference(window.localStorage, scoresRevealed);
         syncScoreToggle(byId('score-toggle'), scoresRevealed);
+        reflectCurrentResults();
     });
+    const fixtureAction = event => {
+        const action = event.target.closest('[data-action]');
+        if (!action) return;
+        if (action.dataset.action === 'toggle-group') {
+            const key = action.dataset.group;
+            expandedGroups.has(key) ? expandedGroups.delete(key) : expandedGroups.add(key);
+            reflectCurrentResults();
+        } else if (action.dataset.action === 'select-fixture') {
+            selectedFixtureId = action.dataset.fixtureId;
+            reflectCurrentResults();
+        }
+    };
+    byId('fixture-stream').addEventListener('click', fixtureAction);
+    byId('featured-match').addEventListener('click', fixtureAction);
 }
 
 function init() {
