@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Fixtures | Soccer Scanner{% endblock %}
-{% block page_styles %}<link rel="stylesheet" href="{{ url_for('static', filename='css/fixtures.css') }}">{% endblock %}
+{% block page_styles %}<link rel="stylesheet" href="{{ url_for('static', filename='css/fixtures.css', v='20260803-dashboard') }}">{% endblock %}
 {% block content %}
 <div class="dashboard-shell">
   <section class="dashboard-hero" aria-labelledby="page-title">
@@ -22,4 +22,4 @@
 </div>
 <dialog id="team-drawer" class="team-drawer" aria-labelledby="team-drawer-title"><button id="close-team-drawer" type="button" aria-label="Close team details">Close</button><div id="team-drawer-content"><h2 id="team-drawer-title">Team intelligence</h2></div></dialog>
 {% endblock %}
-{% block page_scripts %}<script src="{{ url_for('static', filename='js/fixtures.js') }}" defer></script>{% endblock %}
+{% block page_scripts %}<script src="{{ url_for('static', filename='js/fixtures.js', v='20260803-dashboard') }}" defer></script>{% endblock %}
