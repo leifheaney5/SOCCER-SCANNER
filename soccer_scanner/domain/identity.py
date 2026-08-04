@@ -10,6 +10,10 @@ KICKOFF_TOLERANCE_SECONDS = 10 * 60
 SOURCE_ORDER = {'espn': 0, 'football-data': 1}
 
 
+class FixtureIdentityError(ValueError):
+    """Raised when a fixture cannot be assigned a safe public identity."""
+
+
 def _instant(value):
     if not value:
         return None
@@ -26,6 +30,28 @@ def _identity_value(container):
     if not isinstance(container, dict):
         return None
     return container.get('canonicalId')
+
+
+def provider_identity_keys(fixture):
+    provider_ids = fixture.get('providerIds') or {}
+    keys = []
+    for provider, provider_id in provider_ids.items():
+        provider_name = str(provider or '').strip().casefold()
+        event_id = str(provider_id or '').strip()
+        if provider_name and event_id:
+            keys.append((SOURCE_ORDER.get(provider_name, 99), provider_name, event_id))
+    return tuple(
+        f'{provider}:{event_id}'
+        for _rank, provider, event_id in sorted(keys)
+    )
+
+
+def provider_fallback_public_id(fixture):
+    identities = provider_identity_keys(fixture)
+    if not identities:
+        raise FixtureIdentityError('Fixture is missing a provider event identity.')
+    seed = f'provider-fixture|{identities[0]}'
+    return f'fx_{hashlib.sha256(seed.encode("utf-8")).hexdigest()[:24]}'
 
 
 def fixtures_refer_to_same_event(left, right, *, tolerance_seconds=KICKOFF_TOLERANCE_SECONDS):
@@ -110,17 +136,13 @@ def _score(group):
 
 
 def _canonical_id(group, merged):
-    kickoffs = sorted(instant for item in group if (instant := _instant(item.get('utcDate'))) is not None)
-    kickoff = kickoffs[0].replace(second=0, microsecond=0).isoformat() if kickoffs else 'unknown'
-    seed = '|'.join([
-        str(_identity_value(merged.get('competition')) or 'unknown'),
-        str(_identity_value(merged.get('homeTeam')) or 'unknown'),
-        str(_identity_value(merged.get('awayTeam')) or 'unknown'),
-        kickoff,
-        str((merged.get('season') or {}).get('year') or ''),
-        str(merged.get('stage') or ''),
-    ])
-    return f'fx_{hashlib.sha256(seed.encode("utf-8")).hexdigest()[:24]}'
+    candidates = sorted(
+        (item for item in group if provider_identity_keys(item)),
+        key=lambda item: provider_identity_keys(item),
+    )
+    if not candidates:
+        raise FixtureIdentityError('Fixture is missing a provider event identity.')
+    return provider_fallback_public_id(candidates[0])
 
 
 def _merge_group(group):
