@@ -718,6 +718,48 @@ body {
     justify-content: flex-end;
 }
 
+.favorite-button,
+.competition-favorite {
+    width: 44px;
+    height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+}
+
+.favorite-button[aria-pressed="true"],
+.competition-favorite[aria-pressed="true"] {
+    border-color: rgba(var(--accent-rgb), 0.6);
+    background: rgba(var(--accent-rgb), 0.08);
+    color: var(--accent-primary);
+}
+
+.favorite-button[aria-pressed="true"] .icon,
+.competition-favorite[aria-pressed="true"] .icon {
+    fill: currentColor;
+}
+
+.competition-favorite {
+    width: 36px;
+    height: 36px;
+}
+
+.favorite-data-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.favorite-import {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
 .fixture-mobile-meta {
     display: none;
 }
