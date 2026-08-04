@@ -6,12 +6,19 @@ export default defineConfig({
     expect: {timeout: 5_000},
     fullyParallel: false,
     workers: 1,
+    outputDir: 'test-results',
+    preserveOutput: 'always',
+    projects: [
+        {name: 'chromium', use: {browserName: 'chromium'}},
+        {name: 'webkit', use: {browserName: 'webkit'}},
+    ],
     use: {
         baseURL: 'http://127.0.0.1:5100',
         colorScheme: 'dark',
         locale: 'en-US',
         timezoneId: 'America/New_York',
         trace: 'retain-on-failure',
+        serviceWorkers: 'block',
     },
     webServer: {
         command: 'python app.py',

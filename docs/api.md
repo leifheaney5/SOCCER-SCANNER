@@ -1,243 +1,76 @@
-# Soccer Scanner - API Documentation
+# API reference
 
-## Overview
+Public JSON endpoints require no client authentication. Expensive routes are protected by a bounded per-process rate limiter. Every response receives `X-Request-ID`; versioned API errors include the same request ID.
 
-The Soccer Scanner API provides RESTful endpoints for accessing football team data, match information, and league statistics. All endpoints return JSON responses and follow standard HTTP status codes.
+## Canonical fixture API
 
-## Base URL
+### `GET /api/v2/fixtures`
 
-```
-http://localhost:5000/api
-```
+Query parameters:
 
-## Authentication
+- `date`: required format `YYYY-MM-DD`; defaults to the server's current date.
+- `timezone`: IANA timezone such as `America/New_York`; defaults to `UTC`.
 
-API requires a Football-data.org API key configured in environment variables. No authentication required for client requests.
+Unknown parameters return `400 invalid_request`. Invalid dates and timezones return `400` with typed error codes.
 
-## Endpoints
-
-### Get Competitions
-
-Retrieve list of available football competitions.
-
-**Endpoint:** `GET /api/competitions`
-
-**Response:**
-```json
-{
-  "competitions": [
-    {
-      "id": 2021,
-      "name": "Premier League",
-      "plan": "TIER_ONE",
-      "area": {
-        "name": "England"
-      }
-    }
-  ]
-}
-```
-
-**Status Codes:**
-- `200` - Success
-- `500` - API error
-
-### Get Teams
-
-Retrieve teams for a specific competition.
-
-**Endpoint:** `GET /api/teams/{competition_id}`
-
-**Parameters:**
-- `competition_id` (required) - Competition ID from competitions endpoint
-
-**Response:**
-```json
-{
-  "teams": [
-    {
-      "id": 57,
-      "name": "Arsenal FC",
-      "crest": "https://crests.football-data.org/57.png"
-    }
-  ]
-}
-```
-
-**Status Codes:**
-- `200` - Success
-- `404` - Competition not found
-- `500` - API error
-
-### Get Team Analysis
-
-Retrieve comprehensive team analysis including stats, matches, and squad data.
-
-**Endpoint:** `GET /api/team-analysis/{team_id}`
-
-**Parameters:**
-- `team_id` (required) - Team ID from teams endpoint
-
-**Response:**
-```json
-{
-  "team_info": {
-    "id": 57,
-    "name": "Arsenal FC",
-    "founded": 1886,
-    "venue": "Emirates Stadium",
-    "clubColors": "Red / White",
-    "crest": "https://crests.football-data.org/57.png"
-  },
-  "stats": {
-    "wins": 0,
-    "draws": 0,
-    "losses": 0,
-    "win_percentage": 0,
-    "goals_for": 0,
-    "goals_against": 0,
-    "goal_difference": 0,
-    "clean_sheets": 0,
-    "form": [],
-    "home_record": {"wins": 0, "draws": 0, "losses": 0},
-    "away_record": {"wins": 0, "draws": 0, "losses": 0}
-  },
-  "recent_matches": [
-    {
-      "homeTeam": {"id": 57, "name": "Arsenal FC"},
-      "awayTeam": {"id": 61, "name": "Chelsea FC"},
-      "score": {"fullTime": {"home": 2, "away": 1}},
-      "utcDate": "2025-08-22T15:00:00Z",
-      "competition": {"name": "Premier League"}
-    }
-  ],
-  "upcoming_matches": [],
-  "top_performers": {
-    "squad_summary": {
-      "total_players": 25,
-      "average_age": 26.4,
-      "youngest_age": 18,
-      "oldest_age": 34,
-      "total_nationalities": 12
-    },
-    "nationality_breakdown": {
-      "England": 8,
-      "Brazil": 3,
-      "France": 2
-    },
-    "full_squad_by_position": {
-      "Goalkeepers": [
-        {
-          "name": "Aaron Ramsdale",
-          "position": "Goalkeeper",
-          "nationality": "England",
-          "age": 25,
-          "shirtNumber": 1
-        }
-      ]
-    }
-  }
-}
-```
-
-**Status Codes:**
-- `200` - Success
-- `404` - Team not found
-- `500` - API error
-
-### Get Today's Matches
-
-Retrieve matches scheduled for today across multiple competitions.
-
-**Endpoint:** `GET /api/matches-today`
-
-**Response:**
-```json
-{
-  "matches": [
-    {
-      "competition": "Premier League",
-      "homeTeam": "Arsenal",
-      "awayTeam": "Chelsea",
-      "time": "15:00",
-      "status": "TIMED"
-    }
-  ],
-  "stats": {
-    "espn_api": 14,
-    "football_data_fallback": 0,
-    "total_unique": 14
-  }
-}
-```
-
-**Status Codes:**
-- `200` - Success
-- `500` - API error
-
-## Error Handling
-
-All endpoints return consistent error responses:
+Successful response shape:
 
 ```json
 {
-  "error": "Error message description"
+  "state": "success",
+  "date": "2026-08-03",
+  "timezone": "America/New_York",
+  "matches": [{
+    "canonicalFixtureId": "fx_0123456789abcdef01234567",
+    "providerIds": {"espn": "401000001"},
+    "utcDate": "2026-08-03T19:00:00Z",
+    "localDate": "2026-08-03",
+    "status": {"code": "scheduled", "raw": "STATUS_SCHEDULED", "completed": false},
+    "homeTeam": {"canonicalId": "arsenal", "name": "Arsenal", "providerIds": {"espn": "359"}},
+    "awayTeam": {"canonicalId": "chelsea", "name": "Chelsea", "providerIds": {"espn": "363"}},
+    "competition": {"canonicalId": "premier-league", "name": "Premier League"},
+    "score": {"winner": null, "fullTime": {"home": null, "away": null}},
+    "sources": ["espn"],
+    "sourceUpdatedAt": "2026-08-03T18:59:00Z",
+    "dataQuality": {"missingFields": ["referees", "aggregate"]}
+  }],
+  "providers": {},
+  "coverage": {},
+  "cache": {"status": "filled", "providers": {"espn": "filled"}},
+  "lastUpdated": "2026-08-03T18:59:00Z"
 }
 ```
 
-## Rate Limits
+Valid states are `success`, `empty_confirmed`, `partial`, and `stale`. Total provider failure returns `503 provider_unavailable`; a provider-limited total failure or application burst limit returns `429 rate_limited` with `Retry-After`.
 
-- Football-data.org free tier: 10 requests per minute
-- ESPN API: No documented limits
-- Application implements graceful degradation when limits are reached
+### `GET /api/v2/fixtures/{canonicalFixtureId}`
 
-## Data Sources
+Returns a recently cached canonical fixture as `{"fixture": ...}`. Invalid IDs return `400`; expired or unknown links return `404`.
 
-- **Primary**: Football-data.org API for team and competition data
-- **Secondary**: ESPN API for live match data
-- **Embedded**: SofaScore widgets for league tables
+### `GET /api/v2/teams/{canonicalId}/analysis`
 
-## Response Times
+Resolves the maintained canonical team ID to Football-Data.org and returns verified team analysis. Missing mappings return `404 team_identity_unavailable`. The endpoint is unavailable without a working provider credential.
 
-- Team analysis: 2-5 seconds (multiple API calls)
-- Competitions/Teams: 1-2 seconds
-- Today's matches: 1-3 seconds
+### `GET /api/v2/capabilities`
 
-## Example Usage
+Returns typed `supported`, `unavailable`, or `not_supported` states for provider-gated features. Unsupported results contain a reason and never a synthetic `data` field.
 
-### JavaScript Fetch Example
+## Health and build
 
-```javascript
-// Get competitions
-const response = await fetch('/api/competitions');
-const data = await response.json();
+- `GET /health/live`: process liveness.
+- `GET /health/ready`: dependency wiring, exact build, and cache readiness/degradation.
+- `GET /health/version`: version, full commit SHA, build timestamp, environment, and asset token.
+- `GET /health/metrics`: in-process counters and timing aggregates; no raw requests or credentials.
 
-// Get teams for Premier League
-const teams = await fetch('/api/teams/2021');
-const teamData = await teams.json();
+## Page and export routes
 
-// Analyze Arsenal
-const analysis = await fetch('/api/team-analysis/57');
-const teamAnalysis = await analysis.json();
-```
+- `/`, `/matches-today`: fixture dashboard.
+- `/calendar`: bounded seven-day calendar.
+- `/fixtures/{id}`: canonical dashboard deep-link redirect.
+- `/fixtures/{id}.ics`: score-free RFC 5545 event.
+- `/teams`, `/teams/{canonicalId}`: team discovery and stable team page.
+- `/competitions/{canonicalId}`: stable competition page.
+- `/league-tables`: consent-gated third-party table embed.
+- `/privacy`, `/data-sources`, `/offline`: product information and offline shell.
 
-### Python Requests Example
-
-```python
-import requests
-
-# Get competitions
-response = requests.get('http://localhost:5000/api/competitions')
-competitions = response.json()
-
-# Get team analysis
-team_analysis = requests.get('http://localhost:5000/api/team-analysis/57')
-data = team_analysis.json()
-```
-
-## Development Notes
-
-- All endpoints handle CORS for development
-- Debug logging available in development mode
-- Environment variables required for API keys
-- Fallback mechanisms implemented for API failures
+Legacy `/api/competitions`, `/api/teams/{id}`, `/api/team/{id}`, `/api/team-analysis/{id}`, and `/api/matches-today` remain for compatibility. New clients should prefer `/api/v2` because legacy errors and provider-shaped response fields are not the canonical contract.

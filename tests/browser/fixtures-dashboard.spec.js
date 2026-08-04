@@ -232,9 +232,14 @@ test('empty date, filtered empty, provider error retry, partial, and stale state
 });
 
 test('a superseded slow date response cannot replace the latest date', async ({page}) => {
+    let markInitialRequestStarted;
+    const initialRequestStarted = new Promise(resolve => {
+        markInitialRequestStarted = resolve;
+    });
     await page.route('**/api/v2/fixtures**', async route => {
         const requested = new URL(route.request().url()).searchParams.get('date');
         if (requested === '2026-08-03') {
+            markInitialRequestStarted();
             await new Promise(resolve => setTimeout(resolve, 800));
             await route.fulfill({contentType: 'application/json', body: JSON.stringify(fixturePayload)});
             return;
@@ -249,6 +254,7 @@ test('a superseded slow date response cannot replace the latest date', async ({p
     });
 
     await page.goto('/?date=2026-08-03', {waitUntil: 'domcontentloaded'});
+    await initialRequestStarted;
     await page.locator('#dashboard-date').fill('2026-08-04');
     await page.locator('#dashboard-date').dispatchEvent('change');
     await expect(page.locator('#fixture-result-count')).toContainText('1 match');
@@ -275,6 +281,7 @@ test('date changes reconcile stale competition and cancel pending search commits
     await expect(page.locator('#competition-filter')).toHaveValue('Premier League');
 
     await page.locator('#fixture-search').fill('Arsenal');
+    await page.waitForTimeout(200);
     await page.locator('#next-date').click();
 
     await expect(page.locator('#fixture-result-count')).toContainText('1 match');

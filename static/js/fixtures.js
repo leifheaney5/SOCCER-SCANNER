@@ -267,7 +267,7 @@ function chooseDate(date) {
         syncControls();
         return;
     }
-    setState({date, dateError: false, fixture: ''}, {reason: 'date'});
+    setState({date, dateError: false, fixture: '', query: ''}, {reason: 'date'});
     selectedFixtureId = null;
     matchContext?.reset();
     syncControls();
@@ -283,7 +283,7 @@ function bindEvents() {
     byId('timezone-filter').addEventListener('change', event => {
         cancelPendingSearch();
         setState({timezone: event.target.value, fixture: ''}, {reason: 'timezone'});
-        selectedFixtureId = restored.fixture || null;
+        selectedFixtureId = state.fixture || null;
         matchContext?.reset();
         syncControls();
         syncUrl('push');

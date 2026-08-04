@@ -4,7 +4,10 @@
   "type": "module",
   "scripts": {
     "test": "playwright test",
-    "test:browser": "playwright test"
+    "test:browser": "playwright test",
+    "test:chromium": "playwright test --project=chromium",
+    "test:webkit": "playwright test --project=webkit",
+    "smoke:production": "node tests/production-smoke.mjs"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.10.2",

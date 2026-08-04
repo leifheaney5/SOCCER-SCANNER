@@ -1,313 +1,80 @@
-# Soccer Scanner ⚽
+# Soccer Scanner
 
-A modern Python & Flask web application that provides comprehensive football team analysis, live match data, and league standings. Built with clean architecture principles and integrating multiple sports APIs for the most complete football data experience.
+Soccer Scanner 2.0 is a spoiler-safe football fixture workspace built with Flask and vanilla JavaScript. The production site is [soccerscanner.pro](https://soccerscanner.pro).
 
-![Soccer Scanner](https://img.shields.io/badge/version-1.0.0-blue.svg)
-![Python](https://img.shields.io/badge/python-3.7%2B-green.svg)
-![Flask](https://img.shields.io/badge/flask-2.0%2B-red.svg)
-![License](https://img.shields.io/badge/license-MIT-yellow.svg)
+## What it does
 
+- Scans fixtures by local calendar date and IANA timezone across supported ESPN competitions.
+- Keeps every score out of rendered DOM and accessibility content until the visitor explicitly reveals scores.
+- Groups fixtures by competition with canonical team identities, crest fallbacks, deterministic de-duplication, source freshness, and data-quality evidence.
+- Provides shareable filter and fixture URLs, a seven-day calendar, spoiler-free `.ics` exports, local favorites, team intelligence, and explicitly gated league-table embeds.
+- Represents success, confirmed empty, partial, stale, rate-limited, and unavailable provider outcomes truthfully.
+- Runs as an installable PWA. Offline fixture snapshots omit live fixtures and recursively remove scores before storage.
 
-https://github.com/user-attachments/assets/e3f3b3a0-4b3b-4acf-bee6-9f3e491fda6a
+## Runtime architecture
 
-https://github.com/user-attachments/assets/764c560d-b922-482a-9bba-d345ac31a563
+The browser calls the versioned canonical endpoint `GET /api/v2/fixtures`. Flask coordinates typed ESPN and optional Football-Data.org adapters through a bounded provider deadline. Results are normalized, assigned canonical identities, merged, cached, and filtered back to the requested local date. Redis provides shared cache and single-flight coordination when configured; a size-bounded memory cache is the development fallback and reports degraded readiness in production.
 
-<img width="2560" height="1253" alt="Soccer-Scanner-League-Tables" src="https://github.com/user-attachments/assets/f42d4bac-695a-4fc0-8b27-4703993dc3ba" />
+See [architecture](docs/architecture.md), [API contract](docs/api.md), [data sources](docs/data-sources.md), [provider mapping](docs/provider-mapping.md), and [provider capabilities](docs/provider-capabilities.md).
 
+## Local development
 
-## Features
+Requirements:
 
-### Team Analysis
+- Python 3.12
+- Node.js 22 and npm 10
 
-- **Comprehensive Team Data**: Founded date, venue, colors, and crest
-- **Performance Timeline**: Visual timeline of last 10 matches with results
-- **Squad Analytics**: Player demographics, nationality breakdown, age distribution
-- **Match History**: Recent match results with detailed information
-- **Squad Management**: Complete player roster with positions and details
-
-### Fixtures Dashboard
-
-- **Spoiler-safe by default**: Scores are omitted from the DOM until the global reveal control is enabled
-- **Fast fixture scanning**: Competition groups, paired team identities, crests, match states, and a compact featured fixture
-- **Shareable filters**: Date, team, competition, and status state are reflected in the URL
-- **Responsive match context**: A sticky desktop panel becomes an accessible dialog sheet on narrower screens
-- **Team intelligence**: Team data is fetched only on request, cached per team, and shown in a retryable drawer
-- **Resilient providers**: ESPN and Football-data.org responses support partial, stale, empty, and unavailable states
-
-### League Tables
-
-- **Live Standings**: Real-time league tables via SofaScore widgets
-- **Major European Leagues**: Premier League, La Liga, Bundesliga, Serie A, Ligue 1, Liga Portugal
-- **Efficient Loading**: Select and lazy-load one league table at a time
-- **Professional Integration**: Official SofaScore embed widgets
-
-### Technical Features
-
-- **Responsive Design**: Mobile-first approach with dark theme
-- **Clean Architecture**: Separation of concerns with modular design
-- **Error Handling**: Graceful degradation and user-friendly error messages
-- **API Integration**: Robust API handling with fallback mechanisms
-- **Efficient Aggregation**: Concurrent provider requests with bounded deadlines
-- **Resilient Caching**: Fresh and stale fixture caching during provider outages
-
-## Quick Start
-
-### Prerequisites
-
-- Python 3.9 or higher
-- Free API key from [football-data.org](https://www.football-data.org/client/register)
-
-### Installation
-
-1. **Clone the repository:**
-
-   ```bash
-   git clone https://github.com/yourusername/soccer-comp.git
-   cd soccer-comp
-   ```
-
-2. **Create virtual environment:**
-
-   ```bash
-   python -m venv .venv
-   source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-   ```
-
-3. **Install dependencies:**
-
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. **Configure environment:**
-
-   ```bash
-   # Copy the example environment file
-   cp .env.example .env
-   
-   # Edit .env and add your API key
-   # Replace 'your_api_key_here' with your actual API key from football-data.org
-   ```
-
-5. **Run the application:**
-
-   ```bash
-   python app.py
-   ```
-
-6. **Open your browser:**
-   Navigate to `http://localhost:5000`
-
-### Score privacy
-
-Scores start hidden for first-time visitors. The preference is stored locally under
-`soccer-scanner:reveal-scores`; clearing that entry restores the hidden default.
-This rule also applies to featured fixtures, match context, and team recent results.
-
-For production, run the WSGI entry point instead of Flask's development server:
-
-```bash
-gunicorn --bind 0.0.0.0:5000 --workers 2 --timeout 30 wsgi:app
-```
-
-## Usage
-
-### Team Analysis Features
-
-1. Select a competition from the dropdown (Premier League, La Liga, etc.)
-2. Choose a team from the selected competition
-3. Click "Analyze Team" to view comprehensive analysis
-4. Explore team stats, squad details, and match history
-
-### Fixtures Dashboard
-
-1. Open `/` or the compatibility route `/matches-today`
-2. Move between dates or filter by team, competition, and match status
-3. Select a fixture to inspect match context and open team intelligence
-4. Use “Reveal scores” only when you want score-bearing views to render results
-
-### League Standings
-
-1. Click "League Tables" tab
-2. View live standings for 6 major European leagues
-3. Tables update automatically with real-time data
-
-## Documentation
-
-For comprehensive technical documentation, please visit our [docs folder](./docs):
-
-- **[System Architecture](./docs/architecture.md)** - Technical architecture and design principles
-- **[API Documentation](./docs/api.md)** - Complete API endpoint reference
-- **[System Diagrams](./docs/diagrams.md)** - Visual system architecture and data flow
-- **[Deployment Guide](./docs/deployment.md)** - Multi-platform deployment instructions
-
-## Tech Stack
-
-- **Backend**: Python, Flask
-- **APIs**: Football-data.org, ESPN, SofaScore
-- **Frontend**: HTML5, CSS3, JavaScript (Vanilla)
-- **Styling**: Custom CSS with dark theme
-- **Data**: JSON REST APIs
-
-## Tests
-
-Install the browser test dependency and Chromium once, then run both suites:
-
-```bash
-pip install -r requirements.txt
-npm install
-npx playwright install chromium
-PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest -q
-npm test
-```
-
-## Configuration
-
-### Environment Variables
-
-Create a `.env` file in the root directory:
-
-```env
-FOOTBALL_DATA_API_KEY=your_api_key_here
-FLASK_ENV=development
-FLASK_DEBUG=True
-```
-
-### API Keys
-
-1. **Football-data.org**: Free tier provides 10 requests/minute
-   - Register at: [football-data.org](https://www.football-data.org/client/register)
-   - Copy your API key from the dashboard
-   - Add key to `.env` file: `FOOTBALL_DATA_API_KEY=your_actual_key_here`
-
-2. **ESPN API**: Public API, no key required
-3. **SofaScore**: Embedded widgets, no key required
-
-### First Time Setup
-
-```bash
-# 1. Clone and enter directory
-git clone https://github.com/yourusername/soccer-comp.git
-cd soccer-comp
-
-# 2. Create virtual environment
+```powershell
 python -m venv .venv
-
-# 3. Activate virtual environment
-# On Windows:
-.venv\Scripts\activate
-# On macOS/Linux:
-source .venv/bin/activate
-
-# 4. Install dependencies
+.\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-
-# 5. Setup environment variables
-cp .env.example .env
-# Edit .env file and add your API key
-
-# 6. Run the application
+npm ci
+Copy-Item .env.example .env
 python app.py
 ```
 
-The application will be available at `http://localhost:5000`
+Open `http://127.0.0.1:5000`. ESPN fixture coverage works without a credential. `FOOTBALL_DATA_API_KEY` is optional and enables declared Football-Data.org capabilities. Never commit `.env`.
 
-## Deployment
+## Configuration
 
-The application supports multiple deployment platforms:
+| Variable | Purpose | Default |
+|---|---|---|
+| `FOOTBALL_DATA_API_KEY` | Optional team, squad, and standings provider credential | unset |
+| `REDIS_URL` | Shared production cache and cross-worker single-flight | memory fallback |
+| `APP_ENVIRONMENT` | Build/runtime environment; production requires a commit SHA | Railway environment or `development` |
+| `GIT_COMMIT_SHA` | Exact deployed Git revision | Railway commit SHA fallback |
+| `PUBLIC_BASE_URL` | Canonical public origin | `https://soccerscanner.pro` |
+| `TRUSTED_PROXY_HOPS` | Number of trusted reverse-proxy hops | `1` |
+| `PORT` | HTTP port | `5000` |
+| `WEB_CONCURRENCY` | Gunicorn workers | `2` |
 
-- **Heroku**: One-click deployment ready
-- **Railway**: Simple git-based deployment
-- **DigitalOcean App Platform**: Scalable cloud deployment
-- **Docker**: Containerized deployment
-- **VPS**: Traditional server deployment
+The remaining timeout, cache, rate-limit, and provider bounds are defined in `soccer_scanner/config.py` and documented in [deployment](docs/deployment.md).
 
-See [Deployment Guide](./docs/deployment.md) for detailed instructions.
+## Tests
 
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Acknowledgments
-
-- [Football-data.org](https://www.football-data.org/) for comprehensive football data
-- [ESPN](https://www.espn.com/) for live match information
-- [SofaScore](https://www.sofascore.com/) for league table widgets
-- Flask community for excellent documentation and examples
-
----
-
-**Soccer Scanner** - Making football accessible and beautiful. ⚽
-
-## Usage
-
-1. **Select a Competition:** Choose from available football competitions (Premier League, La Liga, etc.)
-2. **Select Team:** Pick a team from the competition to analyze
-3. **Analyze:** Click "Analyze Team" to see comprehensive team statistics and information
-4. **Explore Results:** View team performance metrics, recent matches, and upcoming fixtures
-
-## API Endpoints
-
-- `GET /` - Main application page
-- `GET /api/competitions` - Get available competitions
-- `GET /api/teams/<competition_id>` - Get teams for a specific competition
-- `GET /api/team-analysis/<team_id>` - Get comprehensive team analysis
-- `GET /api/team/<team_id>` - Get individual team information
-- `GET /api/matches-today?date=YYYY-MM-DD&timezone=Area/City` - Get fixtures for a local calendar date
-- `GET /health/live` - Process liveness check
-- `GET /health/ready` - Application readiness check
-
-## Project Structure
-
-```
-soccer-comp/
-├── app.py              # Lightweight development entry point
-├── soccer_scanner/
-│   ├── __init__.py     # Application factory and dependency wiring
-│   ├── config.py       # Environment-backed configuration
-│   ├── routes/         # Page and JSON API blueprints
-│   └── services/       # Provider clients, caching, and domain logic
-├── tests/              # Route and service regression tests
-├── requirements.txt    # Python dependencies
-├── .env               # Environment variables (API key)
-├── README.md          # This file
-├── templates/
-│   ├── base.html      # Shared accessible application shell
-│   ├── index.html     # Team analysis interface
-│   └── matches_today.html # Fixture discovery interface
-└── static/            # Cacheable page CSS and JavaScript modules
+```powershell
+$env:PYTEST_DISABLE_PLUGIN_AUTOLOAD='1'
+python -m pytest -q
+python -m compileall -q app.py wsgi.py soccer_scanner
+npm ci
+npx playwright install chromium webkit
+npm test
 ```
 
-## Free API Limitations
+CI also checks every JavaScript file, serious/critical axe violations, dependency audits, committed secrets, concurrent cache/provider behavior, and synthetic visual-state artifacts. See [testing](docs/testing.md).
 
-The free tier of football-data.org API has some limitations:
-- Limited competitions available
-- Rate limiting (10 requests per minute)
-- Historical data may be limited
+## Production verification
 
-For production use, consider upgrading to a paid plan for more comprehensive data access.
+After Railway reports terminal `SUCCESS`, verify the exact revision rather than inferring deployment from Git:
 
-## Troubleshooting
+```powershell
+$env:BASE_URL='https://soccerscanner.pro'
+$env:EXPECTED_SHA=(git rev-parse HEAD)
+npm run smoke:production
+```
 
-### "Failed to fetch competitions" error
-- Check that your API key is correctly set in the `.env` file
-- Verify your API key is valid at football-data.org
-- Check your internet connection
+The smoke checks root/live/ready/version, exact SHA and asset tokens, the fixture success/error contract, first-party asset and console failures, default hidden-score safety, and 320 px reflow.
 
-### "These teams have never faced off" message
-- This is normal for teams that haven't played against each other
-- Try teams from the same competition and division
-- Some smaller competitions may have limited match history
+## Privacy and boundaries
 
-### No teams loading
-- Some competitions may not be available in the free tier
-- Try selecting a different competition
-- Check the browser console for any JavaScript errors
-
-## Contributing
-
-Feel free to submit issues and enhancement requests!
-
-## License
-
-This project is open source and available under the [MIT License](LICENSE).
+Score preference and favorites stay in browser `localStorage`; there are no user accounts. Client favorites are not notification consent. Events, lineups, detailed statistics, broadcast listings, and notifications remain unavailable until legitimate providers and required consent infrastructure exist.

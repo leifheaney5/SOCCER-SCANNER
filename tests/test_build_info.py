@@ -8,11 +8,11 @@ class BuildInfoTest(unittest.TestCase):
         build = load_build_info({})
 
         self.assertEqual(build.as_public_dict(), {
-            'version': '1.0.0',
+            'version': '2.0.0',
             'commitSha': 'unknown',
             'buildTimestamp': None,
             'environment': 'development',
-            'assetVersion': '1.0.0',
+            'assetVersion': '2.0.0',
         })
 
     def test_explicit_build_values_take_precedence_over_railway_values(self):

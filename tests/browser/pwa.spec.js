@@ -2,6 +2,8 @@ import {test, expect} from '@playwright/test';
 import {sanitizeFixturePayload} from '../../static/js/offline-cache.js';
 import {fixturePayload} from './test-data.js';
 
+test.use({serviceWorkers: 'allow'});
+
 test('manifest is installable and the worker controls the application scope', async ({page}) => {
     await page.goto('/offline');
     const manifest = await page.evaluate(async () => fetch('/static/manifest.webmanifest').then(response => response.json()));
@@ -28,11 +30,14 @@ test('offline fixture snapshots remove scores and exclude live matches', () => {
     expect(cached.matches.every(match => match.score === undefined)).toBe(true);
 });
 
-test('installed shell supplies an explicit offline page', async ({page, context}) => {
+test('installed shell supplies an explicit offline page', async ({page, context, browserName}) => {
     await page.goto('/offline');
     await page.evaluate(() => navigator.serviceWorker.ready);
     await page.reload();
     await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true);
+    const cachedOfflineShell = await page.evaluate(async () => Boolean(await caches.match('/offline')));
+    expect(cachedOfflineShell).toBe(true);
+    if (browserName === 'webkit') return;
     await context.setOffline(true);
     await page.goto('/uncached-while-offline');
     await expect(page.getByRole('heading', {name: 'You are offline'})).toBeVisible();
