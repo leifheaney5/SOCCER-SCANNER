@@ -220,6 +220,16 @@ def merge_fixtures(fixtures, identity_registry=None):
             groups.append([fixture])
         else:
             group.append(fixture)
+    if identity_registry is not None and hasattr(identity_registry, 'resolve_many'):
+        merged = [_merge_group(group) for group in groups]
+        public_ids = identity_registry.resolve_many(list(zip(groups, merged)))
+        if len(public_ids) != len(merged):
+            raise FixtureIdentityError(
+                'Fixture identity registry returned an incomplete batch.'
+            )
+        for match, public_id in zip(merged, public_ids):
+            match['canonicalFixtureId'] = public_id
+        return merged
     return [
         _merge_group(group, identity_registry=identity_registry)
         for group in groups

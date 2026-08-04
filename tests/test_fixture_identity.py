@@ -214,3 +214,29 @@ def test_fixture_without_provider_event_identity_is_rejected():
 
     with pytest.raises(ValueError, match='provider event identity'):
         merge_fixtures([match])
+
+
+def test_registry_resolves_a_composed_response_in_one_batch():
+    class BatchRegistry:
+        def __init__(self):
+            self.calls = []
+
+        def resolve_many(self, entries):
+            self.calls.append(entries)
+            return [
+                f'fx_{index:024x}'
+                for index, _entry in enumerate(entries, start=1)
+            ]
+
+        def resolve(self, _group, _match):
+            raise AssertionError('per-fixture resolution must not be used')
+
+    registry = BatchRegistry()
+    merged = merge_fixtures(
+        [unmapped_fixture(f'event-{index}') for index in range(25)],
+        identity_registry=registry,
+    )
+
+    assert len(registry.calls) == 1
+    assert len(registry.calls[0]) == 25
+    assert len({match['canonicalFixtureId'] for match in merged}) == 25
