@@ -25,9 +25,12 @@ The concurrency/load suite is deterministic and does not call external providers
 ```powershell
 $env:BASE_URL='https://soccerscanner.pro'
 $env:EXPECTED_SHA=(git rev-parse HEAD)
+$env:EXPECTED_ENVIRONMENT='production'
 npm run smoke:production
 ```
 
 The smoke requires a full 40-character SHA and fails on SHA/environment/asset mismatch, non-durable or schema-incompatible persistence, unshared Redis, missing/malformed/duplicate fixture IDs, invalid fixture contracts, static or console errors, revealed-by-default scores, or horizontal overflow at 320 px.
+
+For staging, set its public `BASE_URL` and `EXPECTED_ENVIRONMENT=staging`; all other dependency, identity, browser, and exact-SHA checks remain identical.
 
 Production responses are live evidence and may legitimately show a stable provider error. They must never be replaced with mocked data during this check.

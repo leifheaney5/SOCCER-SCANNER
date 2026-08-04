@@ -28,7 +28,7 @@ Create staging with its own PostgreSQL and Redis data. Set `APP_ENVIRONMENT=stag
 4. Deploy the reviewed commit to the explicitly selected production `web` service.
 5. Poll the scoped deployment until Railway reports terminal `SUCCESS`. A queued or building deployment is not success.
 6. Confirm pre-deploy logs show `alembic upgrade head` completed once.
-7. Run `npm run smoke:production` with `EXPECTED_SHA` set to the exact deployed commit.
+7. Run `npm run smoke:production` with `EXPECTED_SHA` set to the exact deployed commit and `EXPECTED_ENVIRONMENT` set to the selected environment.
 8. Confirm `/health/ready` reports `database.status=ready`, `database.durable=true`, `cache.backend=redis`, `cache.shared=true`, and no blocking reasons.
 9. Compare total fixtures with unique `canonicalFixtureId` count on a busy date and repeat the request to confirm stability.
 10. Record deployment ID, full SHA, schema revision, smoke result, and any operator follow-up.

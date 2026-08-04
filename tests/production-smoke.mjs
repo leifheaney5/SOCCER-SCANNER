@@ -6,8 +6,9 @@ import {
 
 const baseURL = (process.env.BASE_URL || '').replace(/\/$/, '');
 const expectedSha = (process.env.EXPECTED_SHA || '').toLowerCase();
-if (!baseURL || !/^[0-9a-f]{40}$/.test(expectedSha)) {
-    throw new Error('BASE_URL and a full 40-character EXPECTED_SHA are required.');
+const expectedEnvironment = (process.env.EXPECTED_ENVIRONMENT || 'production').toLowerCase();
+if (!baseURL || !/^[0-9a-f]{40}$/.test(expectedSha) || !/^[a-z][a-z0-9-]{0,31}$/.test(expectedEnvironment)) {
+    throw new Error('BASE_URL, a full 40-character EXPECTED_SHA, and a valid EXPECTED_ENVIRONMENT are required.');
 }
 
 async function getJson(path, expectedStatuses = [200]) {
@@ -28,8 +29,8 @@ assertProductionDependenciesReady(ready.body);
 if (version.body.commitSha !== expectedSha || ready.body.build.commitSha !== expectedSha) {
     throw new Error(`Live SHA ${version.body.commitSha} does not match ${expectedSha}.`);
 }
-if (String(version.body.environment).toLowerCase() !== 'production') {
-    throw new Error(`Unexpected environment ${version.body.environment}.`);
+if (String(version.body.environment).toLowerCase() !== expectedEnvironment) {
+    throw new Error(`Unexpected environment ${version.body.environment}; expected ${expectedEnvironment}.`);
 }
 if (version.body.assetVersion !== expectedSha.slice(0, 12)) {
     throw new Error('Asset version is not derived from the expected revision.');
@@ -93,6 +94,7 @@ console.log(JSON.stringify({
     status: 'ok',
     baseURL,
     commitSha: expectedSha,
+    environment: expectedEnvironment,
     assetVersion: expectedSha.slice(0, 12),
     fixtureStatus: fixture.response.status,
     fixtureState: fixture.body.state || fixture.body?.error?.code,
