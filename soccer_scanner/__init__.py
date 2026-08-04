@@ -9,12 +9,14 @@ from flask import Flask, g, jsonify, request
 from .build_info import load_build_info
 from .config import Config
 from .observability import MetricsRegistry, log_event
+from .providers.espn import EspnProvider
+from .providers.football_data import FootballDataProvider
+from .providers.http import ProviderHttpClient
 from .routes.api import api
 from .routes.health import health
 from .routes.pages import pages
-from .services.cache import TTLCache
 from .services.cache_backend import build_cache_backend
-from .services.fixtures import FixtureService
+from .services.fixture_service import CanonicalFixtureService
 from .services.football_data import FootballDataClient
 from .services.rate_limit import MemoryRateLimiter
 from .services.teams import TeamAnalysisService
@@ -62,6 +64,7 @@ def create_app(config=None):
             'api.team_analysis',
             'api.canonical_team_analysis',
             'api.fixtures_by_date',
+            'api.fixtures_v2',
         }
         if request.endpoint not in expensive_endpoints:
             return None
@@ -102,16 +105,38 @@ def create_app(config=None):
     app.extensions['team_identities'] = TeamIdentityResolver.from_file(
         Path(__file__).parent / 'data' / 'team-provider-map.json',
     )
-    app.extensions['fixture_service'] = FixtureService(
-        football_data,
-        TTLCache(
-            app.config['FIXTURE_CACHE_TTL'],
-            stale_ttl_seconds=app.config['FIXTURE_STALE_TTL'],
-            max_entries=app.config['FIXTURE_CACHE_MAX_ENTRIES'],
-        ),
-        timeout=timeout,
-        fetch_deadline=app.config['FIXTURE_FETCH_DEADLINE'],
-        identity_resolver=app.extensions['team_identities'],
+    provider_options = {
+        'timeout': timeout,
+        'max_retries': app.config['PROVIDER_MAX_RETRIES'],
+        'max_json_bytes': app.config['PROVIDER_MAX_JSON_BYTES'],
+        'retry_after_max': app.config['PROVIDER_RETRY_AFTER_MAX'],
+        'pool_connections': app.config['PROVIDER_POOL_CONNECTIONS'],
+        'pool_maxsize': app.config['PROVIDER_POOL_MAXSIZE'],
+    }
+    espn_http = ProviderHttpClient(app.config['ESPN_BASE_URL'], **provider_options)
+    football_http = ProviderHttpClient(
+        app.config['FOOTBALL_DATA_BASE_URL'],
+        **provider_options,
+    )
+    football_http.session.headers['X-Auth-Token'] = (
+        app.config.get('FOOTBALL_DATA_API_KEY') or ''
+    )
+    app.extensions['espn_provider'] = EspnProvider(
+        espn_http,
+        identities=app.extensions['team_identities'],
+    )
+    app.extensions['football_data_provider'] = FootballDataProvider(
+        football_http,
+        app.extensions['team_identities'],
+        enabled=bool(app.config.get('FOOTBALL_DATA_API_KEY')),
+    )
+    app.extensions['fixture_service'] = CanonicalFixtureService(
+        app.extensions['espn_provider'],
+        app.extensions['football_data_provider'],
+        app.extensions['cache_backend'],
+        cache_ttl_seconds=app.config['FIXTURE_CACHE_TTL'],
+        stale_ttl_seconds=app.config['FIXTURE_STALE_TTL'],
+        provider_budget_seconds=app.config['FIXTURE_FETCH_DEADLINE'],
     )
     app.register_blueprint(pages)
     app.register_blueprint(api)

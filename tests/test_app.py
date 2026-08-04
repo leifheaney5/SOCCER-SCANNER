@@ -1,5 +1,6 @@
 import unittest
 import os
+from datetime import date
 from unittest.mock import Mock, patch
 
 from app import app
@@ -9,6 +10,7 @@ from soccer_scanner import create_app
 class SoccerScannerRoutesTest(unittest.TestCase):
     def setUp(self):
         app.config.update(TESTING=True)
+        self.app = app
         self.client = app.test_client()
 
     def test_fixture_dashboard_is_home_page(self):
@@ -56,6 +58,14 @@ class SoccerScannerRoutesTest(unittest.TestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json['code'], 'invalid_timezone')
+
+    def test_v2_rejects_unknown_parameters_with_stable_error_envelope(self):
+        response = self.client.get('/api/v2/fixtures?date=2026-08-03&tracking=unbounded')
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json['error']['code'], 'invalid_request')
+        self.assertFalse(response.json['error']['retryable'])
+        self.assertEqual(response.json['error']['requestId'], response.headers['X-Request-ID'])
 
     def test_health_endpoints_and_security_headers(self):
         live = self.client.get('/health/live')
@@ -187,20 +197,40 @@ class SoccerScannerRoutesTest(unittest.TestCase):
         self.assertEqual(favicon.mimetype, 'image/svg+xml')
         favicon.close()
 
-    @patch('soccer_scanner.services.football_data.FootballDataClient.get')
-    @patch('soccer_scanner.services.fixtures.requests.get')
-    def test_fixture_api_queries_the_requested_date(self, get, football_data_get):
-        get.return_value = Mock(status_code=200)
-        get.return_value.json.return_value = {'events': []}
-        get.return_value.raise_for_status.return_value = None
-        football_data_get.return_value = {'matches': []}
+    def test_fixture_api_alias_queries_the_canonical_service(self):
+        service = Mock()
+        service.fixtures_for_date.return_value = {
+            'state': 'empty_confirmed',
+            'date': '2026-08-14',
+            'timezone': 'UTC',
+            'matches': [],
+        }
+        self.app.extensions['fixture_service'] = service
 
         response = self.client.get('/api/matches-today?date=2026-08-14')
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json['date'], '2026-08-14')
-        self.assertEqual(get.call_count, 20)
-        self.assertTrue(all(call.kwargs['params']['dates'] == '20260814' for call in get.call_args_list))
+        service.fixtures_for_date.assert_called_once_with(date(2026, 8, 14), 'UTC')
+
+    def test_v2_provider_outage_has_stable_typed_error(self):
+        from soccer_scanner.domain.models import FixtureState, FixtureUnavailable
+
+        service = Mock()
+        service.fixtures_for_date.side_effect = FixtureUnavailable(
+            FixtureState.PROVIDER_UNAVAILABLE,
+            'Fixture providers are temporarily unavailable.',
+            retry_after_seconds=30,
+        )
+        self.app.extensions['fixture_service'] = service
+
+        response = self.client.get('/api/v2/fixtures?date=2026-08-14')
+
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(response.json['error']['code'], 'provider_unavailable')
+        self.assertTrue(response.json['error']['retryable'])
+        self.assertEqual(response.json['error']['retryAfterSeconds'], 30)
+        self.assertEqual(response.headers['Retry-After'], '30')
 
     @patch('soccer_scanner.services.teams.TeamAnalysisService.analyze')
     def test_canonical_team_analysis_translates_to_compatible_provider_id(self, analyze):

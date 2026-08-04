@@ -2,14 +2,14 @@ import {expect, test} from '@playwright/test';
 import {emptyFixturePayload, fixturePayload, teamPayload} from './test-data.js';
 
 async function mockFixtures(page, payload = fixturePayload) {
-    await page.route('**/api/matches-today**', route => route.fulfill({
+    await page.route('**/api/v2/fixtures**', route => route.fulfill({
         contentType: 'application/json',
         body: JSON.stringify(payload),
     }));
 }
 
 test('semantic shell shows spoiler control and fixture-shaped loading rows', async ({page}) => {
-    await page.route('**/api/matches-today**', async route => {
+    await page.route('**/api/v2/fixtures**', async route => {
         await new Promise(resolve => setTimeout(resolve, 1_000));
         await route.fulfill({
             contentType: 'application/json',
@@ -133,7 +133,7 @@ test('fixtures render paired identities, crest fallbacks, groups, and live-first
 
 test('date navigation, search, status, competition, and clear controls stay in sync', async ({page}) => {
     const requestedDates = [];
-    await page.route('**/api/matches-today**', route => {
+    await page.route('**/api/v2/fixtures**', route => {
         const url = new URL(route.request().url());
         requestedDates.push(url.searchParams.get('date'));
         return route.fulfill({contentType: 'application/json', body: JSON.stringify(fixturePayload)});
@@ -174,16 +174,16 @@ test('empty date, filtered empty, provider error retry, partial, and stale state
     await expect(emptyState.getByRole('button', {name: 'Previous day'})).toBeVisible();
     await expect(emptyState.getByRole('button', {name: 'Next day'})).toBeVisible();
 
-    await page.unroute('**/api/matches-today**');
+    await page.unroute('**/api/v2/fixtures**');
     await mockFixtures(page);
     await page.goto('/?date=2026-08-03&q=NoSuchClub');
     await expect(page.getByRole('heading', {name: 'No fixtures match these filters'})).toBeVisible();
     await page.getByRole('button', {name: 'Clear filters'}).last().click();
     await expect(page.locator('#fixture-result-count')).toContainText('13 matches');
 
-    await page.unroute('**/api/matches-today**');
+    await page.unroute('**/api/v2/fixtures**');
     let attempts = 0;
-    await page.route('**/api/matches-today**', route => {
+    await page.route('**/api/v2/fixtures**', route => {
         attempts += 1;
         return attempts === 1
             ? route.fulfill({status: 502, contentType: 'application/json', body: JSON.stringify({error: 'provider unavailable'})})
@@ -196,14 +196,14 @@ test('empty date, filtered empty, provider error retry, partial, and stale state
     expect(attempts).toBe(2);
 
     await expect(page.locator('#data-notice')).toContainText('Showing saved fixture data');
-    await page.unroute('**/api/matches-today**');
+    await page.unroute('**/api/v2/fixtures**');
     await mockFixtures(page, {...fixturePayload, stale: false, partial: true});
     await page.reload();
     await expect(page.locator('#data-notice')).toContainText('Some fixture sources are delayed');
 });
 
 test('a superseded slow date response cannot replace the latest date', async ({page}) => {
-    await page.route('**/api/matches-today**', async route => {
+    await page.route('**/api/v2/fixtures**', async route => {
         const requested = new URL(route.request().url()).searchParams.get('date');
         if (requested === '2026-08-03') {
             await new Promise(resolve => setTimeout(resolve, 800));

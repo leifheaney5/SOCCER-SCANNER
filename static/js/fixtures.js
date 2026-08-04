@@ -114,7 +114,7 @@ async function loadFixtures() {
     try {
         const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
         const requestedDate = state.date;
-        const response = await fetch(`/api/matches-today?date=${encodeURIComponent(requestedDate)}&timezone=${encodeURIComponent(timezone)}`, {
+        const response = await fetch(`/api/v2/fixtures?date=${encodeURIComponent(requestedDate)}&timezone=${encodeURIComponent(timezone)}`, {
             signal: activeRequestController.signal,
         });
         if (!response.ok) throw new Error('Fixture request failed');

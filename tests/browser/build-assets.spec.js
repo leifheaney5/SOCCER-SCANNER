@@ -10,7 +10,7 @@ test('all first-party assets load and share the immutable build token', async ({
             firstPartyResponses.push({url: response.url(), status: response.status()});
         }
     });
-    await page.route('**/api/matches-today**', route => route.fulfill({
+    await page.route('**/api/v2/fixtures**', route => route.fulfill({
         contentType: 'application/json',
         body: JSON.stringify(fixturePayload),
     }));

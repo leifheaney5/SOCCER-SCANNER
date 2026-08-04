@@ -1,4 +1,6 @@
 import json
+import threading
+import time
 from datetime import date
 from pathlib import Path
 from unittest.mock import Mock
@@ -146,3 +148,29 @@ def test_adapter_resolves_canonical_identity_only_through_registry():
 
     assert normalized['homeTeam']['canonicalId'] == 'sao-paulo'
     assert normalized['awayTeam']['canonicalId'] is None
+
+
+def test_provider_concurrency_is_bounded_and_workers_finish_before_return():
+    class ConcurrentClient:
+        def __init__(self):
+            self.active = 0
+            self.maximum = 0
+            self.lock = threading.Lock()
+
+        def get_json(self, path, **kwargs):
+            with self.lock:
+                self.active += 1
+                self.maximum = max(self.maximum, self.active)
+            time.sleep(0.02)
+            with self.lock:
+                self.active -= 1
+            return {'events': []}, HttpObservation(1, 0, 0, 20)
+
+    client = ConcurrentClient()
+    leagues = {f'league.{index}': f'League {index}' for index in range(12)}
+    provider = EspnProvider(client, leagues=leagues, max_workers=4)
+
+    provider.fetch_range(date(2026, 8, 3), date(2026, 8, 3))
+
+    assert 1 < client.maximum <= 4
+    assert not any(thread.name.startswith('soccer-espn') for thread in threading.enumerate())

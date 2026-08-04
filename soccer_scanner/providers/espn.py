@@ -1,5 +1,6 @@
 """ESPN scoreboard adapter with truthful, provider-qualified normalization."""
 
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from datetime import date, timedelta
 from time import monotonic
 
@@ -249,10 +250,19 @@ def normalize_event(event, league_id, league_name, identities=None):
 
 
 class EspnProvider:
-    def __init__(self, client, *, identities=None, leagues=None, clock=monotonic):
+    def __init__(
+        self,
+        client,
+        *,
+        identities=None,
+        leagues=None,
+        max_workers=8,
+        clock=monotonic,
+    ):
         self.client = client
         self.identities = identities
         self.leagues = dict(leagues or ESPN_LEAGUES)
+        self.max_workers = max(1, min(8, int(max_workers)))
         self.clock = clock
 
     def fetch_range(self, start_date, end_date, *, budget=None):
@@ -263,37 +273,65 @@ class EspnProvider:
         request_count = timeout_count = rate_limit_count = 0
         source_updates = []
 
-        for league_id, league_name in self.leagues.items():
-            try:
-                payloads, observations = self._range_payloads(
-                    league_id, start_date, end_date, budget=budget,
-                )
-                completed.append(league_id)
-                for observation in observations:
-                    request_count += observation.requestCount
-                    timeout_count += observation.timeoutCount
-                    rate_limit_count += observation.rateLimitCount
-                for payload in payloads:
-                    updated = _nullable_text(payload.get('timestamp')) if isinstance(payload, dict) else None
-                    if updated:
-                        source_updates.append(updated)
-                    events = payload.get('events', []) if isinstance(payload, dict) else []
-                    if not isinstance(events, list):
-                        raise ProviderRequestError('malformed_payload')
-                    fixtures.extend(
-                        normalized
-                        for raw_event in events
-                        if (normalized := normalize_event(
-                            raw_event, league_id, league_name, self.identities,
-                        )) is not None
-                    )
-            except ProviderRequestError as error:
-                observation = error.observation
-                if observation is not None:
-                    request_count += observation.requestCount
-                    timeout_count += observation.timeoutCount
-                    rate_limit_count += observation.rateLimitCount
-                failures.append(error.category)
+        resources = iter(self.leagues.items())
+        pending = {}
+        exhausted = False
+        with ThreadPoolExecutor(
+            max_workers=self.max_workers,
+            thread_name_prefix='soccer-espn',
+        ) as executor:
+            while len(pending) < self.max_workers:
+                try:
+                    league = next(resources)
+                except StopIteration:
+                    exhausted = True
+                    break
+                pending[executor.submit(
+                    self._fetch_league,
+                    league,
+                    start_date,
+                    end_date,
+                    budget,
+                )] = league
+
+            while pending:
+                done, _ = wait(tuple(pending), return_when=FIRST_COMPLETED)
+                for future in done:
+                    league_id, _ = pending.pop(future)
+                    try:
+                        league_fixtures, observations, updates = future.result()
+                        completed.append(league_id)
+                        fixtures.extend(league_fixtures)
+                        source_updates.extend(updates)
+                        for observation in observations:
+                            request_count += observation.requestCount
+                            timeout_count += observation.timeoutCount
+                            rate_limit_count += observation.rateLimitCount
+                    except ProviderRequestError as error:
+                        observation = error.observation
+                        if observation is not None:
+                            request_count += observation.requestCount
+                            timeout_count += observation.timeoutCount
+                            rate_limit_count += observation.rateLimitCount
+                        failures.append(error.category)
+
+                while len(pending) < self.max_workers and not exhausted:
+                    if budget is not None and budget.remaining() <= 0:
+                        failures.append('budget_exhausted')
+                        exhausted = True
+                        break
+                    try:
+                        league = next(resources)
+                    except StopIteration:
+                        exhausted = True
+                        break
+                    pending[executor.submit(
+                        self._fetch_league,
+                        league,
+                        start_date,
+                        end_date,
+                        budget,
+                    )] = league
 
         if not completed:
             status = ProviderStatus.RATE_LIMITED if failures and set(failures) == {'rate_limited'} else ProviderStatus.UNAVAILABLE
@@ -306,7 +344,7 @@ class EspnProvider:
             status=status,
             fixtures=tuple(fixtures),
             requestedResources=tuple(self.leagues),
-            completedResources=tuple(completed),
+            completedResources=tuple(sorted(completed)),
             requestCount=request_count,
             timeoutCount=timeout_count,
             rateLimitCount=rate_limit_count,
@@ -314,6 +352,29 @@ class EspnProvider:
             durationMs=max(0, round((self.clock() - started) * 1000)),
             failureCategories=tuple(sorted(set(failures))),
         )
+
+    def _fetch_league(self, league, start_date, end_date, budget):
+        league_id, league_name = league
+        payloads, observations = self._range_payloads(
+            league_id, start_date, end_date, budget=budget,
+        )
+        fixtures = []
+        source_updates = []
+        for payload in payloads:
+            updated = _nullable_text(payload.get('timestamp')) if isinstance(payload, dict) else None
+            if updated:
+                source_updates.append(updated)
+            events = payload.get('events', []) if isinstance(payload, dict) else []
+            if not isinstance(events, list):
+                raise ProviderRequestError('malformed_payload')
+            fixtures.extend(
+                normalized
+                for raw_event in events
+                if (normalized := normalize_event(
+                    raw_event, league_id, league_name, self.identities,
+                )) is not None
+            )
+        return fixtures, observations, source_updates
 
     def _range_payloads(self, league_id, start_date, end_date, *, budget):
         params = {

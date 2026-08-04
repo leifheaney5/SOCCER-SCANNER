@@ -4,6 +4,7 @@ import os
 class Config:
     FOOTBALL_DATA_API_KEY = os.getenv('FOOTBALL_DATA_API_KEY')
     FOOTBALL_DATA_BASE_URL = 'https://api.football-data.org/v4'
+    ESPN_BASE_URL = 'https://site.api.espn.com/apis/site/v2'
     HTTP_CONNECT_TIMEOUT = 3.05
     HTTP_READ_TIMEOUT = 8
     PROVIDER_MAX_RETRIES = 2
