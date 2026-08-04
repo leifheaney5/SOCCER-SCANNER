@@ -10,17 +10,18 @@ Flask pages + /api/v2 contract
         |
         v
 CanonicalFixtureService
-   |       |        |
-   |       |        +-- canonical identity, field-level merge, local-date filter
-   |       +----------- Redis or bounded memory cache with single-flight fills
-   +------------------- ESPN and optional Football-Data.org adapters
+   |       |        |        |
+   |       |        |        +-- PostgreSQL fixture identity and alias registry
+   |       |        +----------- canonical identity, field-level merge, local-date filter
+   |       +-------------------- Redis or bounded memory cache with single-flight fills
+   +---------------------------- ESPN and optional Football-Data.org adapters
 ```
 
 The HTML shell is server rendered. Page behavior is split into cacheable JavaScript modules: URL/store coordination, fixture state and ranking, spoiler preference, rendering, adaptive refresh, match context, team drawer, favorites, calendar, dialogs, and PWA registration. Desktop and mobile use the same state; match context becomes a modal sheet below the desktop breakpoint.
 
 ## Canonical fixture contract
 
-Provider adapters return camelCase normalized fixtures with explicit provider IDs and timestamps. The identity layer merges two fixtures only when canonical competition, home team, away team, season/stage constraints, and kickoff within ten minutes agree. The stable fixture ID is a truncated SHA-256 digest of canonical competition/teams, minute-normalized kickoff, season, and stage.
+Provider adapters return camelCase normalized fixtures with explicit provider IDs and timestamps. The identity layer never merges conflicting event IDs from the same provider. Cross-provider records merge only when canonical competition, home team, away team, season/stage constraints, and kickoff within ten minutes agree. New public IDs are provider-qualified SHA-256 digests that exclude kickoff, and PostgreSQL retains provider aliases plus superseded public aliases so schedule corrections do not break links.
 
 Field selection is deterministic. Team and competition identity favors the maintained provider map; source freshness selects current status and optional fields; score selection requires an actual provider value. Every merged fixture retains `sources`, `sourceUpdatedAt`, `providerIds`, and `dataQuality.missingFields`.
 
@@ -32,7 +33,9 @@ The orchestrator distinguishes `success`, `empty_confirmed`, `partial`, `stale`,
 
 Provider-range payloads are cached before timezone-specific composition, so compatible timezone requests reuse upstream work. Fresh and stale windows are distinct. Per-key single-flight prevents request storms while unrelated keys fill concurrently.
 
-`REDIS_URL` selects Redis for cross-worker storage and distributed locking. Redis failures fall back to bounded in-process memory and readiness reports `degraded`; healthy memory-only production is functional but not cross-worker coordinated. Fixture deep-link lookup has a bounded multi-day stale window.
+`REDIS_URL` selects Redis for cross-worker storage and distributed locking. Redis failures fall back to bounded in-process memory for requests, but production readiness fails until shared Redis is healthy. Fixture deep links resolve durable public aliases and can refresh a bounded three-day window around the persisted kickoff after cache loss.
+
+Every composed response passes a public-ID uniqueness invariant before fixture-lookup cache writes. A duplicate or missing ID fails the request rather than overwriting another fixture.
 
 ## Spoiler boundary
 
@@ -50,7 +53,7 @@ Scores default hidden and are not placed in text, attributes, or the accessibili
 
 `soccer_scanner/version.py` owns the semantic application version. Production startup requires `GIT_COMMIT_SHA` or Railway's commit SHA. `/health/version` and `/health/ready` expose the exact build, while all first-party CSS and JavaScript entry assets use the first 12 SHA characters.
 
-Gunicorn serves `wsgi:app`. Railway deploys `main`; release completion requires a terminal platform success plus exact-SHA public smoke, not just a pushed commit.
+Gunicorn serves `wsgi:app`. Railway runs `alembic upgrade head` once in pre-deploy, then gates traffic on database/schema and Redis readiness. Release completion requires a terminal platform success plus exact-SHA public smoke, not just a pushed commit. See [Railway architecture](railway-architecture.md).
 
 ## Intentional boundaries
 

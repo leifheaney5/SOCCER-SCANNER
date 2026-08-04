@@ -181,7 +181,7 @@ Commit: `feat: expose dependency readiness and identity diagnostics`
 ### Task 5: Add Railway configuration and operational documentation
 
 **Files:**
-- Create: `railway.toml`
+- Create: `railway.json`
 - Modify: `.env.example`
 - Modify: `README.md`
 - Modify: `docs/architecture.md`
