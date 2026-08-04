@@ -35,6 +35,7 @@ test('URL state initializes controls and filter changes replace the URL', async 
     await expect(page.locator('#fixture-search')).toHaveValue('Arsenal');
 
     await page.locator('#fixture-search').fill('Celtic');
+    await expect.poll(() => page.evaluate(() => location.search)).toContain('q=Celtic');
     await page.locator('#status-upcoming').click();
     await page.locator('#competition-filter').selectOption('Scottish Premiership');
     await expect.poll(() => page.evaluate(() => location.search)).toContain('q=Celtic');
@@ -158,6 +159,7 @@ test('fixtures render paired identities, crest fallbacks, groups, and live-first
 });
 
 test('date navigation, search, status, competition, and clear controls stay in sync', async ({page}) => {
+    await page.clock.setFixedTime(new Date('2026-08-03T16:00:00-04:00'));
     const requestedDates = [];
     await page.route('**/api/v2/fixtures**', route => {
         const url = new URL(route.request().url());
@@ -253,6 +255,62 @@ test('a superseded slow date response cannot replace the latest date', async ({p
     await expect(page.locator('#selected-date-label')).toContainText('August 4');
     await expect(page.locator('#fixture-stream')).toContainText('Celtic');
     await expect(page.locator('#fixture-stream')).not.toContainText('Arsenal');
+});
+
+test('date changes reconcile stale competition and cancel pending search commits', async ({page}) => {
+    await page.route('**/api/v2/fixtures**', route => {
+        const requested = new URL(route.request().url()).searchParams.get('date');
+        const body = requested === '2026-08-04'
+            ? {
+                ...emptyFixturePayload,
+                date: requested,
+                matches: [fixturePayload.matches.find(match => match.id === 'upcoming')],
+                total_matches: 1,
+            }
+            : fixturePayload;
+        return route.fulfill({contentType: 'application/json', body: JSON.stringify(body)});
+    });
+    await page.goto('/?date=2026-08-03&timezone=America%2FNew_York&competition=Premier+League');
+    await expect(page.locator('#competition-filter')).toHaveValue('Premier League');
+
+    await page.locator('#fixture-search').fill('Arsenal');
+    await page.locator('#next-date').click();
+
+    await expect(page.locator('#fixture-result-count')).toContainText('1 match');
+    await expect(page.locator('#competition-filter')).toHaveValue('');
+    await page.waitForTimeout(250);
+    await expect(page.locator('#fixture-search')).toHaveValue('');
+    await expect.poll(() => page.evaluate(() => location.search)).not.toContain('competition=');
+    await expect.poll(() => page.evaluate(() => location.search)).not.toContain('q=');
+});
+
+test('date and status use browser history while search replaces the current entry', async ({page}) => {
+    await mockFixtures(page);
+    await page.goto('/?date=2026-08-03&timezone=America%2FNew_York');
+    await expect(page.locator('#fixture-result-count')).toContainText('13 matches');
+
+    await page.locator('#next-date').click();
+    await expect(page.locator('#dashboard-date')).toHaveValue('2026-08-04');
+    await page.locator('#status-live').click();
+    await expect(page.locator('#status-live')).toHaveAttribute('aria-pressed', 'true');
+    await page.locator('#fixture-search').fill('Arsenal');
+    await expect.poll(() => page.evaluate(() => location.search)).toContain('q=Arsenal');
+
+    await page.goBack();
+    await expect(page.locator('#status-all')).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('#dashboard-date')).toHaveValue('2026-08-04');
+    await page.goBack();
+    await expect(page.locator('#dashboard-date')).toHaveValue('2026-08-03');
+});
+
+test('sort selection is visible and shareable', async ({page}) => {
+    await mockFixtures(page);
+    await page.goto('/?date=2026-08-03&timezone=America%2FNew_York');
+
+    await page.locator('#sort-filter').selectOption('competition');
+
+    await expect.poll(() => page.evaluate(() => location.search)).toContain('sort=competition');
+    await expect(page.locator('#sort-filter')).toHaveValue('competition');
 });
 
 test('desktop fixture selection populates complete spoiler-safe match context', async ({page}) => {

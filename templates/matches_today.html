@@ -47,9 +47,9 @@
 
         <div id="secondary-filters" class="secondary-filters">
             <label class="search-control">
-                <span class="sr-only">Search teams</span>
+                <span class="sr-only">Search teams or competitions</span>
                 <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
-                <input id="fixture-search" type="search" placeholder="Search teams" autocomplete="off">
+                <input id="fixture-search" type="search" placeholder="Search teams or competitions" autocomplete="off">
                 <button id="clear-search" type="button" aria-label="Clear team search" hidden>
                     <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg>
                 </button>
@@ -73,6 +73,39 @@
                     <option value="Asia/Tokyo">Tokyo</option>
                     <option value="Australia/Sydney">Sydney</option>
                 </select>
+            </label>
+
+            <label class="select-control">
+                <span class="sr-only">Country</span>
+                <select id="country-filter" aria-label="Country">
+                    <option value="">All countries</option>
+                </select>
+            </label>
+
+            <label class="select-control">
+                <span class="sr-only">Time window</span>
+                <select id="time-filter" aria-label="Time window">
+                    <option value="all">Any time</option>
+                    <option value="morning">Morning</option>
+                    <option value="afternoon">Afternoon</option>
+                    <option value="evening">Evening</option>
+                    <option value="late-night">Late night</option>
+                </select>
+            </label>
+
+            <label class="select-control">
+                <span class="sr-only">Sort fixtures</span>
+                <select id="sort-filter" aria-label="Sort fixtures">
+                    <option value="kickoff">Kickoff time</option>
+                    <option value="competition">Competition</option>
+                    <option value="live">Live first</option>
+                    <option value="recommended">Recommended</option>
+                </select>
+            </label>
+
+            <label class="check-control">
+                <input id="hide-finished" type="checkbox">
+                <span>Hide finished</span>
             </label>
 
             <div class="status-filters" role="group" aria-label="Match status">

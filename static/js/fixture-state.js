@@ -7,6 +7,8 @@ const EXCEPTION_STATUSES = new Map([
     ['SUSPENDED', 'suspended'],
 ]);
 const FILTER_STATUSES = new Set(['all', 'live', 'upcoming', 'finished']);
+const SORT_VALUES = new Set(['kickoff', 'competition', 'live', 'recommended']);
+const TIME_WINDOWS = new Set(['all', 'morning', 'afternoon', 'evening', 'late-night']);
 
 export function todayLocal(now = new Date()) {
     const year = now.getFullYear();
@@ -62,18 +64,22 @@ export function createState(search = '', defaultTimezone = 'UTC') {
         dateError: params.has('date') && !isValidDate(rawDate),
         timezone: isValidTimezone(rawTimezone) ? rawTimezone : (isValidTimezone(defaultTimezone) ? defaultTimezone : 'UTC'),
         competition: params.get('competition') || '',
+        country: params.get('country') || '',
         status: FILTER_STATUSES.has(rawStatus) ? rawStatus : 'all',
+        sort: SORT_VALUES.has(params.get('sort')) ? params.get('sort') : 'kickoff',
+        timeWindow: TIME_WINDOWS.has(params.get('time')) ? params.get('time') : 'all',
+        hideFinished: params.get('hideFinished') === '1',
         query: params.get('q') || '',
-        set(patch) {
-            Object.assign(this, patch);
-            return this;
-        },
         toSearchParams() {
             const next = new URLSearchParams();
             next.set('date', this.date);
             next.set('timezone', this.timezone);
             if (this.competition) next.set('competition', this.competition);
+            if (this.country) next.set('country', this.country);
             if (this.status !== 'all') next.set('status', this.status);
+            if (this.sort !== 'kickoff') next.set('sort', this.sort);
+            if (this.timeWindow !== 'all') next.set('time', this.timeWindow);
+            if (this.hideFinished) next.set('hideFinished', '1');
             if (this.query) next.set('q', this.query);
             return next;
         },
@@ -89,15 +95,61 @@ export function filterMatches(matches, state) {
     const query = normalizeSearch(state.query.trim());
     return (Array.isArray(matches) ? matches : []).filter(match => {
         const competitionName = match?.competition?.name || '';
+        const country = match?.competition?.area?.name || '';
         const searchable = [
             match?.homeTeam?.name,
             match?.awayTeam?.name,
             competitionName,
         ].filter(Boolean).join(' ');
         const normalizedSearchable = normalizeSearch(searchable);
+        let hour = null;
+        try {
+            const parts = new Intl.DateTimeFormat('en-GB', {
+                timeZone: state.timezone,
+                hour: '2-digit',
+                hourCycle: 'h23',
+            }).formatToParts(new Date(match?.utcDate));
+            hour = Number(parts.find(part => part.type === 'hour')?.value);
+        } catch {
+            hour = null;
+        }
+        const inTimeWindow = state.timeWindow === 'all'
+            || (state.timeWindow === 'morning' && hour >= 6 && hour < 12)
+            || (state.timeWindow === 'afternoon' && hour >= 12 && hour < 18)
+            || (state.timeWindow === 'evening' && hour >= 18 && hour < 24)
+            || (state.timeWindow === 'late-night' && hour >= 0 && hour < 6);
         return (!state.competition || competitionName === state.competition)
+            && (!state.country || country === state.country)
             && (state.status === 'all' || statusKind(match) === state.status)
+            && (!state.hideFinished || statusKind(match) !== 'finished')
+            && inTimeWindow
             && (!query || normalizedSearchable.includes(query));
+    });
+}
+
+export function sortMatches(matches, sort = 'kickoff') {
+    const list = [...(Array.isArray(matches) ? matches : [])];
+    const kickoff = match => String(match?.utcDate || '');
+    const stableId = match => String(match?.canonicalFixtureId || match?.id || '');
+    const rank = match => ({live: 0, upcoming: 1, finished: 2}[statusKind(match)] ?? 3);
+    return list.sort((left, right) => {
+        if (sort === 'competition') {
+            return String(left?.competition?.name || '').localeCompare(String(right?.competition?.name || ''))
+                || kickoff(left).localeCompare(kickoff(right))
+                || stableId(left).localeCompare(stableId(right));
+        }
+        if (sort === 'live') {
+            return rank(left) - rank(right)
+                || kickoff(left).localeCompare(kickoff(right))
+                || stableId(left).localeCompare(stableId(right));
+        }
+        if (sort === 'recommended') {
+            return Number(right?.interestEstimate || 0) - Number(left?.interestEstimate || 0)
+                || kickoff(left).localeCompare(kickoff(right))
+                || stableId(left).localeCompare(stableId(right));
+        }
+        return kickoff(left).localeCompare(kickoff(right))
+            || stableId(left).localeCompare(stableId(right));
     });
 }
 
@@ -129,8 +181,16 @@ export function summarizeMatches(matches) {
 
 export function selectFeatured(matches) {
     const list = Array.isArray(matches) ? matches : [];
-    return list.find(match => statusKind(match) === 'live')
-        || list.find(match => statusKind(match) === 'upcoming')
-        || list.find(match => statusKind(match) === 'finished')
+    const mostInteresting = kind => list.reduce((selected, match) => {
+        if (statusKind(match) !== kind) return selected;
+        const interest = Number(match?.interestEstimate ?? match?.enhanced_info?.importance_score ?? 0);
+        const selectedInterest = Number(
+            selected?.interestEstimate ?? selected?.enhanced_info?.importance_score ?? 0,
+        );
+        return !selected || interest > selectedInterest ? match : selected;
+    }, null);
+    return mostInteresting('live')
+        || mostInteresting('upcoming')
+        || mostInteresting('finished')
         || null;
 }

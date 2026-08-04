@@ -2,19 +2,22 @@ const assetVersion = new URL(import.meta.url).searchParams.get('v');
 const versionedModule = path => (
     assetVersion ? `${path}?v=${encodeURIComponent(assetVersion)}` : path
 );
-const [fixtureStateModule, scorePreferenceModule, fixtureRendererModule, matchContextModule, teamDrawerModule] = await Promise.all([
+const [appStoreModule, fixtureStateModule, scorePreferenceModule, fixtureRendererModule, matchContextModule, teamDrawerModule] = await Promise.all([
+    import(versionedModule('./app-store.js')),
     import(versionedModule('./fixture-state.js')),
     import(versionedModule('./score-preference.js')),
     import(versionedModule('./fixture-renderer.js')),
     import(versionedModule('./match-context.js')),
     import(versionedModule('./team-drawer.js')),
 ]);
+const {createStore} = appStoreModule;
 const {
     createState,
     filterMatches,
     groupMatches,
     isValidDate,
     shiftDate,
+    sortMatches,
     summarizeMatches,
     todayLocal,
 } = fixtureStateModule;
@@ -37,7 +40,11 @@ const {createTeamDrawer} = teamDrawerModule;
 
 const byId = id => document.getElementById(id);
 const detectedTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
-const state = createState(window.location.search, detectedTimezone);
+const store = createStore(createState(window.location.search, detectedTimezone));
+let state = store.getState();
+store.subscribe(next => {
+    state = next;
+});
 let payload = null;
 let scoresRevealed = readScorePreference();
 let searchTimer = null;
@@ -48,9 +55,14 @@ let requestSequence = 0;
 let matchContext = null;
 let teamDrawer = null;
 
-function syncUrl() {
+function setState(patch, metadata = {}) {
+    return store.dispatch(patch, metadata);
+}
+
+function syncUrl(mode = 'replace') {
     const query = state.toSearchParams().toString();
-    history.replaceState(null, '', `${location.pathname}?${query}`);
+    const method = mode === 'push' ? 'pushState' : 'replaceState';
+    history[method]({dashboard: true}, '', `${location.pathname}?${query}`);
 }
 
 function syncControls() {
@@ -63,6 +75,10 @@ function syncControls() {
         timezone.add(new Option(state.timezone.replaceAll('_', ' '), state.timezone));
     }
     timezone.value = state.timezone;
+    byId('country-filter').value = state.country;
+    byId('time-filter').value = state.timeWindow;
+    byId('sort-filter').value = state.sort;
+    byId('hide-finished').checked = state.hideFinished;
     byId('fixture-search').value = state.query;
     byId('clear-search').hidden = !state.query;
     const competition = byId('competition-filter');
@@ -73,8 +89,11 @@ function syncControls() {
         button.setAttribute('aria-pressed', String(button.dataset.status === state.status));
     });
     const activeFilters = Number(Boolean(state.competition))
+        + Number(Boolean(state.country))
         + Number(state.status !== 'all')
-        + Number(Boolean(state.query));
+        + Number(Boolean(state.query))
+        + Number(state.timeWindow !== 'all')
+        + Number(state.hideFinished);
     byId('active-filter-count').textContent = String(activeFilters);
     byId('active-filter-count').hidden = activeFilters === 0;
     byId('clear-filters').hidden = activeFilters === 0;
@@ -86,16 +105,40 @@ function populateCompetitions(matches) {
     const names = [...new Set(matches.map(match => match?.competition?.name).filter(Boolean))].sort();
     const options = [new Option('All competitions', ''), ...names.map(name => new Option(name, name))];
     select.replaceChildren(...options);
-    if (state.competition && names.includes(state.competition)) select.value = state.competition;
+    if (state.competition && names.includes(state.competition)) {
+        select.value = state.competition;
+    } else if (state.competition) {
+        setState({competition: ''}, {reason: 'reconcile'});
+        syncUrl('replace');
+    }
+    const countrySelect = byId('country-filter');
+    const countries = [...new Set(matches.map(match => match?.competition?.area?.name).filter(Boolean))].sort();
+    countrySelect.replaceChildren(
+        new Option('All countries', ''),
+        ...countries.map(country => new Option(country, country)),
+    );
+    if (state.country && countries.includes(state.country)) {
+        countrySelect.value = state.country;
+    } else if (state.country) {
+        setState({country: ''}, {reason: 'reconcile'});
+        syncUrl('replace');
+    }
 }
 
 function reflectCurrentResults() {
     if (!payload) return;
-    const matches = filterMatches(payload.matches, state);
+    const filteredMatches = filterMatches(payload.matches, state);
+    const matches = sortMatches(filteredMatches, state.sort);
+    if (selectedFixtureId && !matches.some(match => (
+        String(match.canonicalFixtureId || match.id) === selectedFixtureId
+    ))) {
+        selectedFixtureId = null;
+        matchContext?.reset();
+    }
     const summary = summarizeMatches(matches);
     renderSummary(byId('daily-summary'), payload.matches, payload);
     renderNotice(byId('data-notice'), payload);
-    renderFeatured(byId('featured-match'), matches, scoresRevealed);
+    renderFeatured(byId('featured-match'), filteredMatches, scoresRevealed);
     if (matches.length === 0) {
         renderEmptyState(byId('fixture-stream'), {filtered: payload.matches.length > 0});
     } else {
@@ -141,24 +184,31 @@ async function loadFixtures() {
     }
 }
 
-function applyFilter(patch) {
-    state.set(patch);
+function cancelPendingSearch() {
+    clearTimeout(searchTimer);
+    searchTimer = null;
+}
+
+function applyFilter(patch, {historyMode = 'push'} = {}) {
+    if (!Object.hasOwn(patch, 'query')) cancelPendingSearch();
+    setState(patch, {reason: 'filter'});
     syncControls();
-    syncUrl();
+    syncUrl(historyMode);
     reflectCurrentResults();
 }
 
 function chooseDate(date) {
+    cancelPendingSearch();
     if (!isValidDate(date)) {
-        state.set({dateError: true});
+        setState({dateError: true}, {reason: 'invalid-date'});
         syncControls();
         return;
     }
-    state.set({date, dateError: false});
+    setState({date, dateError: false}, {reason: 'date'});
     selectedFixtureId = null;
     matchContext?.reset();
     syncControls();
-    syncUrl();
+    syncUrl('push');
     loadFixtures();
 }
 
@@ -168,14 +218,19 @@ function bindEvents() {
     byId('next-date').addEventListener('click', () => chooseDate(shiftDate(state.date, 1)));
     byId('dashboard-date').addEventListener('change', event => chooseDate(event.target.value));
     byId('timezone-filter').addEventListener('change', event => {
-        state.set({timezone: event.target.value});
+        cancelPendingSearch();
+        setState({timezone: event.target.value}, {reason: 'timezone'});
         selectedFixtureId = null;
         matchContext?.reset();
         syncControls();
-        syncUrl();
+        syncUrl('push');
         loadFixtures();
     });
     byId('competition-filter').addEventListener('change', event => applyFilter({competition: event.target.value}));
+    byId('country-filter').addEventListener('change', event => applyFilter({country: event.target.value}));
+    byId('time-filter').addEventListener('change', event => applyFilter({timeWindow: event.target.value}));
+    byId('sort-filter').addEventListener('change', event => applyFilter({sort: event.target.value}));
+    byId('hide-finished').addEventListener('change', event => applyFilter({hideFinished: event.target.checked}));
     document.querySelector('.status-filters').addEventListener('click', event => {
         const button = event.target.closest('[data-status]');
         if (button) applyFilter({status: button.dataset.status});
@@ -184,10 +239,20 @@ function bindEvents() {
         clearTimeout(searchTimer);
         const query = event.target.value;
         byId('clear-search').hidden = !query;
-        searchTimer = setTimeout(() => applyFilter({query}), 150);
+        searchTimer = setTimeout(() => applyFilter({query}, {historyMode: 'replace'}), 150);
     });
-    byId('clear-search').addEventListener('click', () => applyFilter({query: ''}));
-    byId('clear-filters').addEventListener('click', () => applyFilter({competition: '', status: 'all', query: ''}));
+    byId('clear-search').addEventListener('click', () => {
+        cancelPendingSearch();
+        applyFilter({query: ''}, {historyMode: 'replace'});
+    });
+    byId('clear-filters').addEventListener('click', () => applyFilter({
+        competition: '',
+        country: '',
+        status: 'all',
+        query: '',
+        timeWindow: 'all',
+        hideFinished: false,
+    }));
     byId('filter-toggle').addEventListener('click', event => {
         const expanded = event.currentTarget.getAttribute('aria-expanded') === 'true';
         event.currentTarget.setAttribute('aria-expanded', String(!expanded));
@@ -217,13 +282,27 @@ function bindEvents() {
             );
             if (match && replacement) matchContext.open(match, replacement);
         } else if (action.dataset.action === 'clear-filters') {
-            applyFilter({competition: '', status: 'all', query: ''});
+            applyFilter({competition: '', country: '', status: 'all', query: '', timeWindow: 'all', hideFinished: false});
         } else if (action.dataset.action === 'shift-date') {
             chooseDate(shiftDate(state.date, Number(action.dataset.days)));
         }
     };
     byId('fixture-stream').addEventListener('click', fixtureAction);
     byId('featured-match').addEventListener('click', fixtureAction);
+    window.addEventListener('popstate', () => {
+        cancelPendingSearch();
+        const previous = state;
+        const restored = createState(window.location.search, detectedTimezone);
+        setState(restored, {reason: 'popstate'});
+        selectedFixtureId = null;
+        matchContext?.reset();
+        syncControls();
+        if (previous.date !== state.date || previous.timezone !== state.timezone) {
+            loadFixtures();
+        } else {
+            reflectCurrentResults();
+        }
+    });
 }
 
 function init() {

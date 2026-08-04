@@ -116,6 +116,27 @@ body {
     flex: 1 1 auto;
     justify-content: flex-end;
     gap: 8px;
+    flex-wrap: wrap;
+}
+
+.check-control {
+    min-height: 40px;
+    padding: 0 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--bg-primary);
+    color: var(--text-secondary);
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.check-control input {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--accent-primary);
 }
 
 .icon-button,
