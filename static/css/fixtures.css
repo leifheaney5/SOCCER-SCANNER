@@ -339,6 +339,20 @@ body {
     gap: 20px;
 }
 
+.fixture-stream-actions {
+    align-items: center;
+    display: flex;
+    gap: 8px;
+}
+
+.refresh-fixtures.is-updating .icon {
+    animation: refresh-rotation 800ms linear infinite;
+}
+
+@keyframes refresh-rotation {
+    to { transform: rotate(360deg); }
+}
+
 .section-heading h2 {
     margin: 0;
     font-size: 19px;

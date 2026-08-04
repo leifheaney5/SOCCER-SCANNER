@@ -321,11 +321,19 @@ export function renderEmptyState(container, {filtered = false} = {}) {
     container.setAttribute('aria-busy', 'false');
 }
 
-export function renderRequestError(container, onRetry) {
+export function renderRequestError(container, onRetry, {kind = 'unavailable', retryAfterSeconds = null} = {}) {
+    const copy = {
+        invalid_request: ['Check the fixture request', 'The selected date or timezone is not valid.'],
+        rate_limited: ['Fixture updates are temporarily limited', retryAfterSeconds ? `Try again in about ${retryAfterSeconds} seconds.` : 'Please wait a moment before trying again.'],
+        offline: ['You appear to be offline', 'Reconnect to refresh fixture data.'],
+        timeout: ['Fixture providers are taking too long', 'The request timed out before providers completed.'],
+        format: ['Fixture data could not be read', 'A provider returned an unexpected response.'],
+        unavailable: ['Football data is temporarily unavailable', 'The fixture providers did not respond. Try the request again.'],
+    }[kind] || ['Football data is temporarily unavailable', 'The fixture providers did not respond. Try the request again.'];
     const state = node('div', 'dashboard-state dashboard-state--error');
     state.append(
-        node('h3', '', 'Football data is temporarily unavailable'),
-        node('p', '', 'The fixture providers did not respond. Try the request again.'),
+        node('h3', '', copy[0]),
+        node('p', '', copy[1]),
     );
     const retry = node('button', 'control-button', 'Retry');
     retry.type = 'button';
@@ -333,4 +341,13 @@ export function renderRequestError(container, onRetry) {
     state.append(retry);
     container.replaceChildren(state);
     container.setAttribute('aria-busy', 'false');
+}
+
+export function renderUpdateFailure(container, {kind = 'unavailable'} = {}) {
+    const detail = kind === 'offline'
+        ? 'Showing the last loaded fixtures while this device is offline.'
+        : 'Showing the last loaded fixtures while the next update is retried.';
+    container.replaceChildren(node('strong', '', 'Live update delayed'), node('span', '', detail));
+    container.dataset.state = 'update-delayed';
+    container.hidden = false;
 }

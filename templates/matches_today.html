@@ -131,7 +131,12 @@
                         <p class="eyebrow">All competitions</p>
                         <h2 id="fixture-stream-title">Match schedule</h2>
                     </div>
-                    <p id="fixture-result-count" class="result-count">Loading</p>
+                    <div class="fixture-stream-actions">
+                        <p id="fixture-result-count" class="result-count">Loading</p>
+                        <button id="refresh-fixtures" class="icon-button refresh-fixtures" type="button" aria-label="Refresh fixtures">
+                            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>
+                        </button>
+                    </div>
                 </div>
                 <div id="fixture-stream" class="fixture-stream" aria-busy="true">
                     {% for index in range(6) %}

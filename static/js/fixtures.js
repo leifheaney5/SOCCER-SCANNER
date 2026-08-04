@@ -2,13 +2,14 @@ const assetVersion = new URL(import.meta.url).searchParams.get('v');
 const versionedModule = path => (
     assetVersion ? `${path}?v=${encodeURIComponent(assetVersion)}` : path
 );
-const [appStoreModule, fixtureStateModule, scorePreferenceModule, fixtureRendererModule, matchContextModule, teamDrawerModule] = await Promise.all([
+const [appStoreModule, fixtureStateModule, scorePreferenceModule, fixtureRendererModule, matchContextModule, teamDrawerModule, refreshModule] = await Promise.all([
     import(versionedModule('./app-store.js')),
     import(versionedModule('./fixture-state.js')),
     import(versionedModule('./score-preference.js')),
     import(versionedModule('./fixture-renderer.js')),
     import(versionedModule('./match-context.js')),
     import(versionedModule('./team-drawer.js')),
+    import(versionedModule('./refresh-controller.js')),
 ]);
 const {createStore} = appStoreModule;
 const {
@@ -34,9 +35,11 @@ const {
     renderNotice,
     renderRequestError,
     renderSummary,
+    renderUpdateFailure,
 } = fixtureRendererModule;
 const {createMatchContext} = matchContextModule;
 const {createTeamDrawer} = teamDrawerModule;
+const {createRefreshController} = refreshModule;
 
 const byId = id => document.getElementById(id);
 const detectedTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
@@ -54,6 +57,7 @@ let activeRequestController = null;
 let requestSequence = 0;
 let matchContext = null;
 let teamDrawer = null;
+let refreshController = null;
 
 function setState(patch, metadata = {}) {
     return store.dispatch(patch, metadata);
@@ -154,33 +158,70 @@ function reflectCurrentResults() {
     teamDrawer?.rerender();
 }
 
-async function loadFixtures() {
+function classifyRequestFailure(response, body, error = null) {
+    const providerCode = body?.error?.code;
+    let kind = providerCode || 'unavailable';
+    if (!navigator.onLine) kind = 'offline';
+    else if (response?.status === 429) kind = 'rate_limited';
+    else if (response?.status === 400) kind = 'invalid_request';
+    else if (error instanceof SyntaxError) kind = 'format';
+    else if (error?.name === 'TimeoutError') kind = 'timeout';
+    const headerDelay = Number(response?.headers?.get('Retry-After'));
+    const retryAfterSeconds = Number(body?.error?.retryAfterSeconds) || (Number.isFinite(headerDelay) ? headerDelay : null);
+    return {kind, retryAfterSeconds, retryAfterMs: retryAfterSeconds ? retryAfterSeconds * 1_000 : null};
+}
+
+async function loadFixtures({preserve = false} = {}) {
     activeRequestController?.abort();
     activeRequestController = new AbortController();
     const requestId = ++requestSequence;
-    byId('dashboard-status').textContent = 'Loading fixtures';
-    renderLoading(byId('fixture-stream'));
-    byId('fixture-result-count').textContent = 'Loading';
-    byId('featured-match').hidden = true;
-    byId('featured-match').replaceChildren();
-    byId('data-notice').hidden = true;
+    byId('dashboard-status').textContent = preserve ? 'Updating fixtures' : 'Loading fixtures';
+    byId('refresh-fixtures').classList.toggle('is-updating', preserve);
+    byId('refresh-fixtures').setAttribute('aria-busy', String(preserve));
+    if (!preserve) {
+        renderLoading(byId('fixture-stream'));
+        byId('fixture-result-count').textContent = 'Loading';
+        byId('featured-match').hidden = true;
+        byId('featured-match').replaceChildren();
+        byId('data-notice').hidden = true;
+    }
     try {
         const requestedDate = state.date;
         const response = await fetch(`/api/v2/fixtures?date=${encodeURIComponent(requestedDate)}&timezone=${encodeURIComponent(state.timezone)}`, {
             signal: activeRequestController.signal,
         });
-        if (!response.ok) throw new Error('Fixture request failed');
-        const nextPayload = await response.json();
+        let nextPayload = null;
+        try {
+            nextPayload = await response.json();
+        } catch (error) {
+            error.response = response;
+            throw error;
+        }
+        if (!response.ok) {
+            const failure = classifyRequestFailure(response, nextPayload);
+            const error = new Error('Fixture request failed');
+            Object.assign(error, {response, body: nextPayload, failure});
+            throw error;
+        }
         if (requestId !== requestSequence) return;
         payload = {...nextPayload, date: requestedDate};
         if (!Array.isArray(payload.matches)) payload.matches = [];
         populateCompetitions(payload.matches);
         syncControls();
         reflectCurrentResults();
+        return {ok: true};
     } catch (error) {
-        if (error?.name === 'AbortError' || requestId !== requestSequence) return;
-        byId('dashboard-status').textContent = 'Football data is temporarily unavailable';
-        renderRequestError(byId('fixture-stream'), loadFixtures);
+        if (error?.name === 'AbortError' || requestId !== requestSequence) return {ok: false, aborted: true};
+        const failure = error.failure || classifyRequestFailure(error.response, error.body, error);
+        byId('dashboard-status').textContent = preserve ? 'Live update delayed; showing previous fixtures' : 'Football data is temporarily unavailable';
+        if (preserve && payload) renderUpdateFailure(byId('data-notice'), failure);
+        else renderRequestError(byId('fixture-stream'), () => loadFixtures(), failure);
+        return {ok: false, ...failure};
+    } finally {
+        if (requestId === requestSequence) {
+            byId('refresh-fixtures').classList.remove('is-updating');
+            byId('refresh-fixtures').setAttribute('aria-busy', 'false');
+        }
     }
 }
 
@@ -303,6 +344,7 @@ function bindEvents() {
             reflectCurrentResults();
         }
     });
+    byId('refresh-fixtures').addEventListener('click', () => refreshController?.refresh('manual'));
 }
 
 function init() {
@@ -323,7 +365,11 @@ function init() {
     });
     syncControls();
     bindEvents();
-    loadFixtures();
+    refreshController = createRefreshController({
+        load: loadFixtures,
+        getContext: () => ({date: state.date, matches: payload?.matches || []}),
+    });
+    loadFixtures().finally(() => refreshController.start());
 }
 
 init();
