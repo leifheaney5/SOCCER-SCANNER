@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}Data Sources | Soccer Scanner{% endblock %}
+{% block content %}
+<article class="content-page">
+    <p class="eyebrow">Product information</p>
+    <h1>Data sources</h1>
+    <p>Soccer Scanner combines available fixture coverage without inventing missing facts.</p>
+    <h2>ESPN</h2>
+    <p>ESPN provides the primary public fixture schedule and match-state coverage across tracked competitions.</p>
+    <h2>Football-data.org</h2>
+    <p>Football-data.org can add verified competition, club, team-analysis, and fixture fields when a server-side API key is configured.</p>
+    <h2>SofaScore</h2>
+    <p>The Tables page can load a SofaScore standings embed only after the user visits that workspace. Soccer Scanner does not merge those standings into fixture records.</p>
+    <h2>Coverage policy</h2>
+    <p>Unavailable values remain unavailable. Estimates are labeled, provider failures are shown separately from genuinely empty schedules, and each fixture retains source and freshness evidence.</p>
+</article>
+{% endblock %}

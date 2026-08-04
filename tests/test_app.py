@@ -30,7 +30,9 @@ class SoccerScannerRoutesTest(unittest.TestCase):
         self.assertIn('aria-labelledby="team-drawer-title"', html)
         self.assertIn('aria-labelledby="match-context-dialog-title"', html)
         self.assertNotIn('class="suite-rail"', html)
-        self.assertNotIn('>Teams</a>', html)
+        self.assertIn('>Teams</a>', html)
+        self.assertIn('>Calendar</a>', html)
+        self.assertIn('>Favorites</a>', html)
 
     def test_team_analysis_has_a_stable_route(self):
         response = self.client.get('/teams')
@@ -95,6 +97,55 @@ class SoccerScannerRoutesTest(unittest.TestCase):
         self.assertNotIn("script-src 'self' 'unsafe-inline'", live.headers['Content-Security-Policy'])
         self.assertNotIn("style-src 'self' 'unsafe-inline'", live.headers['Content-Security-Policy'])
         self.assertIn("object-src 'none'", live.headers['Content-Security-Policy'])
+        self.assertIn("frame-ancestors 'self'", live.headers['Content-Security-Policy'])
+        self.assertNotIn('Access-Control-Allow-Origin', live.headers)
+
+    def test_api_responses_are_not_stored_and_html_has_canonical_metadata(self):
+        api_response = self.client.get('/api/v2/fixtures?date=invalid')
+        page = self.client.get('/')
+        html = page.get_data(as_text=True)
+
+        self.assertEqual(api_response.headers['Cache-Control'], 'no-store')
+        self.assertIn('<link rel="canonical" href="https://soccerscanner.pro/">', html)
+        self.assertIn('property="og:title"', html)
+        self.assertIn('name="twitter:card"', html)
+        self.assertIn('/static/manifest.webmanifest', html)
+        self.assertNotIn('score', html.lower().split('property="og:description"', 1)[-1].split('>', 1)[0])
+
+    def test_trusted_https_proxy_enables_production_hsts(self):
+        environment = {
+            'APP_ENVIRONMENT': 'production',
+            'GIT_COMMIT_SHA': '0123456789abcdef0123456789abcdef01234567',
+        }
+        with patch.dict(os.environ, environment, clear=False):
+            production_app = create_app({
+                'TESTING': False,
+                'TRUSTED_PROXY_HOPS': 1,
+                'REDIS_URL': None,
+            })
+            response = production_app.test_client().get(
+                '/health/live',
+                headers={'X-Forwarded-Proto': 'https'},
+            )
+
+        self.assertIn('max-age=31536000', response.headers['Strict-Transport-Security'])
+
+    def test_privacy_data_sources_and_error_pages_are_useful(self):
+        privacy = self.client.get('/privacy')
+        sources = self.client.get('/data-sources')
+        missing = self.client.get('/not-a-real-page')
+        missing_api = self.client.get('/api/not-a-real-route')
+
+        self.assertEqual(privacy.status_code, 200)
+        self.assertIn(b'Privacy', privacy.data)
+        self.assertIn(b'localStorage', privacy.data)
+        self.assertEqual(sources.status_code, 200)
+        self.assertIn(b'ESPN', sources.data)
+        self.assertIn(b'Football-data.org', sources.data)
+        self.assertEqual(missing.status_code, 404)
+        self.assertIn(b'Page not found', missing.data)
+        self.assertEqual(missing_api.status_code, 404)
+        self.assertEqual(missing_api.json['error']['code'], 'not_found')
 
     def test_request_id_is_validated_and_echoed(self):
         accepted = self.client.get('/health/live', headers={'X-Request-ID': 'client-123'})

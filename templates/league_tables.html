@@ -26,9 +26,13 @@
                 <option value="https://widgets.sofascore.com/embed/tournament/52/season/77806/standings/Liga%20Portugal%2025%2F26?widgetTitle=Liga%20Portugal%2025%2F26&amp;showCompetitionLogo=true">Liga Portugal 2025/26</option>
             </select>
         </div>
-        <div id="standings-status" class="standings-status" role="status">Loading Premier League standings…</div>
+        <div class="standings-consent">
+            <p>Tables can reveal match outcomes and load content from SofaScore.</p>
+            <button id="reveal-standings" class="control-button" type="button" aria-pressed="false">Reveal selected table</button>
+        </div>
+        <div id="standings-status" class="standings-status" role="status">Choose reveal to load standings.</div>
         <div class="widget-container active-widget">
-            <iframe id="standings-frame" class="sofascore-iframe" title="Premier League standings" loading="lazy"></iframe>
+            <iframe id="standings-frame" class="sofascore-iframe" title="Premier League standings" loading="lazy" hidden></iframe>
         </div>
         <footer class="standings-provider">
             Standings provided by <a target="_blank" rel="noopener noreferrer" href="https://www.sofascore.com/">SofaScore</a>.

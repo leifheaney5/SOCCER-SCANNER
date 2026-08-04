@@ -1,4 +1,5 @@
 from datetime import date
+import re
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import requests
@@ -56,6 +57,15 @@ def team_analysis(team_id):
 
 @api.get('/v2/teams/<canonical_id>/analysis')
 def canonical_team_analysis(canonical_id):
+    if not re.fullmatch(r'[a-z0-9][a-z0-9-]{0,79}', canonical_id):
+        return jsonify({
+            'error': {
+                'code': 'team_identity_unavailable',
+                'message': 'Verified team analysis is unavailable for this team.',
+                'retryable': False,
+                'requestId': g.request_id,
+            },
+        }), 404
     identities = current_app.extensions['team_identities']
     provider_id = identities.provider_id(canonical_id, 'football-data')
     if provider_id is None:

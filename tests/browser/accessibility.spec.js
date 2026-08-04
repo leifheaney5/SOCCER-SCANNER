@@ -58,3 +58,10 @@ test('empty and provider-error surfaces have no serious accessibility violations
     await expect(page.getByRole('heading', {name: 'Football data is temporarily unavailable'})).toBeVisible();
     await expectNoSeriousViolations(page);
 });
+
+for (const path of ['/teams', '/league-tables', '/privacy', '/data-sources', '/not-a-real-page']) {
+    test(`${path} has no serious accessibility violations`, async ({page}) => {
+        await page.goto(path);
+        await expectNoSeriousViolations(page);
+    });
+}

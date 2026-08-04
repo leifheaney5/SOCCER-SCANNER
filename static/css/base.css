@@ -255,6 +255,57 @@ svg {
     min-width: 0;
 }
 
+.app-footer {
+    margin-top: 48px;
+    border-top: 1px solid var(--border-color);
+    color: var(--text-muted);
+    font-size: 13px;
+}
+
+.footer-container {
+    width: min(100%, 1400px);
+    margin: 0 auto;
+    padding: 20px;
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.footer-container nav {
+    display: flex;
+    gap: 16px;
+}
+
+.footer-container a:hover {
+    color: var(--text-primary);
+}
+
+.content-page {
+    width: min(100% - 32px, 760px);
+    margin: 0 auto;
+    padding: 56px 0;
+}
+
+.content-page h1 {
+    margin: 0 0 16px;
+    font-size: clamp(32px, 6vw, 48px);
+    line-height: 1.05;
+}
+
+.content-page h2 {
+    margin: 32px 0 8px;
+    font-size: 20px;
+}
+
+.content-page p,
+.content-page li {
+    color: var(--text-secondary);
+}
+
+.content-page a {
+    color: var(--accent-secondary);
+}
+
 @media (max-width: 900px) {
     :root {
         --header-height: 60px;

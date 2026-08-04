@@ -21,3 +21,13 @@ def teams():
 @pages.get('/league-tables')
 def league_tables():
     return render_template('league_tables.html')
+
+
+@pages.get('/privacy')
+def privacy():
+    return render_template('privacy.html')
+
+
+@pages.get('/data-sources')
+def data_sources():
+    return render_template('data_sources.html')

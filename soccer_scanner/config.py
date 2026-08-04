@@ -28,3 +28,5 @@ class Config:
     FIXTURE_CACHE_MAX_ENTRIES = 64
     FIXTURE_FETCH_DEADLINE = 4
     SEND_FILE_MAX_AGE_DEFAULT = 3600
+    TRUSTED_PROXY_HOPS = int(os.getenv('TRUSTED_PROXY_HOPS', '1'))
+    PUBLIC_BASE_URL = os.getenv('PUBLIC_BASE_URL', 'https://soccerscanner.pro').rstrip('/')

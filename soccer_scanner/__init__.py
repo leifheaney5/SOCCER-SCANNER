@@ -4,7 +4,8 @@ import re
 from time import monotonic
 from uuid import uuid4
 
-from flask import Flask, g, jsonify, request
+from flask import Flask, g, jsonify, render_template, request
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 from .build_info import load_build_info
 from .config import Config
@@ -28,6 +29,14 @@ def create_app(config=None):
     app.config.from_object(Config)
     if config:
         app.config.update(config)
+    trusted_proxy_hops = max(0, int(app.config.get('TRUSTED_PROXY_HOPS', 0)))
+    if trusted_proxy_hops:
+        app.wsgi_app = ProxyFix(
+            app.wsgi_app,
+            x_for=trusted_proxy_hops,
+            x_proto=trusted_proxy_hops,
+            x_host=trusted_proxy_hops,
+        )
 
     build_info = load_build_info(os.environ)
     app.extensions['build_info'] = build_info
@@ -89,7 +98,12 @@ def create_app(config=None):
 
     @app.context_processor
     def inject_build_info():
-        return {'build': build_info.as_public_dict()}
+        public_base = app.config['PUBLIC_BASE_URL']
+        return {
+            'build': build_info.as_public_dict(),
+            'canonical_url': f'{public_base}{request.path}',
+            'public_base_url': public_base,
+        }
 
     timeout = (
         app.config['HTTP_CONNECT_TIMEOUT'],
@@ -142,6 +156,32 @@ def create_app(config=None):
     app.register_blueprint(api)
     app.register_blueprint(health)
 
+    @app.errorhandler(404)
+    def not_found(_error):
+        if request.path.startswith('/api/'):
+            return jsonify({
+                'error': {
+                    'code': 'not_found',
+                    'message': 'The requested API route does not exist.',
+                    'retryable': False,
+                    'requestId': g.request_id,
+                },
+            }), 404
+        return render_template('404.html'), 404
+
+    @app.errorhandler(500)
+    def internal_error(_error):
+        if request.path.startswith('/api/'):
+            return jsonify({
+                'error': {
+                    'code': 'internal_error',
+                    'message': 'The request could not be completed.',
+                    'retryable': True,
+                    'requestId': g.request_id,
+                },
+            }), 500
+        return render_template('500.html'), 500
+
     @app.after_request
     def security_headers(response):
         response.headers.setdefault('X-Content-Type-Options', 'nosniff')
@@ -157,8 +197,17 @@ def create_app(config=None):
             "style-src 'self' https://fonts.googleapis.com; "
             "font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; "
             "connect-src 'self'; frame-src https://widgets.sofascore.com; "
-            "object-src 'none'; base-uri 'self'; form-action 'self'",
+            "frame-ancestors 'self'; object-src 'none'; base-uri 'self'; form-action 'self'",
         )
+        if request.path.startswith('/api/'):
+            response.headers['Cache-Control'] = 'no-store'
+        elif not request.path.startswith('/static/'):
+            response.headers.setdefault('Cache-Control', 'no-cache')
+        if request.is_secure and build_info.environment == 'production':
+            response.headers.setdefault(
+                'Strict-Transport-Security',
+                'max-age=31536000; includeSubDomains',
+            )
         response.headers['X-Request-ID'] = g.request_id
         metrics = app.extensions['metrics']
         metrics.increment('api.requests')

@@ -119,6 +119,48 @@
             background: #2563eb;
         }
 
+/* Shared Soccer Scanner product shell overrides. */
+body {
+    padding: 0;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+}
+
+.app-header {
+    min-height: var(--header-height);
+    padding: 0;
+    border-bottom-color: var(--border-color);
+    background: rgba(0, 0, 0, 0.96);
+}
+
+.nav-container {
+    width: min(100%, 1400px);
+    max-width: none;
+    min-height: var(--header-height);
+    padding: 0 20px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    flex-wrap: nowrap;
+}
+
+.app-title { font-size: 15px; }
+.nav-links { gap: 4px; }
+.nav-link { padding: 0 14px; border-radius: 0; background: transparent; color: var(--text-secondary); }
+.nav-link.active { background: transparent; color: var(--text-primary); }
+.container { margin-top: 32px; background: var(--bg-card); border-color: var(--border-color); }
+.header { background: var(--bg-card); border-color: var(--border-color); }
+.header p { color: var(--text-secondary); }
+.team-section { background: var(--bg-secondary); border-color: var(--border-color); }
+.season-badge { background: var(--bg-tertiary); border-color: var(--border-color); }
+.compare-btn { background: var(--accent-primary); color: #071000; }
+.compare-btn:hover { background: var(--accent-secondary); }
+
+@media (max-width: 900px) {
+    .nav-container { grid-template-columns: auto 1fr auto; }
+    .nav-links { display: none; }
+    .nav-links.is-open { display: flex; }
+}
+
         .compare-btn:disabled {
             background: #64748b;
             cursor: not-allowed;
@@ -1359,3 +1401,25 @@
             color: #ffffff;
         }
 .results.is-visible { display: block; }
+
+/* Keep the shared header authoritative over legacy team-result styles. */
+body { padding: 0; background: var(--bg-primary); color: var(--text-primary); }
+body .app-header { min-height: var(--header-height); padding: 0; background: rgba(0, 0, 0, 0.96); border-color: var(--border-color); }
+body .nav-container {
+    width: min(100%, 1400px);
+    max-width: none;
+    min-height: var(--header-height);
+    padding: 0 20px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    flex-wrap: nowrap;
+}
+body .app-title { font-size: 15px; }
+body .nav-links { gap: 4px; }
+body .nav-link { padding: 0 14px; border-radius: 0; background: transparent; color: var(--text-secondary); }
+body .nav-link.active { background: transparent; color: var(--text-primary); }
+
+@media (max-width: 900px) {
+    body .nav-links { display: none; }
+    body .nav-links.is-open { display: flex; }
+}
