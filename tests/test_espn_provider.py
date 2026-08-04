@@ -6,6 +6,7 @@ from unittest.mock import Mock
 from soccer_scanner.domain.models import ProviderStatus
 from soccer_scanner.providers.espn import ESPN_LEAGUES, EspnProvider, normalize_event
 from soccer_scanner.providers.http import HttpObservation
+from soccer_scanner.services.team_identity import TeamIdentityResolver
 
 
 FIXTURES = Path(__file__).parent / 'fixtures' / 'providers'
@@ -131,3 +132,17 @@ def test_fetches_one_inclusive_date_range_per_league_and_reports_outcome():
 
 def test_supported_league_set_is_bounded_to_twenty():
     assert len(ESPN_LEAGUES) == 20
+
+
+def test_adapter_resolves_canonical_identity_only_through_registry():
+    identities = TeamIdentityResolver([{
+        'canonicalId': 'sao-paulo',
+        'name': 'São Paulo',
+        'aliases': ['São Paulo FC'],
+        'providerIds': {'espn': '10'},
+    }])
+
+    normalized = normalize_event(event(), 'bra.1', 'Brasileirao', identities)
+
+    assert normalized['homeTeam']['canonicalId'] == 'sao-paulo'
+    assert normalized['awayTeam']['canonicalId'] is None

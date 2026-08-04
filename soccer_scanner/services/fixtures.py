@@ -6,13 +6,14 @@ from zoneinfo import ZoneInfo
 
 import requests
 
+from soccer_scanner.domain.identity import merge_fixtures
+from soccer_scanner.services.team_identity import normalize_alias
+
 from .fixture_analytics import (
     analyze_daily_matches,
     calculate_match_importance,
     check_rivalry_factor,
     convert_espn_to_standard_format,
-    determine_tv_coverage,
-    estimate_attendance,
 )
 
 ESPN_LEAGUES = {
@@ -188,7 +189,7 @@ class FixtureService:
         timezone_name='UTC',
         identity_resolver=None,
     ):
-        unique = {}
+        normalized = []
         local_zone = ZoneInfo(timezone_name)
         for match in matches:
             try:
@@ -198,11 +199,18 @@ class FixtureService:
                 match_date = kickoff.astimezone(local_zone).date()
                 if match_date != requested_date:
                     continue
-                identity = str(match.get('id') or (
-                    match['homeTeam'].get('name'), match['awayTeam'].get('name'), match['utcDate']
-                ))
                 provider = 'espn' if str(match.get('id', '')).startswith('espn_') else 'football-data'
                 normalized_match = dict(match)
+                raw_provider_id = str(match.get('id') or '')
+                if provider == 'espn' and raw_provider_id.startswith('espn_'):
+                    raw_provider_id = raw_provider_id[5:]
+                normalized_match['providerIds'] = {
+                    **(match.get('providerIds') or {}),
+                    **({provider: raw_provider_id} if raw_provider_id else {}),
+                }
+                normalized_match['sourceUpdatedAt'] = (
+                    match.get('sourceUpdatedAt') or match.get('lastUpdated')
+                )
                 if identity_resolver is not None:
                     for side in ('homeTeam', 'awayTeam'):
                         team = dict(match.get(side) or {})
@@ -213,18 +221,41 @@ class FixtureService:
                             team.get('name'),
                         )
                         normalized_match[side] = {**team, **resolved.as_dict()}
-                unique[identity] = {
-                    **normalized_match,
-                    'enhanced_info': {
-                        'importance_score': calculate_match_importance(match),
-                        'tv_coverage': determine_tv_coverage(match),
-                        'attendance_estimate': estimate_attendance(match),
-                        'rivalry_factor': check_rivalry_factor(match),
-                        'match_date': requested_date.isoformat(),
-                        'days_from_today': 0,
-                        'source': 'ESPN' if provider == 'espn' else 'football-data.org',
+                competition = dict(match.get('competition') or {})
+                competition_slug = {
+                    'premierleague': 'premier-league',
+                    'laliga': 'la-liga',
+                    'bundesliga': 'bundesliga',
+                    'seriea': 'serie-a',
+                    'ligue1': 'ligue-1',
+                    'championsleague': 'champions-league',
+                }.get(normalize_alias(competition.get('name')))
+                competition_provider_id = str(competition.get('providerId') or competition.get('id') or '')
+                normalized_match['competition'] = {
+                    **competition,
+                    'canonicalId': competition.get('canonicalId') or competition_slug,
+                    'provider': competition.get('provider') or provider,
+                    'providerId': competition_provider_id or None,
+                    'providerIds': {
+                        **(competition.get('providerIds') or {}),
+                        **({provider: competition_provider_id} if competition_provider_id else {}),
                     },
                 }
+                normalized.append(normalized_match)
             except (KeyError, TypeError, ValueError):
                 continue
-        return list(unique.values())
+        merged_matches = merge_fixtures(normalized)
+        return [
+            {
+                **match,
+                'id': match['canonicalFixtureId'],
+                'enhanced_info': {
+                    'importance_score': calculate_match_importance(match),
+                    'rivalry_factor': check_rivalry_factor(match),
+                    'match_date': requested_date.isoformat(),
+                    'days_from_today': 0,
+                    'source': ' + '.join(match.get('sources') or []),
+                },
+            }
+            for match in merged_matches
+        ]

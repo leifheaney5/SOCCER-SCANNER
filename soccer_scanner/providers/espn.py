@@ -30,6 +30,29 @@ ESPN_LEAGUES = {
     'arg.1': 'Liga Profesional',
 }
 
+ESPN_COMPETITION_IDS = {
+    'eng.1': 'premier-league',
+    'esp.1': 'la-liga',
+    'ger.1': 'bundesliga',
+    'ita.1': 'serie-a',
+    'fra.1': 'ligue-1',
+    'uefa.champions': 'champions-league',
+    'uefa.europa': 'europa-league',
+    'uefa.europa.conf': 'conference-league',
+    'ned.1': 'eredivisie',
+    'por.1': 'primeira-liga',
+    'bel.1': 'belgian-pro-league',
+    'aut.1': 'austrian-bundesliga',
+    'tur.1': 'super-lig',
+    'sco.1': 'scottish-premiership',
+    'eng.2': 'championship',
+    'esp.2': 'segunda-division',
+    'ger.2': 'second-bundesliga',
+    'ita.2': 'serie-b',
+    'bra.1': 'brasileirao',
+    'arg.1': 'liga-profesional',
+}
+
 
 _STATUS_MAP = {
     'STATUS_SCHEDULED': 'scheduled',
@@ -69,7 +92,7 @@ def _nullable_int(value):
         return None
 
 
-def _team(competitor):
+def _team(competitor, identities=None):
     if not isinstance(competitor, dict):
         return None
     payload = competitor.get('team')
@@ -80,11 +103,18 @@ def _team(competitor):
     if not provider_id or not name:
         return None
     abbreviation = _nullable_text(payload.get('abbreviation'))
+    identity = (
+        identities.resolve('espn', provider_id, name).as_dict()
+        if identities is not None
+        else {
+            'canonicalId': None,
+            'provider': 'espn',
+            'providerId': provider_id,
+            'providerIds': {'espn': provider_id},
+        }
+    )
     return {
-        'canonicalId': None,
-        'provider': 'espn',
-        'providerId': provider_id,
-        'providerIds': {'espn': provider_id},
+        **identity,
         'name': name,
         'shortName': _nullable_text(payload.get('shortDisplayName')) or abbreviation,
         'tla': abbreviation,
@@ -102,7 +132,7 @@ def _winner(home_score, away_score, completed):
     return 'draw'
 
 
-def normalize_event(event, league_id, league_name):
+def normalize_event(event, league_id, league_name, identities=None):
     """Normalize one ESPN event; malformed identities are discarded."""
     if not isinstance(event, dict):
         return None
@@ -125,8 +155,8 @@ def normalize_event(event, league_id, league_name):
         (item for item in competitors if isinstance(item, dict) and item.get('homeAway') == 'away'),
         None,
     )
-    home = _team(home_competitor)
-    away = _team(away_competitor)
+    home = _team(home_competitor, identities)
+    away = _team(away_competitor, identities)
     if home is None or away is None:
         return None
 
@@ -196,7 +226,7 @@ def normalize_event(event, league_id, league_name):
             'penalties': None,
         },
         'competition': {
-            'canonicalId': None,
+            'canonicalId': ESPN_COMPETITION_IDS.get(league_id),
             'provider': 'espn',
             'providerId': league_id,
             'providerIds': {'espn': league_id},
@@ -219,8 +249,9 @@ def normalize_event(event, league_id, league_name):
 
 
 class EspnProvider:
-    def __init__(self, client, *, leagues=None, clock=monotonic):
+    def __init__(self, client, *, identities=None, leagues=None, clock=monotonic):
         self.client = client
+        self.identities = identities
         self.leagues = dict(leagues or ESPN_LEAGUES)
         self.clock = clock
 
@@ -252,7 +283,9 @@ class EspnProvider:
                     fixtures.extend(
                         normalized
                         for raw_event in events
-                        if (normalized := normalize_event(raw_event, league_id, league_name)) is not None
+                        if (normalized := normalize_event(
+                            raw_event, league_id, league_name, self.identities,
+                        )) is not None
                     )
             except ProviderRequestError as error:
                 observation = error.observation

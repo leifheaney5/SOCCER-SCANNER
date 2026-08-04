@@ -7,6 +7,7 @@ import requests
 from soccer_scanner.services.cache import TTLCache
 from soccer_scanner.services.fixtures import FixtureService
 from soccer_scanner.services.teams import TeamAnalysisService
+from soccer_scanner.services.team_identity import TeamIdentityResolver
 
 
 class TTLCacheTest(unittest.TestCase):
@@ -107,7 +108,48 @@ class FixtureServiceTest(unittest.TestCase):
             [match], date(2026, 8, 14), 'America/New_York'
         )
 
-        self.assertEqual([item['id'] for item in result], ['late-match'])
+        self.assertEqual(len(result), 1)
+        self.assertTrue(result[0]['id'].startswith('fx_'))
+        self.assertEqual(result[0]['utcDate'], '2026-08-15T01:00:00Z')
+
+    def test_deduplicates_cross_provider_fixture_ids_using_canonical_identity(self):
+        identities = TeamIdentityResolver([
+            {
+                'canonicalId': 'arsenal', 'name': 'Arsenal', 'aliases': ['Arsenal FC'],
+                'providerIds': {'espn': '359', 'football-data': '57'},
+            },
+            {
+                'canonicalId': 'chelsea', 'name': 'Chelsea', 'aliases': ['Chelsea FC'],
+                'providerIds': {'espn': '363', 'football-data': '61'},
+            },
+        ])
+        espn = {
+            'id': 'espn_401', 'providerIds': {'espn': '401'},
+            'utcDate': '2026-08-14T19:00:00Z', 'status': 'SCHEDULED',
+            'sourceUpdatedAt': '2026-08-14T12:00:00Z',
+            'homeTeam': {'provider': 'espn', 'providerId': '359', 'name': 'Arsenal'},
+            'awayTeam': {'provider': 'espn', 'providerId': '363', 'name': 'Chelsea'},
+            'competition': {'name': 'Premier League'},
+            'score': {'fullTime': {'home': None, 'away': None}},
+        }
+        football_data = {
+            'id': 9001, 'utcDate': '2026-08-14T19:05:00Z', 'status': 'TIMED',
+            'lastUpdated': '2026-08-14T13:00:00Z',
+            'homeTeam': {'id': 57, 'name': 'Arsenal FC'},
+            'awayTeam': {'id': 61, 'name': 'Chelsea FC'},
+            'competition': {'id': 2021, 'name': 'Premier League', 'code': 'PL'},
+            'score': {'fullTime': {'home': None, 'away': None}},
+        }
+
+        result = FixtureService._enhance_and_deduplicate(
+            [espn, football_data],
+            date(2026, 8, 14),
+            identity_resolver=identities,
+        )
+
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]['providerIds'], {'espn': '401', 'football-data': '9001'})
+        self.assertTrue(result[0]['canonicalFixtureId'].startswith('fx_'))
 
 
 class TeamAnalysisServiceTest(unittest.TestCase):
