@@ -4,7 +4,7 @@ Soccer Scanner 2.0 is a spoiler-safe football fixture workspace built with Flask
 
 ## What it does
 
-- Scans fixtures by local calendar date and IANA timezone across supported ESPN competitions.
+- Scans fixtures by local calendar date and IANA timezone through ESPN's global soccer scoreboard, including every competition present in that provider response rather than a fixed league shortlist.
 - Keeps every score out of rendered DOM and accessibility content until the visitor explicitly reveals scores.
 - Groups fixtures by competition with canonical team identities, crest fallbacks, deterministic de-duplication, source freshness, and data-quality evidence.
 - Provides shareable filter and fixture URLs, a seven-day calendar, spoiler-free `.ics` exports, local favorites, team intelligence, and explicitly gated league-table embeds.
