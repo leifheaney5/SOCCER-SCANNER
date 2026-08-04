@@ -17,10 +17,20 @@ class TeamAnalysisService:
     def analyze(self, team_id):
         team_info = self.football_data.get(f'teams/{team_id}')
         squad = team_info.get('squad', [])
-
-        recent = self._matches(team_id, limit=10, status='FINISHED')
-        upcoming = self._matches(team_id, limit=20, status='SCHEDULED')
-        all_matches = self._matches(team_id, limit=50)
+        match_payload = self._match_payload(team_id, limit=50)
+        all_matches = match_payload.get('matches', [])
+        recent = [
+            match for match in all_matches
+            if match.get('status') in {'FINISHED', 'AWARDED'}
+        ][:10]
+        upcoming = [
+            match for match in all_matches
+            if match.get('status') in {'SCHEDULED', 'TIMED'}
+        ][:20]
+        stats = calculate_team_stats(recent, team_id)
+        provider_played = match_payload.get('resultSet', {}).get('played')
+        if isinstance(provider_played, int) and provider_played >= 0:
+            stats['matches_played'] = provider_played
 
         return {
             'team_info': team_info,
@@ -28,15 +38,14 @@ class TeamAnalysisService:
             'formation_data': analyze_squad_formation(squad),
             'recent_matches': recent,
             'upcoming_matches': upcoming,
-            'stats': calculate_team_stats(recent, team_id),
+            'stats': stats,
             'top_performers': get_top_performers(recent, team_id, squad),
             'competition_analysis': analyze_team_competitions(all_matches, team_id),
         }
 
-    def _matches(self, team_id, **params):
+    def _match_payload(self, team_id, **params):
         try:
-            return self.football_data.get(
-                f'teams/{team_id}/matches', params=params
-            ).get('matches', [])
+            payload = self.football_data.get(f'teams/{team_id}/matches', params=params)
+            return payload if isinstance(payload, dict) else {'matches': []}
         except requests.RequestException:
-            return []
+            return {'matches': []}

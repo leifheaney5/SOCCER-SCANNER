@@ -158,8 +158,6 @@ class TeamAnalysisServiceTest(unittest.TestCase):
         client.get.side_effect = [
             {'name': 'Example FC', 'squad': []},
             requests.Timeout(),
-            requests.Timeout(),
-            requests.Timeout(),
         ]
 
         result = TeamAnalysisService(client).analyze('10')
@@ -167,6 +165,37 @@ class TeamAnalysisServiceTest(unittest.TestCase):
         self.assertEqual(result['team_info']['name'], 'Example FC')
         self.assertEqual(result['recent_matches'], [])
         self.assertEqual(result['upcoming_matches'], [])
+
+    def test_fetches_team_matches_once_and_preserves_provider_played(self):
+        client = Mock()
+        finished = {
+            'status': 'FINISHED',
+            'homeTeam': {'id': 10},
+            'awayTeam': {'id': 20},
+            'score': {'fullTime': {'home': 2, 'away': 1}},
+            'competition': {'id': 1, 'name': 'Test League'},
+            'utcDate': '2026-08-01T12:00:00Z',
+        }
+        upcoming = {
+            'status': 'SCHEDULED',
+            'homeTeam': {'id': 20},
+            'awayTeam': {'id': 10},
+            'score': {'fullTime': {'home': None, 'away': None}},
+            'competition': {'id': 1, 'name': 'Test League'},
+            'utcDate': '2026-08-10T12:00:00Z',
+        }
+        client.get.side_effect = [
+            {'name': 'Example FC', 'squad': []},
+            {'matches': [finished, upcoming], 'resultSet': {'count': 2, 'played': 1}},
+        ]
+
+        result = TeamAnalysisService(client).analyze('10')
+
+        self.assertEqual(client.get.call_count, 2)
+        client.get.assert_any_call('teams/10/matches', params={'limit': 50})
+        self.assertEqual(result['recent_matches'], [finished])
+        self.assertEqual(result['upcoming_matches'], [upcoming])
+        self.assertEqual(result['stats']['matches_played'], 1)
 
 
 if __name__ == '__main__':

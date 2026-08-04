@@ -2,7 +2,7 @@ const assetVersion = new URL(import.meta.url).searchParams.get('v');
 const versionedModule = path => (
     assetVersion ? `${path}?v=${encodeURIComponent(assetVersion)}` : path
 );
-const [appStoreModule, fixtureStateModule, scorePreferenceModule, fixtureRendererModule, matchContextModule, teamDrawerModule, refreshModule] = await Promise.all([
+const [appStoreModule, fixtureStateModule, scorePreferenceModule, fixtureRendererModule, matchContextModule, teamDrawerModule, refreshModule, dialogModule] = await Promise.all([
     import(versionedModule('./app-store.js')),
     import(versionedModule('./fixture-state.js')),
     import(versionedModule('./score-preference.js')),
@@ -10,6 +10,7 @@ const [appStoreModule, fixtureStateModule, scorePreferenceModule, fixtureRendere
     import(versionedModule('./match-context.js')),
     import(versionedModule('./team-drawer.js')),
     import(versionedModule('./refresh-controller.js')),
+    import(versionedModule('./dialog-manager.js')),
 ]);
 const {createStore} = appStoreModule;
 const {
@@ -40,6 +41,7 @@ const {
 const {createMatchContext} = matchContextModule;
 const {createTeamDrawer} = teamDrawerModule;
 const {createRefreshController} = refreshModule;
+const {createDialogManager} = dialogModule;
 
 const byId = id => document.getElementById(id);
 const detectedTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
@@ -348,11 +350,13 @@ function bindEvents() {
 }
 
 function init() {
+    const dialogManager = createDialogManager();
     teamDrawer = createTeamDrawer({
         dialog: byId('team-drawer'),
         content: byId('team-drawer-content'),
         closeButton: byId('close-team-drawer'),
         getRevealed: () => scoresRevealed,
+        dialogManager,
     });
     matchContext = createMatchContext({
         panel: byId('match-context'),
@@ -362,6 +366,7 @@ function init() {
         closeButton: byId('close-match-context'),
         getRevealed: () => scoresRevealed,
         onTeam: (team, trigger) => teamDrawer.open(team, trigger),
+        dialogManager,
     });
     syncControls();
     bindEvents();

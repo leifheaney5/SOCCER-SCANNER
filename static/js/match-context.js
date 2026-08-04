@@ -104,11 +104,13 @@ export function createMatchContext({
     closeButton,
     getRevealed,
     onTeam,
+    dialogManager,
 }) {
     let currentMatch = null;
     let activeTrigger = null;
 
-    const desktop = () => window.matchMedia('(min-width: 1100px)').matches;
+    const mediaQuery = window.matchMedia('(min-width: 1100px)');
+    const desktop = () => mediaQuery.matches;
 
     function render() {
         if (!currentMatch) return;
@@ -122,13 +124,8 @@ export function createMatchContext({
         panel.classList.toggle('has-selection', desktop());
     }
 
-    function restoreFocus() {
-        document.body.classList.remove('dialog-open');
-        if (activeTrigger?.isConnected) activeTrigger.focus();
-    }
-
-    function close() {
-        if (dialog.open) dialog.close();
+    function close(options) {
+        dialogManager.close(dialog, options);
     }
 
     function open(match, trigger) {
@@ -136,8 +133,7 @@ export function createMatchContext({
         activeTrigger = trigger;
         render();
         if (!desktop()) {
-            if (!dialog.open) dialog.showModal();
-            document.body.classList.add('dialog-open');
+            dialogManager.open(dialog, activeTrigger);
             closeButton.focus();
         }
     }
@@ -151,14 +147,25 @@ export function createMatchContext({
             heading,
             node('p', '', 'Choose a match to inspect the kickoff, venue, competition, and both teams.'),
         );
-        close();
+        close({restoreFocus: false});
+    }
+
+    function onViewportChange() {
+        if (!currentMatch) return;
+        render();
+        if (desktop()) {
+            close({restoreFocus: false});
+        } else {
+            dialogManager.open(dialog, activeTrigger);
+            closeButton.focus();
+        }
     }
 
     closeButton.addEventListener('click', close);
-    dialog.addEventListener('close', restoreFocus);
     dialog.addEventListener('click', event => {
         if (event.target === dialog) close();
     });
+    mediaQuery.addEventListener('change', onViewportChange);
     dialog.addEventListener('keydown', event => {
         if (event.key !== 'Tab') return;
         const focusable = focusableElements(dialog);

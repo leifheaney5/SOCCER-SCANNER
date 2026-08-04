@@ -68,7 +68,12 @@ def canonical_team_analysis(canonical_id):
             },
         }), 404
     try:
-        return jsonify(current_app.extensions['team_analysis'].analyze(provider_id))
+        analysis = current_app.extensions['team_analysis'].analyze(provider_id)
+        team_info = analysis.setdefault('team_info', {})
+        team_info['canonicalId'] = canonical_id
+        team_info['provider'] = 'football-data'
+        team_info['providerId'] = provider_id
+        return jsonify(analysis)
     except requests.RequestException as error:
         return provider_error(error)
 

@@ -34,9 +34,11 @@ function renderSkeleton(content) {
     content.replaceChildren(skeleton);
 }
 
-function statValue(stats, key, fallback = 0) {
+function statValue(stats, key) {
     const value = stats?.[key];
-    return Number.isFinite(Number(value)) ? Number(value) : fallback;
+    return value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value))
+        ? Number(value)
+        : null;
 }
 
 function createIdentity(data) {
@@ -44,6 +46,11 @@ function createIdentity(data) {
     const identity = node('section', 'team-intelligence-identity');
     const copy = node('div', 'team-intelligence-copy');
     copy.append(node('h3', 'team-intelligence-name', team.name || 'Team intelligence'));
+    if (team.canonicalId) {
+        const link = node('a', 'team-page-link', 'Open team page');
+        link.href = `/teams/${encodeURIComponent(team.canonicalId)}`;
+        copy.append(link);
+    }
     const facts = node('div', 'team-facts');
     if (team.founded) facts.append(node('span', '', `Founded ${team.founded}`));
     if (team.venue) facts.append(node('span', '', team.venue));
@@ -60,16 +67,23 @@ function createRecord(stats) {
     const wins = statValue(stats, 'wins');
     const draws = statValue(stats, 'draws');
     const losses = statValue(stats, 'losses');
-    const played = wins + draws + losses;
-    const difference = statValue(stats, 'goal_difference', statValue(stats, 'goals_for') - statValue(stats, 'goals_against'));
+    const goalsFor = statValue(stats, 'goals_for');
+    const goalsAgainst = statValue(stats, 'goals_against');
+    const played = statValue(stats, 'matches_played')
+        ?? ([wins, draws, losses].every(Number.isFinite) ? wins + draws + losses : null);
+    const difference = statValue(stats, 'goal_difference')
+        ?? ([goalsFor, goalsAgainst].every(Number.isFinite) ? goalsFor - goalsAgainst : null);
+    const readable = (value, suffix, {signed = false} = {}) => (
+        Number.isFinite(value) ? `${signed && value > 0 ? '+' : ''}${value} ${suffix}` : 'Unavailable'
+    );
     const values = [
-        ['Played', `${played} played`],
-        ['Wins', `${wins} wins`],
-        ['Draws', `${draws} draws`],
-        ['Losses', `${losses} losses`],
-        ['Goals for', `${statValue(stats, 'goals_for')} goals for`],
-        ['Goals against', `${statValue(stats, 'goals_against')} goals against`],
-        ['Goal difference', `${difference > 0 ? '+' : ''}${difference} goal difference`],
+        ['Played', readable(played, 'played')],
+        ['Wins', readable(wins, 'wins')],
+        ['Draws', readable(draws, 'draws')],
+        ['Losses', readable(losses, 'losses')],
+        ['Goals for', readable(goalsFor, 'goals for')],
+        ['Goals against', readable(goalsAgainst, 'goals against')],
+        ['Goal difference', readable(difference, 'goal difference', {signed: true})],
     ];
     const grid = node('dl', 'record-grid');
     for (const [label, value] of values) {
@@ -187,25 +201,23 @@ function renderIdentityUnavailable(content, team) {
     content.replaceChildren(state);
 }
 
-export function createTeamDrawer({dialog, content, closeButton, getRevealed}) {
+export function createTeamDrawer({dialog, content, closeButton, getRevealed, dialogManager}) {
     const cache = new Map();
     const inFlight = new Map();
     let currentTeam = null;
     let currentData = null;
     let activeTrigger = null;
 
-    function syncBodyLock() {
-        document.body.classList.toggle('dialog-open', Boolean(document.querySelector('dialog[open]')));
-    }
-
     function close() {
-        if (dialog.open) dialog.close();
+        dialogManager.close(dialog);
     }
 
     async function request(canonicalId, force = false) {
         if (!force && cache.has(canonicalId)) return cache.get(canonicalId);
         if (!force && inFlight.has(canonicalId)) return inFlight.get(canonicalId);
-        const operation = fetch(`/api/v2/teams/${encodeURIComponent(canonicalId)}/analysis`)
+        const operation = fetch(`/api/v2/teams/${encodeURIComponent(canonicalId)}/analysis`, {
+            signal: typeof AbortSignal?.timeout === 'function' ? AbortSignal.timeout(10_000) : undefined,
+        })
             .then(response => {
                 if (!response.ok) throw new Error('Team provider request failed');
                 return response.json();
@@ -242,8 +254,7 @@ export function createTeamDrawer({dialog, content, closeButton, getRevealed}) {
         currentTeam = team;
         activeTrigger = trigger;
         currentData = cache.get(String(team?.canonicalId || '')) || null;
-        if (!dialog.open) dialog.showModal();
-        document.body.classList.add('dialog-open');
+        dialogManager.open(dialog, activeTrigger);
         closeButton.focus();
         if (currentData) renderTeam(content, currentData, getRevealed());
         else load();
@@ -254,10 +265,6 @@ export function createTeamDrawer({dialog, content, closeButton, getRevealed}) {
     }
 
     closeButton.addEventListener('click', close);
-    dialog.addEventListener('close', () => {
-        syncBodyLock();
-        if (activeTrigger?.isConnected) activeTrigger.focus();
-    });
     dialog.addEventListener('click', event => {
         if (event.target === dialog) close();
     });

@@ -400,6 +400,7 @@ test('team drawer renders complete intelligence, protects scores, caches, and re
     await expect(drawer).toContainText('Founded 1886');
     await expect(drawer).toContainText('Emirates Stadium');
     await expect(drawer).toContainText('Red / White');
+    await expect(drawer.getByRole('link', {name: 'Open team page'})).toHaveAttribute('href', '/teams/arsenal');
     await expect(drawer).toContainText('10 played');
     await expect(drawer).toContainText('6 wins');
     await expect(drawer).toContainText('2 draws');
@@ -483,6 +484,37 @@ test('team drawer exposes provider retry and limited-data states', async ({page}
     await page.locator('#match-context').getByRole('button', {name: 'Open River Plate intelligence'}).click();
     await expect(drawer).toContainText('Limited team data');
     await expect(drawer).toContainText('River Plate');
+    await expect(drawer).toContainText('Unavailable');
+    await expect(drawer).not.toContainText('0 played');
+});
+
+test('nested mobile dialogs close in order and match context follows viewport changes', async ({page}) => {
+    await page.setViewportSize({width: 390, height: 844});
+    await mockFixtures(page);
+    await page.route('**/api/v2/teams/*/analysis', route => route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify(teamPayload),
+    }));
+    await page.goto('/?date=2026-08-03');
+
+    await page.locator('.fixture-card[data-fixture-id="live-secret"] .details-button').click();
+    const matchDialog = page.locator('#match-context-dialog');
+    await expect(matchDialog).toBeVisible();
+    await matchDialog.getByRole('button', {name: 'Open Arsenal intelligence'}).click();
+    await expect(page.locator('#team-drawer')).toBeVisible();
+    await expect(matchDialog).toHaveAttribute('inert', '');
+
+    await page.keyboard.press('Escape');
+    await expect(page.locator('#team-drawer')).not.toBeVisible();
+    await expect(matchDialog).toBeVisible();
+    await expect(matchDialog).not.toHaveAttribute('inert', '');
+
+    await page.setViewportSize({width: 1280, height: 900});
+    await expect(matchDialog).not.toBeVisible();
+    await expect(page.locator('#match-context')).toContainText('Arsenal');
+
+    await page.setViewportSize({width: 390, height: 844});
+    await expect(matchDialog).toBeVisible();
 });
 
 test('visual tokens, type roles, and reduced motion match the product contract', async ({page}) => {

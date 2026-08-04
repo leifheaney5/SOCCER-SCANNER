@@ -240,6 +240,8 @@ class SoccerScannerRoutesTest(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         analyze.assert_called_once_with('57')
+        self.assertEqual(response.json['team_info']['canonicalId'], 'arsenal')
+        self.assertEqual(response.json['team_info']['providerId'], '57')
 
     def test_canonical_team_analysis_rejects_raw_or_unknown_provider_id(self):
         response = self.client.get('/api/v2/teams/57/analysis')

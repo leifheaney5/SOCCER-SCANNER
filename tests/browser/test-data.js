@@ -183,6 +183,7 @@ export const emptyFixturePayload = {
 
 export const teamPayload = {
     team_info: {
+        canonicalId: 'arsenal',
         id: 'live-secret-home',
         name: 'Arsenal',
         shortName: 'Arsenal',
