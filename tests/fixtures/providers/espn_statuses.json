@@ -1,0 +1,14 @@
+{
+  "scheduled": {"name": "STATUS_SCHEDULED", "state": "pre", "completed": false},
+  "delayed": {"name": "STATUS_DELAYED", "state": "pre", "completed": false},
+  "in_progress": {"name": "STATUS_IN_PROGRESS", "state": "in", "completed": false},
+  "half_time": {"name": "STATUS_HALFTIME", "state": "in", "completed": false},
+  "extra_time": {"name": "STATUS_EXTRA_TIME", "state": "in", "completed": false},
+  "penalties": {"name": "STATUS_PENALTIES", "state": "in", "completed": false},
+  "finished": {"name": "STATUS_FINAL", "state": "post", "completed": true},
+  "postponed": {"name": "STATUS_POSTPONED", "state": "pre", "completed": false},
+  "cancelled": {"name": "STATUS_CANCELED", "state": "post", "completed": true},
+  "suspended": {"name": "STATUS_SUSPENDED", "state": "in", "completed": false},
+  "abandoned": {"name": "STATUS_ABANDONED", "state": "post", "completed": true},
+  "unknown": {"name": "STATUS_MYSTERY", "state": "pre", "completed": false}
+}

@@ -66,6 +66,19 @@ class FixtureServiceTest(unittest.TestCase):
         self.assertEqual(result['providers']['football_data']['status'], 'unavailable')
 
     @patch('soccer_scanner.services.fixtures.requests.get')
+    def test_espn_uses_one_inclusive_range_request_per_league(self, get):
+        get.return_value = Mock(status_code=200)
+        get.return_value.json.return_value = {'events': []}
+        get.return_value.raise_for_status.return_value = None
+        service = FixtureService(Mock(), TTLCache(60))
+
+        service._fetch_espn([date(2026, 8, 3), date(2026, 8, 4)])
+
+        self.assertEqual(get.call_count, 20)
+        for call in get.call_args_list:
+            self.assertEqual(call.kwargs['params']['dates'], '20260803-20260804')
+
+    @patch('soccer_scanner.services.fixtures.requests.get')
     def test_serves_stale_data_when_all_providers_fail(self, get):
         get.side_effect = requests.Timeout('provider timed out')
         football_data = Mock()

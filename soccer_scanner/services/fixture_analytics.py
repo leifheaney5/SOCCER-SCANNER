@@ -1,117 +1,38 @@
-"""Pure fixture normalization and presentation analytics."""
-def convert_espn_to_standard_format(espn_event, league_name):
-    """Convert ESPN API format to standard match format"""
-    try:
-        # Extract basic match information
-        match_id = espn_event.get('id')
-        status = espn_event.get('status', {}).get('type', {}).get('name', 'SCHEDULED')
-        
-        # Map ESPN status to our format
-        status_mapping = {
-            'STATUS_SCHEDULED': 'SCHEDULED',
-            'STATUS_IN_PROGRESS': 'LIVE',
-            'STATUS_FINAL': 'FINISHED',
-            'STATUS_POSTPONED': 'POSTPONED',
-            'STATUS_CANCELED': 'CANCELLED'
-        }
-        
-        mapped_status = status_mapping.get(status, 'SCHEDULED')
-        
-        # Extract team information
-        competitors = espn_event.get('competitions', [{}])[0].get('competitors', [])
-        if len(competitors) < 2:
-            return None
-            
-        home_team = None
-        away_team = None
-        
-        for competitor in competitors:
-            team_data = {
-                'id': competitor.get('team', {}).get('id'),
-                'name': competitor.get('team', {}).get('displayName'),
-                'shortName': competitor.get('team', {}).get('abbreviation'),
-                'tla': competitor.get('team', {}).get('abbreviation'),
-                'crest': competitor.get('team', {}).get('logo')
-            }
-            
-            if competitor.get('homeAway') == 'home':
-                home_team = team_data
-            else:
-                away_team = team_data
-        
-        if not home_team or not away_team:
-            return None
-        
-        # Extract score information
-        home_score = None
-        away_score = None
-        
-        if mapped_status == 'FINISHED' or mapped_status == 'LIVE':
-            for competitor in competitors:
-                score = competitor.get('score')
-                if competitor.get('homeAway') == 'home':
-                    home_score = score
-                else:
-                    away_score = score
-        
-        # Extract date and venue
-        date_str = espn_event.get('date')
-        venue_info = espn_event.get('competitions', [{}])[0].get('venue', {})
-        venue_name = venue_info.get('fullName', 'Unknown Venue')
-        
-        # Build standard format match
-        standard_match = {
-            'id': f"espn_{match_id}",
-            'utcDate': date_str,
-            'status': mapped_status,
-            'stage': 'REGULAR_SEASON',
-            'group': None,
-            'lastUpdated': espn_event.get('date'),
-            'homeTeam': home_team,
-            'awayTeam': away_team,
-            'score': {
-                'winner': None,
-                'duration': 'REGULAR',
-                'fullTime': {
-                    'home': home_score,
-                    'away': away_score
-                },
-                'halfTime': {
-                    'home': None,
-                    'away': None
-                }
-            },
-            'competition': {
-                'id': f"espn_{league_name.lower().replace(' ', '_')}",
-                'name': league_name,
-                'code': league_name.upper()[:3],
-                'type': 'LEAGUE',
-                'emblem': None
-            },
-            'season': {
-                'id': 2024,
-                'startDate': '2024-08-01',
-                'endDate': '2025-05-31',
-                'currentMatchday': 1
-            },
-            'venue': venue_name,
-            'referees': []
-        }
-        
-        # Determine winner if match is finished
-        if mapped_status == 'FINISHED' and home_score is not None and away_score is not None:
-            if home_score > away_score:
-                standard_match['score']['winner'] = 'HOME_TEAM'
-            elif away_score > home_score:
-                standard_match['score']['winner'] = 'AWAY_TEAM'
-            else:
-                standard_match['score']['winner'] = 'DRAW'
-        
-        return standard_match
-        
-    except Exception as e:
-        print(f"DEBUG: Error converting ESPN match format: {e}")
+"""Pure fixture presentation analytics and legacy compatibility helpers."""
+
+from soccer_scanner.providers.espn import normalize_event
+
+
+_LEGACY_STATUS = {
+    'scheduled': 'SCHEDULED',
+    'delayed': 'DELAYED',
+    'in_progress': 'LIVE',
+    'half_time': 'HALFTIME',
+    'extra_time': 'LIVE',
+    'penalties': 'LIVE',
+    'finished': 'FINISHED',
+    'postponed': 'POSTPONED',
+    'cancelled': 'CANCELLED',
+    'suspended': 'SUSPENDED',
+    'abandoned': 'CANCELLED',
+    'unknown': 'UNKNOWN',
+}
+
+
+def convert_espn_to_standard_format(espn_event, league_name, league_id=None):
+    """Return a non-fabricated legacy shape while v1 remains supported."""
+    provider_league_id = league_id or f'legacy:{league_name.casefold().replace(" ", "-")}'
+    normalized = normalize_event(espn_event, provider_league_id, league_name)
+    if normalized is None:
         return None
+    provider_id = normalized['providerIds']['espn']
+    return {
+        **normalized,
+        'id': f'espn_{provider_id}',
+        'status': _LEGACY_STATUS[normalized['status']['code']],
+        'rawStatus': normalized['status'],
+        'lastUpdated': normalized['sourceUpdatedAt'],
+    }
 
 def calculate_match_importance(match):
     """Calculate importance score for a match (0-100)"""

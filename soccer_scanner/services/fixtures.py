@@ -118,26 +118,30 @@ class FixtureService:
             return self._key_locks.setdefault(key, Lock())
 
     def _fetch_espn(self, provider_dates):
-        def fetch(work_item):
-            league, provider_date = work_item
+        def fetch(league):
             league_id, league_name = league
+            range_value = f'{provider_dates[0]:%Y%m%d}'
+            if provider_dates[-1] != provider_dates[0]:
+                range_value += f'-{provider_dates[-1]:%Y%m%d}'
             response = requests.get(
                 f'https://site.api.espn.com/apis/site/v2/sports/soccer/{league_id}/scoreboard',
-                params={'dates': provider_date.strftime('%Y%m%d'), 'limit': 50}, timeout=self.timeout,
+                params={
+                    'dates': range_value,
+                    'limit': 100,
+                },
+                timeout=self.timeout,
             )
             response.raise_for_status()
             return [
                 converted for event in response.json().get('events', [])
-                if (converted := convert_espn_to_standard_format(event, league_name))
+                if (converted := convert_espn_to_standard_format(
+                    event, league_name, league_id,
+                ))
             ]
 
         matches = []
         executor = ThreadPoolExecutor(max_workers=self.max_workers)
-        work_items = [
-            (league, provider_date)
-            for provider_date in provider_dates
-            for league in ESPN_LEAGUES.items()
-        ]
+        work_items = list(ESPN_LEAGUES.items())
         futures = {executor.submit(fetch, item): item for item in work_items}
         completed, pending = wait(futures, timeout=self.fetch_deadline)
         failed = len(pending)
@@ -145,7 +149,7 @@ class FixtureService:
         for future in completed:
             try:
                 matches.extend(future.result())
-                successful_leagues.add(futures[future][0][0])
+                successful_leagues.add(futures[future][0])
             except (requests.RequestException, ValueError, TypeError):
                 failed += 1
         for future in pending:
