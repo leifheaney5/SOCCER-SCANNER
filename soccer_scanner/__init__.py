@@ -143,6 +143,8 @@ def create_app(config=None):
     app.extensions['espn_provider'] = EspnProvider(
         espn_http,
         identities=app.extensions['team_identities'],
+        cache=app.extensions['cache_backend'],
+        league_metadata_ttl_seconds=app.config['ESPN_LEAGUE_METADATA_TTL'],
     )
     app.extensions['football_data_provider'] = FootballDataProvider(
         football_http,
