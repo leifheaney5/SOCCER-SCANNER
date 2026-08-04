@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block title %}{{ competition_name }} | Soccer Scanner{% endblock %}
+{% block content %}
+<article class="content-page">
+    <p class="eyebrow">Competition</p>
+    <h1>{{ competition_name }}</h1>
+    <p>This stable competition page links into the live fixture workspace without inventing unsupported standings or metadata.</p>
+    <p><a href="/?competition={{ competition_name|urlencode }}">Browse {{ competition_name }} fixtures</a></p>
+    <p><a href="/league-tables">Open spoiler-gated league tables</a></p>
+</article>
+{% endblock %}

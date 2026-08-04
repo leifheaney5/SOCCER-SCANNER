@@ -107,6 +107,19 @@ def test_full_success_and_authoritative_empty_have_distinct_states():
     assert empty_result['state'] == FixtureState.EMPTY_CONFIRMED.value
 
 
+def test_composed_fixtures_are_available_through_bounded_canonical_lookup():
+    scanner, _, _ = service(
+        outcome('espn', ProviderStatus.SUCCESS, [fixture('espn', '1')]),
+        outcome('football-data', ProviderStatus.DISABLED, completed=()),
+    )
+
+    result = scanner.fixtures_for_date(date(2026, 8, 3), 'UTC')
+    fixture_id = result['matches'][0]['canonicalFixtureId']
+
+    assert scanner.lookup_fixture(fixture_id) == result['matches'][0]
+    assert scanner.lookup_fixture('fx_' + ('0' * 24)) is None
+
+
 def test_partial_results_never_look_like_a_confirmed_empty_day():
     fixtures = []
     for index in range(6):

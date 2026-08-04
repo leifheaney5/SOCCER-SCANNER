@@ -157,6 +157,16 @@ def fixtures_v2():
     return _fixtures_by_date(versioned=True)
 
 
+@api.get('/v2/fixtures/<canonical_fixture_id>')
+def fixture_v2(canonical_fixture_id):
+    if not re.fullmatch(r'fx_[a-f0-9]{24}', canonical_fixture_id):
+        return _fixture_error('invalid_fixture_id', 'Invalid canonical fixture ID.', 400)
+    match = current_app.extensions['fixture_service'].lookup_fixture(canonical_fixture_id)
+    if match is None:
+        return _fixture_error('fixture_not_found', 'Fixture link is unavailable or expired.', 404)
+    return jsonify({'fixture': match})
+
+
 @api.get('/matches-today')
 def fixtures_by_date():
     return _fixtures_by_date(versioned=False)

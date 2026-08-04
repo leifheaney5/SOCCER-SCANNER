@@ -846,6 +846,17 @@ body {
     gap: 0;
 }
 
+.context-actions {
+    margin-top: 16px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.context-actions a {
+    text-decoration: none;
+}
+
 .context-meta-item {
     padding: 9px 0;
     display: grid;

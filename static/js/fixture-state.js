@@ -70,6 +70,7 @@ export function createState(search = '', defaultTimezone = 'UTC') {
         timeWindow: TIME_WINDOWS.has(params.get('time')) ? params.get('time') : 'all',
         hideFinished: params.get('hideFinished') === '1',
         favoritesOnly: params.get('favorites') === '1',
+        fixture: (params.get('fixture') || '').slice(0, 120),
         query: params.get('q') || '',
         toSearchParams() {
             const next = new URLSearchParams();
@@ -82,6 +83,7 @@ export function createState(search = '', defaultTimezone = 'UTC') {
             if (this.timeWindow !== 'all') next.set('time', this.timeWindow);
             if (this.hideFinished) next.set('hideFinished', '1');
             if (this.favoritesOnly) next.set('favorites', '1');
+            if (this.fixture) next.set('fixture', this.fixture);
             if (this.query) next.set('q', this.query);
             return next;
         },

@@ -56,6 +56,51 @@ class SoccerScannerRoutesTest(unittest.TestCase):
         self.assertIn(b'id="calendar-results"', response.data)
         self.assertIn(b'/static/js/calendar.js', response.data)
 
+    def test_canonical_fixture_lookup_deep_link_and_ics_are_spoiler_free(self):
+        fixture_id = 'fx_' + ('a' * 24)
+        match = {
+            'canonicalFixtureId': fixture_id,
+            'utcDate': '2026-08-03T19:00:00Z',
+            'localDate': '2026-08-03',
+            'homeTeam': {'name': 'Arsenal'},
+            'awayTeam': {'name': 'Chelsea'},
+            'competition': {'name': 'Premier League'},
+            'venue': 'Scanner Stadium',
+            'score': {'fullTime': {'home': 97, 'away': 96}},
+        }
+        service = Mock()
+        service.lookup_fixture.return_value = match
+        original = self.app.extensions['fixture_service']
+        self.app.extensions['fixture_service'] = service
+        try:
+            api_response = self.client.get(f'/api/v2/fixtures/{fixture_id}')
+            deep_link = self.client.get(f'/fixtures/{fixture_id}')
+            calendar = self.client.get(f'/fixtures/{fixture_id}.ics')
+        finally:
+            self.app.extensions['fixture_service'] = original
+
+        self.assertEqual(api_response.status_code, 200)
+        self.assertEqual(api_response.json['fixture']['canonicalFixtureId'], fixture_id)
+        self.assertEqual(deep_link.status_code, 302)
+        self.assertIn(f'fixture={fixture_id}', deep_link.headers['Location'])
+        self.assertEqual(calendar.status_code, 200)
+        self.assertEqual(calendar.mimetype, 'text/calendar')
+        self.assertIn('SUMMARY:Arsenal vs Chelsea', calendar.get_data(as_text=True))
+        self.assertIn('LOCATION:Scanner Stadium', calendar.get_data(as_text=True))
+        self.assertNotIn('97', calendar.get_data(as_text=True))
+        self.assertNotIn('96', calendar.get_data(as_text=True))
+
+    def test_team_and_competition_deep_pages_have_stable_routes(self):
+        team = self.client.get('/teams/arsenal')
+        competition = self.client.get('/competitions/premier-league')
+        unknown_team = self.client.get('/teams/not-mapped')
+
+        self.assertEqual(team.status_code, 200)
+        self.assertIn(b'data-team-id="arsenal"', team.data)
+        self.assertEqual(competition.status_code, 200)
+        self.assertIn(b'Premier League', competition.data)
+        self.assertEqual(unknown_team.status_code, 404)
+
     def test_fixture_api_rejects_an_invalid_date(self):
         response = self.client.get('/api/matches-today?date=tomorrow')
 

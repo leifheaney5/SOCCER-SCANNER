@@ -56,7 +56,7 @@ let payload = null;
 let scoresRevealed = readScorePreference();
 let searchTimer = null;
 const expandedGroups = new Set();
-let selectedFixtureId = null;
+let selectedFixtureId = state.fixture || null;
 let activeRequestController = null;
 let requestSequence = 0;
 let matchContext = null;
@@ -145,6 +145,10 @@ function reflectCurrentResults() {
         String(match.canonicalFixtureId || match.id) === selectedFixtureId
     ))) {
         selectedFixtureId = null;
+        if (state.fixture) {
+            setState({fixture: ''}, {reason: 'reconcile-fixture'});
+            syncUrl('replace');
+        }
         matchContext?.reset();
     }
     const summary = summarizeMatches(matches);
@@ -167,6 +171,13 @@ function reflectCurrentResults() {
     byId('fixture-stream-title').textContent = state.favoritesOnly ? 'Your matches' : 'Match schedule';
     matchContext?.rerender();
     teamDrawer?.rerender();
+    if (selectedFixtureId && !matchContext?.selected()) {
+        const match = payload.matches.find(item => String(item.canonicalFixtureId || item.id) === selectedFixtureId);
+        const trigger = byId('fixture-stream').querySelector(
+            `.details-button[data-fixture-id="${CSS.escape(selectedFixtureId)}"]`,
+        );
+        if (match && trigger) matchContext.open(match, trigger);
+    }
 }
 
 function classifyRequestFailure(response, body, error = null) {
@@ -256,7 +267,7 @@ function chooseDate(date) {
         syncControls();
         return;
     }
-    setState({date, dateError: false}, {reason: 'date'});
+    setState({date, dateError: false, fixture: ''}, {reason: 'date'});
     selectedFixtureId = null;
     matchContext?.reset();
     syncControls();
@@ -271,8 +282,8 @@ function bindEvents() {
     byId('dashboard-date').addEventListener('change', event => chooseDate(event.target.value));
     byId('timezone-filter').addEventListener('change', event => {
         cancelPendingSearch();
-        setState({timezone: event.target.value}, {reason: 'timezone'});
-        selectedFixtureId = null;
+        setState({timezone: event.target.value, fixture: ''}, {reason: 'timezone'});
+        selectedFixtureId = restored.fixture || null;
         matchContext?.reset();
         syncControls();
         syncUrl('push');
@@ -330,6 +341,8 @@ function bindEvents() {
             reflectCurrentResults();
         } else if (action.dataset.action === 'select-fixture') {
             selectedFixtureId = action.dataset.fixtureId;
+            setState({fixture: selectedFixtureId}, {reason: 'fixture'});
+            syncUrl('push');
             reflectCurrentResults();
             const match = payload?.matches?.find(item => (
                 String(item.canonicalFixtureId || item.id) === selectedFixtureId
@@ -408,6 +421,21 @@ function init() {
         closeButton: byId('close-match-context'),
         getRevealed: () => scoresRevealed,
         onTeam: (team, trigger) => teamDrawer.open(team, trigger),
+        onClose: () => {
+            const closedFixtureId = selectedFixtureId;
+            selectedFixtureId = null;
+            matchContext?.reset();
+            if (state.fixture) {
+                setState({fixture: ''}, {reason: 'close-fixture'});
+                syncUrl('replace');
+            }
+            reflectCurrentResults();
+            if (closedFixtureId) {
+                byId('fixture-stream').querySelector(
+                    `.details-button[data-fixture-id="${CSS.escape(closedFixtureId)}"]`,
+                )?.focus();
+            }
+        },
         dialogManager,
     });
     syncControls();

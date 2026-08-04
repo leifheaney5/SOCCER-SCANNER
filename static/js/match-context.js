@@ -92,7 +92,26 @@ function createContextContent(match, revealed, onTeam, headingId) {
     addMeta(details, 'Matchday', match?.matchday ?? match?.season?.currentMatchday ? `Matchday ${match?.matchday ?? match?.season?.currentMatchday}` : null);
     addMeta(details, 'Stage', sentenceCase(match?.stage));
     addMeta(details, 'Source', match?.enhanced_info?.source);
-    fragment.append(competition, heading, status, matchup, details);
+    const fixtureId = String(match?.canonicalFixtureId || match?.id || '');
+    const actions = node('div', 'context-actions');
+    if (fixtureId) {
+        const copy = node('button', 'control-button', 'Copy fixture link');
+        copy.type = 'button';
+        copy.addEventListener('click', async () => {
+            const link = `${location.origin}/fixtures/${encodeURIComponent(fixtureId)}`;
+            try {
+                await navigator.clipboard.writeText(link);
+                copy.textContent = 'Link copied';
+            } catch {
+                copy.textContent = link;
+            }
+        });
+        const calendar = node('a', 'control-button', 'Add to calendar');
+        calendar.href = `/fixtures/${encodeURIComponent(fixtureId)}.ics`;
+        calendar.setAttribute('download', '');
+        actions.append(copy, calendar);
+    }
+    fragment.append(competition, heading, status, matchup, details, actions);
     return fragment;
 }
 
@@ -104,10 +123,12 @@ export function createMatchContext({
     closeButton,
     getRevealed,
     onTeam,
+    onClose,
     dialogManager,
 }) {
     let currentMatch = null;
     let activeTrigger = null;
+    let preserveSelectionOnClose = false;
 
     const mediaQuery = window.matchMedia('(min-width: 1100px)');
     const desktop = () => mediaQuery.matches;
@@ -125,6 +146,7 @@ export function createMatchContext({
     }
 
     function close(options) {
+        preserveSelectionOnClose = Boolean(options?.preserveSelection);
         dialogManager.close(dialog, options);
     }
 
@@ -154,7 +176,7 @@ export function createMatchContext({
         if (!currentMatch) return;
         render();
         if (desktop()) {
-            close({restoreFocus: false});
+            close({restoreFocus: false, preserveSelection: true});
         } else {
             dialogManager.open(dialog, activeTrigger);
             closeButton.focus();
@@ -164,6 +186,13 @@ export function createMatchContext({
     closeButton.addEventListener('click', close);
     dialog.addEventListener('click', event => {
         if (event.target === dialog) close();
+    });
+    dialog.addEventListener('close', () => {
+        if (preserveSelectionOnClose) {
+            preserveSelectionOnClose = false;
+            return;
+        }
+        if (currentMatch) onClose?.(currentMatch);
     });
     mediaQuery.addEventListener('change', onViewportChange);
     dialog.addEventListener('keydown', event => {

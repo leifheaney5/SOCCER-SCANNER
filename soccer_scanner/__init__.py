@@ -74,6 +74,7 @@ def create_app(config=None):
             'api.canonical_team_analysis',
             'api.fixtures_by_date',
             'api.fixtures_v2',
+            'api.fixture_v2',
         }
         if request.endpoint not in expensive_endpoints:
             return None

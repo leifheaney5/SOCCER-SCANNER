@@ -329,6 +329,8 @@ test('desktop fixture selection populates complete spoiler-safe match context', 
     await expect(context).toContainText('Live now');
     await expect(context).toContainText('Monday, August 3');
     await expect(context).toContainText('Scanner Stadium');
+    await expect(context.getByRole('button', {name: 'Copy fixture link'})).toBeVisible();
+    await expect(context.getByRole('link', {name: 'Add to calendar'})).toHaveAttribute('href', '/fixtures/live-secret.ics');
     await expect(context).toContainText('Matchday 4');
     await expect(context).toContainText('Regular season');
     await expect(context).toContainText('ESPN');
@@ -486,6 +488,16 @@ test('team drawer exposes provider retry and limited-data states', async ({page}
     await expect(drawer).toContainText('River Plate');
     await expect(drawer).toContainText('Unavailable');
     await expect(drawer).not.toContainText('0 played');
+});
+
+test('fixture query opens shareable match context after its date loads', async ({page}) => {
+    await page.setViewportSize({width: 1280, height: 900});
+    await mockFixtures(page);
+    await page.goto('/?date=2026-08-03&fixture=live-secret');
+
+    await expect(page.locator('#match-context')).toContainText('Arsenal');
+    await expect(page.locator('.fixture-card[data-fixture-id="live-secret"]')).toHaveAttribute('aria-current', 'true');
+    await expect.poll(() => page.evaluate(() => location.search)).toContain('fixture=live-secret');
 });
 
 test('nested mobile dialogs close in order and match context follows viewport changes', async ({page}) => {

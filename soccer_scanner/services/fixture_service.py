@@ -157,7 +157,7 @@ class CanonicalFixtureService:
             (outcome.sourceUpdatedAt for outcome in selected if outcome.sourceUpdatedAt),
             default=self.now().isoformat(),
         )
-        return {
+        response = {
             'state': state.value,
             'date': requested_date.isoformat(),
             'timezone': timezone_name,
@@ -194,6 +194,28 @@ class CanonicalFixtureService:
                 'total_unique': len(matches),
             },
         }
+        for match in matches:
+            fixture_id = match.get('canonicalFixtureId')
+            if not fixture_id:
+                continue
+            try:
+                self.cache.set(
+                    f'fixture-lookup:{fixture_id}',
+                    match,
+                    ttl_seconds=24 * 60 * 60,
+                    stale_ttl_seconds=6 * 24 * 60 * 60,
+                )
+            except (ValueError, RuntimeError):
+                # Fixture responses remain available if optional deep-link storage degrades.
+                continue
+        return response
+
+    def lookup_fixture(self, canonical_fixture_id):
+        lookup = self.cache.get(
+            f'fixture-lookup:{canonical_fixture_id}',
+            allow_stale=True,
+        )
+        return lookup.value if lookup.status in {'fresh', 'stale'} else None
 
     @staticmethod
     def _provider_name(provider):
