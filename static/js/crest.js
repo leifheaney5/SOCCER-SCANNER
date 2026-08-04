@@ -12,8 +12,11 @@ function initials(name) {
 function safeImageUrl(value) {
     if (!value) return null;
     try {
-        const url = new URL(String(value), window.location.origin);
-        return SAFE_PROTOCOLS.has(url.protocol) ? url.href : null;
+        const rawValue = String(value).trim();
+        const url = new URL(rawValue, window.location.origin);
+        if (!SAFE_PROTOCOLS.has(url.protocol)) return null;
+        if (url.origin === window.location.origin && url.protocol !== 'data:') return null;
+        return url.href;
     } catch {
         return null;
     }

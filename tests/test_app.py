@@ -1,7 +1,9 @@
 import unittest
+import os
 from unittest.mock import Mock, patch
 
 from app import app
+from soccer_scanner import create_app
 
 
 class SoccerScannerRoutesTest(unittest.TestCase):
@@ -58,16 +60,62 @@ class SoccerScannerRoutesTest(unittest.TestCase):
     def test_health_endpoints_and_security_headers(self):
         live = self.client.get('/health/live')
         ready = self.client.get('/health/ready')
+        version = self.client.get('/health/version')
 
         self.assertEqual(live.status_code, 200)
         self.assertEqual(ready.status_code, 200)
+        self.assertEqual(version.status_code, 200)
         self.assertEqual(ready.json['status'], 'ready')
+        self.assertEqual(ready.json['build'], version.json)
+        self.assertRegex(version.json['version'], r'^\d+\.\d+\.\d+$')
+        self.assertIn('commitSha', version.json)
+        self.assertIn('buildTimestamp', version.json)
+        self.assertIn('environment', version.json)
+        self.assertIn('assetVersion', version.json)
         self.assertEqual(live.headers['X-Content-Type-Options'], 'nosniff')
         self.assertIn("default-src 'self'", live.headers['Content-Security-Policy'])
         self.assertIn("script-src 'self'", live.headers['Content-Security-Policy'])
         self.assertNotIn("script-src 'self' 'unsafe-inline'", live.headers['Content-Security-Policy'])
         self.assertNotIn("style-src 'self' 'unsafe-inline'", live.headers['Content-Security-Policy'])
         self.assertIn("object-src 'none'", live.headers['Content-Security-Policy'])
+
+    def test_production_requires_a_valid_commit_sha(self):
+        environment = {
+            'APP_ENVIRONMENT': 'production',
+            'RAILWAY_ENVIRONMENT_NAME': '',
+            'GIT_COMMIT_SHA': '',
+            'RAILWAY_GIT_COMMIT_SHA': '',
+        }
+        with patch.dict(os.environ, environment, clear=False):
+            with self.assertRaisesRegex(RuntimeError, 'commit SHA'):
+                create_app({'TESTING': False})
+
+    def test_build_sha_versions_every_first_party_entry_asset(self):
+        sha = '0123456789abcdef0123456789abcdef01234567'
+        environment = {
+            'APP_ENVIRONMENT': 'test',
+            'GIT_COMMIT_SHA': sha,
+            'APP_VERSION': '2.0.0',
+            'BUILD_TIMESTAMP': '2026-08-03T20:00:00Z',
+        }
+        with patch.dict(os.environ, environment, clear=False):
+            built_app = create_app({'TESTING': True})
+            response = built_app.test_client().get('/')
+            version = built_app.test_client().get('/health/version').json
+
+        html = response.get_data(as_text=True)
+        self.assertEqual(version, {
+            'version': '2.0.0',
+            'commitSha': sha,
+            'buildTimestamp': '2026-08-03T20:00:00Z',
+            'environment': 'test',
+            'assetVersion': sha[:12],
+        })
+        self.assertIn(f'/static/css/base.css?v={sha[:12]}', html)
+        self.assertIn(f'/static/css/fixtures.css?v={sha[:12]}', html)
+        self.assertIn(f'/static/js/dom.js?v={sha[:12]}', html)
+        self.assertIn(f'/static/js/fixtures.js?v={sha[:12]}', html)
+        self.assertNotIn('20260803-dashboard-v1', html)
 
     def test_pages_use_shared_layout_and_external_assets(self):
         fixtures = self.client.get('/').get_data(as_text=True)

@@ -1,5 +1,8 @@
+import os
+
 from flask import Flask
 
+from .build_info import load_build_info
 from .config import Config
 from .routes.api import api
 from .routes.health import health
@@ -15,6 +18,13 @@ def create_app(config=None):
     app.config.from_object(Config)
     if config:
         app.config.update(config)
+
+    build_info = load_build_info(os.environ)
+    app.extensions['build_info'] = build_info
+
+    @app.context_processor
+    def inject_build_info():
+        return {'build': build_info.as_public_dict()}
 
     timeout = (
         app.config['HTTP_CONNECT_TIMEOUT'],

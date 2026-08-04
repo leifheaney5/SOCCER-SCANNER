@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block title %}Fixtures | Soccer Scanner{% endblock %}
-{% block page_styles %}<link rel="stylesheet" href="{{ url_for('static', filename='css/fixtures.css', v='20260803-dashboard-v1') }}">{% endblock %}
+{% block page_styles %}<link rel="stylesheet" href="{{ url_for('static', filename='css/fixtures.css', v=build.assetVersion) }}">{% endblock %}
 
 {% block header_actions %}
 <button id="score-toggle" class="score-toggle" type="button" aria-pressed="false" aria-label="Reveal scores">
@@ -133,4 +133,4 @@
 </dialog>
 {% endblock %}
 
-{% block page_scripts %}<script type="module" src="{{ url_for('static', filename='js/fixtures.js', v='20260803-dashboard-v1') }}"></script>{% endblock %}
+{% block page_scripts %}<script type="module" src="{{ url_for('static', filename='js/fixtures.js', v=build.assetVersion) }}"></script>{% endblock %}

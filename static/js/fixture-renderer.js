@@ -1,6 +1,15 @@
-import {createCrest} from './crest.js';
-import {selectFeatured, statusKind, summarizeMatches} from './fixture-state.js';
-import {validScore} from './score-preference.js';
+const assetVersion = new URL(import.meta.url).searchParams.get('v');
+const versionedModule = path => (
+    assetVersion ? `${path}?v=${encodeURIComponent(assetVersion)}` : path
+);
+const [crestModule, fixtureStateModule, scorePreferenceModule] = await Promise.all([
+    import(versionedModule('./crest.js')),
+    import(versionedModule('./fixture-state.js')),
+    import(versionedModule('./score-preference.js')),
+]);
+const {createCrest} = crestModule;
+const {selectFeatured, statusKind, summarizeMatches} = fixtureStateModule;
+const {validScore} = scorePreferenceModule;
 
 const GROUP_PREVIEW_LIMIT = 6;
 const SVG_NS = 'http://www.w3.org/2000/svg';

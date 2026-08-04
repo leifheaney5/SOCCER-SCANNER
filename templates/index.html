@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block title %}Teams - Soccer Scanner{% endblock %}
-{% block page_styles %}<link rel="stylesheet" href="{{ url_for('static', filename='css/teams.css') }}">{% endblock %}
+{% block page_styles %}<link rel="stylesheet" href="{{ url_for('static', filename='css/teams.css', v=build.assetVersion) }}">{% endblock %}
 
 {% block content %}
 <div class="container">
@@ -45,4 +45,4 @@
     </div>
 {% endblock %}
 
-{% block page_scripts %}<script src="{{ url_for('static', filename='js/teams.js') }}" defer></script>{% endblock %}
+{% block page_scripts %}<script src="{{ url_for('static', filename='js/teams.js', v=build.assetVersion) }}" defer></script>{% endblock %}

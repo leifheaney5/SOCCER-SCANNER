@@ -1,5 +1,13 @@
-import {createCrest} from './crest.js';
-import {createScoreNode, formatKickoff} from './fixture-renderer.js';
+const assetVersion = new URL(import.meta.url).searchParams.get('v');
+const versionedModule = path => (
+    assetVersion ? `${path}?v=${encodeURIComponent(assetVersion)}` : path
+);
+const [crestModule, fixtureRendererModule] = await Promise.all([
+    import(versionedModule('./crest.js')),
+    import(versionedModule('./fixture-renderer.js')),
+]);
+const {createCrest} = crestModule;
+const {createScoreNode, formatKickoff} = fixtureRendererModule;
 
 function node(tag, className = '', text = '') {
     const element = document.createElement(tag);

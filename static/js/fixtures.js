@@ -1,17 +1,28 @@
-import {
+const assetVersion = new URL(import.meta.url).searchParams.get('v');
+const versionedModule = path => (
+    assetVersion ? `${path}?v=${encodeURIComponent(assetVersion)}` : path
+);
+const [fixtureStateModule, scorePreferenceModule, fixtureRendererModule, matchContextModule, teamDrawerModule] = await Promise.all([
+    import(versionedModule('./fixture-state.js')),
+    import(versionedModule('./score-preference.js')),
+    import(versionedModule('./fixture-renderer.js')),
+    import(versionedModule('./match-context.js')),
+    import(versionedModule('./team-drawer.js')),
+]);
+const {
     createState,
     filterMatches,
     groupMatches,
     shiftDate,
     summarizeMatches,
     todayLocal,
-} from './fixture-state.js';
-import {
+} = fixtureStateModule;
+const {
     readScorePreference,
     syncScoreToggle,
     writeScorePreference,
-} from './score-preference.js';
-import {
+} = scorePreferenceModule;
+const {
     renderFeatured,
     renderEmptyState,
     renderFixtureStream,
@@ -19,9 +30,9 @@ import {
     renderNotice,
     renderRequestError,
     renderSummary,
-} from './fixture-renderer.js';
-import {createMatchContext} from './match-context.js';
-import {createTeamDrawer} from './team-drawer.js';
+} = fixtureRendererModule;
+const {createMatchContext} = matchContextModule;
+const {createTeamDrawer} = teamDrawerModule;
 
 const byId = id => document.getElementById(id);
 const state = createState(window.location.search);

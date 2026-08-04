@@ -13,4 +13,13 @@ def ready():
     required_services = ('football_data', 'fixture_service', 'team_analysis')
     missing = [name for name in required_services if name not in current_app.extensions]
     status = 'ready' if not missing else 'not_ready'
-    return jsonify({'status': status, 'missing': missing}), 200 if not missing else 503
+    return jsonify({
+        'status': status,
+        'missing': missing,
+        'build': current_app.extensions['build_info'].as_public_dict(),
+    }), 200 if not missing else 503
+
+
+@health.get('/version')
+def version():
+    return jsonify(current_app.extensions['build_info'].as_public_dict())
