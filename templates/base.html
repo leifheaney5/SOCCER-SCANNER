@@ -19,8 +19,18 @@
             <a class="app-title" href="/" aria-label="Soccer Scanner home">
                 <span>SOCCER</span><span class="app-title-accent">SCANNER</span>
             </a>
-            <nav class="nav-links" aria-label="Primary navigation">
-                <a href="/" class="nav-link{% if request.path in ['/', '/matches-today'] %} active{% endif %}"{% if request.path in ['/', '/matches-today'] %} aria-current="page"{% endif %}>Fixtures</a>
+            <button id="nav-toggle" class="nav-toggle" type="button" aria-expanded="false" aria-controls="primary-navigation">
+                <span class="sr-only">Open navigation</span>
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+            </button>
+            <nav id="primary-navigation" class="nav-links" aria-label="Primary navigation">
+                {% set fixture_page = request.path in ['/', '/matches-today'] %}
+                <a href="/" class="nav-link{% if fixture_page and request.args.get('status') != 'live' and request.args.get('favorites') != '1' %} active{% endif %}"{% if fixture_page and request.args.get('status') != 'live' and request.args.get('favorites') != '1' %} aria-current="page"{% endif %}>Fixtures</a>
+                <a href="/?status=live" class="nav-link{% if fixture_page and request.args.get('status') == 'live' %} active{% endif %}"{% if fixture_page and request.args.get('status') == 'live' %} aria-current="page"{% endif %}>Live</a>
+                <a href="/calendar" class="nav-link{% if request.path == '/calendar' %} active{% endif %}"{% if request.path == '/calendar' %} aria-current="page"{% endif %}>Calendar</a>
+                <a href="/teams" class="nav-link{% if request.path.startswith('/teams') %} active{% endif %}"{% if request.path.startswith('/teams') %} aria-current="page"{% endif %}>Teams</a>
+                <a href="/league-tables" class="nav-link{% if request.path == '/league-tables' %} active{% endif %}"{% if request.path == '/league-tables' %} aria-current="page"{% endif %}>Tables</a>
+                <a href="/?favorites=1" class="nav-link{% if fixture_page and request.args.get('favorites') == '1' %} active{% endif %}"{% if fixture_page and request.args.get('favorites') == '1' %} aria-current="page"{% endif %}>Favorites</a>
                 <a class="nav-link nav-link-external" href="https://select-xi.pro/" target="_blank" rel="noopener noreferrer">
                     Select XI
                     <span aria-hidden="true">↗</span>

@@ -32,3 +32,31 @@ function setHTML(element, html) {
 }
 
 window.safeDOM = Object.freeze({setHTML});
+
+const navToggle = document.getElementById('nav-toggle');
+const navigation = document.getElementById('primary-navigation');
+if (navToggle && navigation) {
+    const closeNavigation = () => {
+        navToggle.setAttribute('aria-expanded', 'false');
+        navToggle.querySelector('.sr-only').textContent = 'Open navigation';
+        navigation.classList.remove('is-open');
+    };
+    navToggle.addEventListener('click', () => {
+        const opening = navToggle.getAttribute('aria-expanded') !== 'true';
+        navToggle.setAttribute('aria-expanded', String(opening));
+        navToggle.querySelector('.sr-only').textContent = opening ? 'Close navigation' : 'Open navigation';
+        navigation.classList.toggle('is-open', opening);
+    });
+    navigation.addEventListener('click', event => {
+        if (event.target.closest('a')) closeNavigation();
+    });
+    document.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && navigation.classList.contains('is-open')) {
+            closeNavigation();
+            navToggle.focus();
+        }
+    });
+    document.addEventListener('click', event => {
+        if (!event.target.closest('.nav-container')) closeNavigation();
+    });
+}
