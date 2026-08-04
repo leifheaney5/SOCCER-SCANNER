@@ -27,11 +27,14 @@ jobs:
       - run: PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest -q
       - name: Check every JavaScript file
         run: find static tests -type f \( -name '*.js' -o -name '*.mjs' \) -print0 | xargs -0 -n1 node --check
+      - run: npm run test:smoke-invariants
       - run: npm audit --audit-level=high
       - run: pip-audit -r requirements.txt
       - run: npx playwright test --project=chromium --project=webkit
       - name: Scan committed content for secrets
         uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Upload safe browser evidence
         if: always()
         uses: actions/upload-artifact@v4
