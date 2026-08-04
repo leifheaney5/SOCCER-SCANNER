@@ -49,6 +49,13 @@ class SoccerScannerRoutesTest(unittest.TestCase):
         self.assertEqual(standings.status_code, 200)
         self.assertIn(b'id="league-selector"', standings.data)
 
+    def test_calendar_workspace_is_available(self):
+        response = self.client.get('/calendar')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b'id="calendar-results"', response.data)
+        self.assertIn(b'/static/js/calendar.js', response.data)
+
     def test_fixture_api_rejects_an_invalid_date(self):
         response = self.client.get('/api/matches-today?date=tomorrow')
 

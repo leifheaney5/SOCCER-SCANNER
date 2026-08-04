@@ -65,3 +65,10 @@ for (const path of ['/teams', '/league-tables', '/privacy', '/data-sources', '/n
         await expectNoSeriousViolations(page);
     });
 }
+
+test('/calendar has no serious accessibility violations', async ({page}) => {
+    await mockFixtures(page, emptyFixturePayload);
+    await page.goto('/calendar?start=2026-08-03');
+    await expect(page.locator('#calendar-status')).toContainText('7 days loaded');
+    await expectNoSeriousViolations(page);
+});

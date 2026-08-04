@@ -23,6 +23,11 @@ def league_tables():
     return render_template('league_tables.html')
 
 
+@pages.get('/calendar')
+def calendar():
+    return render_template('calendar.html')
+
+
 @pages.get('/privacy')
 def privacy():
     return render_template('privacy.html')
