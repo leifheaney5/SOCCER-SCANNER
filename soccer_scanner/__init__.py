@@ -1,9 +1,13 @@
 import os
+import re
+from time import monotonic
+from uuid import uuid4
 
-from flask import Flask
+from flask import Flask, g, request
 
 from .build_info import load_build_info
 from .config import Config
+from .observability import MetricsRegistry, log_event
 from .routes.api import api
 from .routes.health import health
 from .routes.pages import pages
@@ -21,6 +25,19 @@ def create_app(config=None):
 
     build_info = load_build_info(os.environ)
     app.extensions['build_info'] = build_info
+    app.extensions['metrics'] = MetricsRegistry()
+
+    request_id_pattern = re.compile(r'^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$')
+
+    @app.before_request
+    def begin_request_observation():
+        supplied_request_id = request.headers.get('X-Request-ID', '')
+        g.request_id = (
+            supplied_request_id
+            if request_id_pattern.fullmatch(supplied_request_id)
+            else str(uuid4())
+        )
+        g.request_started = monotonic()
 
     @app.context_processor
     def inject_build_info():
@@ -68,5 +85,28 @@ def create_app(config=None):
             "connect-src 'self'; frame-src https://widgets.sofascore.com; "
             "object-src 'none'; base-uri 'self'; form-action 'self'",
         )
+        response.headers['X-Request-ID'] = g.request_id
+        metrics = app.extensions['metrics']
+        metrics.increment('api.requests')
+        if response.status_code >= 400:
+            metrics.increment('api.errors')
+        if response.status_code == 429:
+            metrics.increment('api.rate_limited')
+        log_event(
+            app.logger,
+            'request_completed',
+            requestId=g.request_id,
+            endpoint=request.endpoint,
+            statusCode=response.status_code,
+            durationMs=round((monotonic() - g.request_started) * 1000),
+        )
         return response
+
+    log_event(
+        app.logger,
+        'application_started',
+        version=build_info.version,
+        commitSha=build_info.commit_sha[:12],
+        environment=build_info.environment,
+    )
     return app

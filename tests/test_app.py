@@ -61,10 +61,14 @@ class SoccerScannerRoutesTest(unittest.TestCase):
         live = self.client.get('/health/live')
         ready = self.client.get('/health/ready')
         version = self.client.get('/health/version')
+        metrics = self.client.get('/health/metrics')
 
         self.assertEqual(live.status_code, 200)
         self.assertEqual(ready.status_code, 200)
         self.assertEqual(version.status_code, 200)
+        self.assertEqual(metrics.status_code, 200)
+        self.assertIn('counters', metrics.json)
+        self.assertIn('timings', metrics.json)
         self.assertEqual(ready.json['status'], 'ready')
         self.assertEqual(ready.json['build'], version.json)
         self.assertRegex(version.json['version'], r'^\d+\.\d+\.\d+$')
@@ -78,6 +82,24 @@ class SoccerScannerRoutesTest(unittest.TestCase):
         self.assertNotIn("script-src 'self' 'unsafe-inline'", live.headers['Content-Security-Policy'])
         self.assertNotIn("style-src 'self' 'unsafe-inline'", live.headers['Content-Security-Policy'])
         self.assertIn("object-src 'none'", live.headers['Content-Security-Policy'])
+
+    def test_request_id_is_validated_and_echoed(self):
+        accepted = self.client.get('/health/live', headers={'X-Request-ID': 'client-123'})
+        generated = self.client.get('/health/live', headers={'X-Request-ID': 'not valid!'})
+
+        self.assertEqual(accepted.headers['X-Request-ID'], 'client-123')
+        self.assertRegex(
+            generated.headers['X-Request-ID'],
+            r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
+        )
+
+    def test_provider_transport_configuration_is_bounded(self):
+        self.assertGreaterEqual(app.config['PROVIDER_MAX_RETRIES'], 0)
+        self.assertLessEqual(app.config['PROVIDER_MAX_RETRIES'], 3)
+        self.assertLessEqual(app.config['PROVIDER_MAX_JSON_BYTES'], 2_000_000)
+        self.assertLessEqual(app.config['PROVIDER_RETRY_AFTER_MAX'], 60)
+        self.assertLessEqual(app.config['PROVIDER_POOL_CONNECTIONS'], 16)
+        self.assertLessEqual(app.config['PROVIDER_POOL_MAXSIZE'], 32)
 
     def test_production_requires_a_valid_commit_sha(self):
         environment = {

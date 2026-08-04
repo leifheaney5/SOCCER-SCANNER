@@ -23,3 +23,8 @@ def ready():
 @health.get('/version')
 def version():
     return jsonify(current_app.extensions['build_info'].as_public_dict())
+
+
+@health.get('/metrics')
+def metrics():
+    return jsonify(current_app.extensions['metrics'].snapshot())
