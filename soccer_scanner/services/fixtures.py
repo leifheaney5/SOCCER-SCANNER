@@ -29,12 +29,13 @@ ESPN_LEAGUES = {
 
 class FixtureService:
     def __init__(self, football_data, cache, timeout=(3.05, 8), max_workers=8,
-                 fetch_deadline=4):
+                 fetch_deadline=4, identity_resolver=None):
         self.football_data = football_data
         self.cache = cache
         self.timeout = timeout
         self.max_workers = max_workers
         self.fetch_deadline = fetch_deadline
+        self.identity_resolver = identity_resolver
         self._key_locks = WeakValueDictionary()
         self._key_locks_guard = Lock()
 
@@ -85,7 +86,12 @@ class FixtureService:
                     'partial': True,
                 }
 
-        matches = self._enhance_and_deduplicate(matches, requested_date, timezone_name)
+        matches = self._enhance_and_deduplicate(
+            matches,
+            requested_date,
+            timezone_name,
+            identity_resolver=self.identity_resolver,
+        )
         matches.sort(key=lambda match: (
             -match['enhanced_info']['importance_score'], match.get('utcDate', '')
         ))
@@ -176,7 +182,12 @@ class FixtureService:
         return sorted(dates)
 
     @staticmethod
-    def _enhance_and_deduplicate(matches, requested_date, timezone_name='UTC'):
+    def _enhance_and_deduplicate(
+        matches,
+        requested_date,
+        timezone_name='UTC',
+        identity_resolver=None,
+    ):
         unique = {}
         local_zone = ZoneInfo(timezone_name)
         for match in matches:
@@ -190,8 +201,20 @@ class FixtureService:
                 identity = str(match.get('id') or (
                     match['homeTeam'].get('name'), match['awayTeam'].get('name'), match['utcDate']
                 ))
+                provider = 'espn' if str(match.get('id', '')).startswith('espn_') else 'football-data'
+                normalized_match = dict(match)
+                if identity_resolver is not None:
+                    for side in ('homeTeam', 'awayTeam'):
+                        team = dict(match.get(side) or {})
+                        provider_id = team.get('providerId') or team.get('id')
+                        resolved = identity_resolver.resolve(
+                            team.get('provider') or provider,
+                            provider_id,
+                            team.get('name'),
+                        )
+                        normalized_match[side] = {**team, **resolved.as_dict()}
                 unique[identity] = {
-                    **match,
+                    **normalized_match,
                     'enhanced_info': {
                         'importance_score': calculate_match_importance(match),
                         'tv_coverage': determine_tv_coverage(match),
@@ -199,7 +222,7 @@ class FixtureService:
                         'rivalry_factor': check_rivalry_factor(match),
                         'match_date': requested_date.isoformat(),
                         'days_from_today': 0,
-                        'source': 'ESPN' if str(match.get('id', '')).startswith('espn_') else 'football-data.org',
+                        'source': 'ESPN' if provider == 'espn' else 'football-data.org',
                     },
                 }
             except (KeyError, TypeError, ValueError):

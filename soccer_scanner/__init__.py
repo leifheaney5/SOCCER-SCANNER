@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 import re
 from time import monotonic
 from uuid import uuid4
@@ -17,6 +18,7 @@ from .services.fixtures import FixtureService
 from .services.football_data import FootballDataClient
 from .services.rate_limit import MemoryRateLimiter
 from .services.teams import TeamAnalysisService
+from .services.team_identity import TeamIdentityResolver
 
 
 def create_app(config=None):
@@ -58,6 +60,7 @@ def create_app(config=None):
             'api.competition_teams',
             'api.team',
             'api.team_analysis',
+            'api.canonical_team_analysis',
             'api.fixtures_by_date',
         }
         if request.endpoint not in expensive_endpoints:
@@ -96,6 +99,9 @@ def create_app(config=None):
     )
     app.extensions['football_data'] = football_data
     app.extensions['team_analysis'] = TeamAnalysisService(football_data)
+    app.extensions['team_identities'] = TeamIdentityResolver.from_file(
+        Path(__file__).parent / 'data' / 'team-provider-map.json',
+    )
     app.extensions['fixture_service'] = FixtureService(
         football_data,
         TTLCache(
@@ -105,6 +111,7 @@ def create_app(config=None):
         ),
         timeout=timeout,
         fetch_deadline=app.config['FIXTURE_FETCH_DEADLINE'],
+        identity_resolver=app.extensions['team_identities'],
     )
     app.register_blueprint(pages)
     app.register_blueprint(api)

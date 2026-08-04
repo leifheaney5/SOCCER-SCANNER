@@ -202,6 +202,21 @@ class SoccerScannerRoutesTest(unittest.TestCase):
         self.assertEqual(get.call_count, 20)
         self.assertTrue(all(call.kwargs['params']['dates'] == '20260814' for call in get.call_args_list))
 
+    @patch('soccer_scanner.services.teams.TeamAnalysisService.analyze')
+    def test_canonical_team_analysis_translates_to_compatible_provider_id(self, analyze):
+        analyze.return_value = {'team_info': {'name': 'Arsenal'}}
+
+        response = self.client.get('/api/v2/teams/arsenal/analysis')
+
+        self.assertEqual(response.status_code, 200)
+        analyze.assert_called_once_with('57')
+
+    def test_canonical_team_analysis_rejects_raw_or_unknown_provider_id(self):
+        response = self.client.get('/api/v2/teams/57/analysis')
+
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.json['error']['code'], 'team_identity_unavailable')
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "teams": [
+    {
+      "canonicalId": "arsenal",
+      "name": "Arsenal",
+      "aliases": ["Arsenal FC"],
+      "providerIds": {"espn": "359", "football-data": "57"}
+    },
+    {
+      "canonicalId": "chelsea",
+      "name": "Chelsea",
+      "aliases": ["Chelsea FC"],
+      "providerIds": {"espn": "363", "football-data": "61"}
+    },
+    {
+      "canonicalId": "liverpool",
+      "name": "Liverpool",
+      "aliases": ["Liverpool FC"],
+      "providerIds": {"espn": "364", "football-data": "64"}
+    },
+    {
+      "canonicalId": "manchester-city",
+      "name": "Manchester City",
+      "aliases": ["Manchester City FC", "Man City"],
+      "providerIds": {"espn": "382", "football-data": "65"}
+    },
+    {
+      "canonicalId": "manchester-united",
+      "name": "Manchester United",
+      "aliases": ["Manchester United FC", "Man United"],
+      "providerIds": {"espn": "360", "football-data": "66"}
+    },
+    {
+      "canonicalId": "tottenham-hotspur",
+      "name": "Tottenham Hotspur",
+      "aliases": ["Tottenham Hotspur FC", "Tottenham"],
+      "providerIds": {"espn": "367", "football-data": "73"}
+    }
+  ]
+}

@@ -297,7 +297,7 @@ test('team drawer renders complete intelligence, protects scores, caches, and re
     await page.setViewportSize({width: 1280, height: 900});
     await mockFixtures(page);
     let teamRequests = 0;
-    await page.route('**/api/team-analysis/*', async route => {
+    await page.route('**/api/v2/teams/*/analysis', async route => {
         teamRequests += 1;
         await new Promise(resolve => setTimeout(resolve, 350));
         await route.fulfill({contentType: 'application/json', body: JSON.stringify(teamPayload)});
@@ -361,9 +361,9 @@ test('team drawer exposes provider retry and limited-data states', async ({page}
     await page.setViewportSize({width: 1280, height: 900});
     await mockFixtures(page);
     let arsenalAttempts = 0;
-    await page.route('**/api/team-analysis/*', route => {
-        const teamId = route.request().url().split('/').at(-1);
-        if (teamId === 'live-secret-home') {
+    await page.route('**/api/v2/teams/*/analysis', route => {
+        const teamId = route.request().url().split('/').at(-2);
+        if (teamId === 'arsenal') {
             arsenalAttempts += 1;
             return arsenalAttempts === 1
                 ? route.fulfill({status: 502, contentType: 'application/json', body: JSON.stringify({error: 'raw provider failure'})})

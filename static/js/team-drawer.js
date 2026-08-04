@@ -178,6 +178,15 @@ function renderError(content, retry) {
     content.replaceChildren(state);
 }
 
+function renderIdentityUnavailable(content, team) {
+    const state = node('div', 'team-drawer-state team-drawer-state--unavailable');
+    state.append(
+        node('h3', '', 'Team intelligence unavailable'),
+        node('p', '', `Verified provider mapping is not available for ${team?.name || 'this team'}.`),
+    );
+    content.replaceChildren(state);
+}
+
 export function createTeamDrawer({dialog, content, closeButton, getRevealed}) {
     const cache = new Map();
     const inFlight = new Map();
@@ -193,37 +202,37 @@ export function createTeamDrawer({dialog, content, closeButton, getRevealed}) {
         if (dialog.open) dialog.close();
     }
 
-    async function request(teamId, force = false) {
-        if (!force && cache.has(teamId)) return cache.get(teamId);
-        if (!force && inFlight.has(teamId)) return inFlight.get(teamId);
-        const operation = fetch(`/api/team-analysis/${encodeURIComponent(teamId)}`)
+    async function request(canonicalId, force = false) {
+        if (!force && cache.has(canonicalId)) return cache.get(canonicalId);
+        if (!force && inFlight.has(canonicalId)) return inFlight.get(canonicalId);
+        const operation = fetch(`/api/v2/teams/${encodeURIComponent(canonicalId)}/analysis`)
             .then(response => {
                 if (!response.ok) throw new Error('Team provider request failed');
                 return response.json();
             })
             .then(data => {
-                cache.set(teamId, data);
+                cache.set(canonicalId, data);
                 return data;
             })
-            .finally(() => inFlight.delete(teamId));
-        inFlight.set(teamId, operation);
+            .finally(() => inFlight.delete(canonicalId));
+        inFlight.set(canonicalId, operation);
         return operation;
     }
 
     async function load(force = false) {
-        const teamId = String(currentTeam?.id || '');
-        if (!teamId) {
-            renderError(content, () => load(true));
+        const canonicalId = String(currentTeam?.canonicalId || '');
+        if (!canonicalId) {
+            renderIdentityUnavailable(content, currentTeam);
             return;
         }
         renderSkeleton(content);
         try {
-            const data = await request(teamId, force);
-            if (String(currentTeam?.id || '') !== teamId) return;
+            const data = await request(canonicalId, force);
+            if (String(currentTeam?.canonicalId || '') !== canonicalId) return;
             currentData = data;
             renderTeam(content, data, getRevealed());
         } catch {
-            if (String(currentTeam?.id || '') !== teamId) return;
+            if (String(currentTeam?.canonicalId || '') !== canonicalId) return;
             currentData = null;
             renderError(content, () => load(true));
         }
@@ -232,7 +241,7 @@ export function createTeamDrawer({dialog, content, closeButton, getRevealed}) {
     function open(team, trigger) {
         currentTeam = team;
         activeTrigger = trigger;
-        currentData = cache.get(String(team?.id || '')) || null;
+        currentData = cache.get(String(team?.canonicalId || '')) || null;
         if (!dialog.open) dialog.showModal();
         document.body.classList.add('dialog-open');
         closeButton.focus();

@@ -2,7 +2,7 @@ from datetime import date
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import requests
-from flask import Blueprint, current_app, jsonify, request
+from flask import Blueprint, current_app, g, jsonify, request
 
 api = Blueprint('api', __name__, url_prefix='/api')
 
@@ -48,6 +48,25 @@ def team(team_id):
 def team_analysis(team_id):
     try:
         return jsonify(current_app.extensions['team_analysis'].analyze(team_id))
+    except requests.RequestException as error:
+        return provider_error(error)
+
+
+@api.get('/v2/teams/<canonical_id>/analysis')
+def canonical_team_analysis(canonical_id):
+    identities = current_app.extensions['team_identities']
+    provider_id = identities.provider_id(canonical_id, 'football-data')
+    if provider_id is None:
+        return jsonify({
+            'error': {
+                'code': 'team_identity_unavailable',
+                'message': 'Verified team analysis is unavailable for this team.',
+                'retryable': False,
+                'requestId': g.request_id,
+            },
+        }), 404
+    try:
+        return jsonify(current_app.extensions['team_analysis'].analyze(provider_id))
     except requests.RequestException as error:
         return provider_error(error)
 

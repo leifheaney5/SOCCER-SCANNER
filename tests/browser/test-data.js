@@ -2,6 +2,18 @@ const crest = color => `data:image/svg+xml,${encodeURIComponent(
     `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><circle cx="20" cy="20" r="18" fill="${color}"/></svg>`,
 )}`;
 
+const teamIdentity = (id, name, teamCrest) => ({
+    id,
+    canonicalId: name.toLocaleLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
+    provider: 'football-data',
+    providerId: id,
+    providerIds: {'football-data': id},
+    name,
+    shortName: name,
+    tla: name.slice(0, 3).toUpperCase(),
+    crest: teamCrest,
+});
+
 const baseMatch = ({
     id,
     status,
@@ -22,8 +34,8 @@ const baseMatch = ({
     stage: 'REGULAR_SEASON',
     group: null,
     lastUpdated: '2026-08-03T18:30:00Z',
-    homeTeam: {id: `${id}-home`, name: home, shortName: home, tla: home.slice(0, 3).toUpperCase(), crest: homeCrest},
-    awayTeam: {id: `${id}-away`, name: away, shortName: away, tla: away.slice(0, 3).toUpperCase(), crest: awayCrest},
+    homeTeam: teamIdentity(`${id}-home`, home, homeCrest),
+    awayTeam: teamIdentity(`${id}-away`, away, awayCrest),
     score: {
         winner: homeScore === awayScore ? 'DRAW' : (homeScore > awayScore ? 'HOME_TEAM' : 'AWAY_TEAM'),
         duration: 'REGULAR',
