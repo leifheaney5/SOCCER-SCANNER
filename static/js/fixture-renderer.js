@@ -8,7 +8,7 @@ const [crestModule, fixtureStateModule, scorePreferenceModule] = await Promise.a
     import(versionedModule('./score-preference.js')),
 ]);
 const {createCrest} = crestModule;
-const {selectFeatured, statusKind, summarizeMatches} = fixtureStateModule;
+const {selectFeatured, statusKind, statusValue, summarizeMatches} = fixtureStateModule;
 const {validScore} = scorePreferenceModule;
 
 const GROUP_PREVIEW_LIMIT = 6;
@@ -61,7 +61,7 @@ function formatDate(value) {
 }
 
 function statusLabel(match) {
-    const status = String(match?.status || 'SCHEDULED').toUpperCase();
+    const status = statusValue(match);
     if (status === 'PAUSED' || status === 'HALFTIME') return 'HT';
     const kind = statusKind(match);
     if (kind === 'live') return 'LIVE';
@@ -129,7 +129,7 @@ function createTeamRows(match) {
 }
 
 function fixtureId(match) {
-    return String(match?.id || `${match?.homeTeam?.name || 'home'}-${match?.awayTeam?.name || 'away'}-${match?.utcDate || ''}`);
+    return String(match?.canonicalFixtureId || match?.id || `${match?.homeTeam?.name || 'home'}-${match?.awayTeam?.name || 'away'}-${match?.utcDate || ''}`);
 }
 
 function createDetailsButton(match, featured = false) {

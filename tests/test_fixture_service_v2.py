@@ -188,3 +188,22 @@ def test_provider_cache_is_timezone_independent_and_composition_is_local():
     assert utc['timezone'] == 'UTC'
     assert abidjan['timezone'] == 'Africa/Abidjan'
     assert abidjan['matches'][0]['localDate'] == '2026-08-03'
+
+
+def test_dst_local_day_filters_once_and_analytics_use_local_hours():
+    before_midnight = fixture('espn', 'before')
+    before_midnight['utcDate'] = '2026-03-08T04:30:00Z'
+    after_midnight = fixture('espn', 'after')
+    after_midnight['utcDate'] = '2026-03-08T05:30:00Z'
+    after_jump = fixture('espn', 'jump')
+    after_jump['utcDate'] = '2026-03-08T07:30:00Z'
+    scanner, _, _ = service(
+        outcome('espn', ProviderStatus.SUCCESS, [before_midnight, after_midnight, after_jump]),
+        outcome('football-data', ProviderStatus.DISABLED, completed=()),
+    )
+
+    result = scanner.fixtures_for_date(date(2026, 3, 8), 'America/New_York')
+
+    assert len(result['matches']) == 2
+    assert {match['providerIds']['espn'] for match in result['matches']} == {'after', 'jump'}
+    assert result['matchStatistics']['byTimeSlot']['lateNight'] == 2

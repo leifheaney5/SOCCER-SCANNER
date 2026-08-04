@@ -42,6 +42,32 @@ test('URL state initializes controls and filter changes replace the URL', async 
     await expect.poll(() => page.evaluate(() => location.search)).toContain('competition=Scottish+Premiership');
 });
 
+test('timezone is visible, shareable, and structured provider statuses render correctly', async ({page}) => {
+    const structured = structuredClone(fixturePayload);
+    structured.matches[0].status = {code: 'in_progress', raw: 'STATUS_IN_PROGRESS', completed: false};
+    await mockFixtures(page, structured);
+    await page.goto('/?date=2026-08-03&timezone=Asia%2FTokyo');
+
+    await expect(page.locator('#timezone-filter')).toHaveValue('Asia/Tokyo');
+    await expect(page.locator('[data-fixture-id="live-secret"] .fixture-status-label')).toHaveText('LIVE');
+    await page.locator('#timezone-filter').selectOption('Europe/London');
+    await expect.poll(() => page.evaluate(() => location.search)).toContain('timezone=Europe%2FLondon');
+});
+
+test('impossible URL dates show specific inline validation and never reach providers', async ({page}) => {
+    let fixtureRequests = 0;
+    await page.route('**/api/v2/fixtures**', route => {
+        fixtureRequests += 1;
+        return route.fulfill({contentType: 'application/json', body: JSON.stringify(emptyFixturePayload)});
+    });
+
+    await page.goto('/?date=2026-99-99&timezone=America%2FNew_York');
+
+    await expect(page.locator('#date-error')).toContainText('Enter a real calendar date');
+    await expect(page.locator('#dashboard-date')).not.toHaveValue('2026-99-99');
+    expect(fixtureRequests).toBe(1);
+});
+
 test('score preference defaults hidden and persists after reload', async ({page}) => {
     await mockFixtures(page);
     await page.goto('/?date=2026-08-03');
@@ -163,7 +189,7 @@ test('date navigation, search, status, competition, and clear controls stay in s
     await expect(page.locator('#clear-filters')).toBeVisible();
     await page.locator('#clear-filters').click();
     await expect(page.locator('#fixture-result-count')).toContainText('13 matches');
-    await expect.poll(() => page.evaluate(() => location.search)).toBe('?date=2026-08-03');
+    await expect.poll(() => page.evaluate(() => location.search)).toBe('?date=2026-08-03&timezone=America%2FNew_York');
 });
 
 test('empty date, filtered empty, provider error retry, partial, and stale states are distinct', async ({page}) => {

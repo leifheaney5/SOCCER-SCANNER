@@ -13,6 +13,7 @@ const {
     createState,
     filterMatches,
     groupMatches,
+    isValidDate,
     shiftDate,
     summarizeMatches,
     todayLocal,
@@ -35,7 +36,8 @@ const {createMatchContext} = matchContextModule;
 const {createTeamDrawer} = teamDrawerModule;
 
 const byId = id => document.getElementById(id);
-const state = createState(window.location.search);
+const detectedTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+const state = createState(window.location.search, detectedTimezone);
 let payload = null;
 let scoresRevealed = readScorePreference();
 let searchTimer = null;
@@ -53,6 +55,14 @@ function syncUrl() {
 
 function syncControls() {
     byId('dashboard-date').value = state.date;
+    const dateError = byId('date-error');
+    dateError.hidden = !state.dateError;
+    byId('dashboard-date').setAttribute('aria-invalid', String(Boolean(state.dateError)));
+    const timezone = byId('timezone-filter');
+    if (![...timezone.options].some(option => option.value === state.timezone)) {
+        timezone.add(new Option(state.timezone.replaceAll('_', ' '), state.timezone));
+    }
+    timezone.value = state.timezone;
     byId('fixture-search').value = state.query;
     byId('clear-search').hidden = !state.query;
     const competition = byId('competition-filter');
@@ -112,9 +122,8 @@ async function loadFixtures() {
     byId('featured-match').replaceChildren();
     byId('data-notice').hidden = true;
     try {
-        const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
         const requestedDate = state.date;
-        const response = await fetch(`/api/v2/fixtures?date=${encodeURIComponent(requestedDate)}&timezone=${encodeURIComponent(timezone)}`, {
+        const response = await fetch(`/api/v2/fixtures?date=${encodeURIComponent(requestedDate)}&timezone=${encodeURIComponent(state.timezone)}`, {
             signal: activeRequestController.signal,
         });
         if (!response.ok) throw new Error('Fixture request failed');
@@ -140,7 +149,12 @@ function applyFilter(patch) {
 }
 
 function chooseDate(date) {
-    state.set({date});
+    if (!isValidDate(date)) {
+        state.set({dateError: true});
+        syncControls();
+        return;
+    }
+    state.set({date, dateError: false});
     selectedFixtureId = null;
     matchContext?.reset();
     syncControls();
@@ -153,6 +167,14 @@ function bindEvents() {
     byId('today-date').addEventListener('click', () => chooseDate(todayLocal()));
     byId('next-date').addEventListener('click', () => chooseDate(shiftDate(state.date, 1)));
     byId('dashboard-date').addEventListener('change', event => chooseDate(event.target.value));
+    byId('timezone-filter').addEventListener('change', event => {
+        state.set({timezone: event.target.value});
+        selectedFixtureId = null;
+        matchContext?.reset();
+        syncControls();
+        syncUrl();
+        loadFixtures();
+    });
     byId('competition-filter').addEventListener('change', event => applyFilter({competition: event.target.value}));
     document.querySelector('.status-filters').addEventListener('click', event => {
         const button = event.target.closest('[data-status]');
@@ -187,7 +209,9 @@ function bindEvents() {
         } else if (action.dataset.action === 'select-fixture') {
             selectedFixtureId = action.dataset.fixtureId;
             reflectCurrentResults();
-            const match = payload?.matches?.find(item => String(item.id) === selectedFixtureId);
+            const match = payload?.matches?.find(item => (
+                String(item.canonicalFixtureId || item.id) === selectedFixtureId
+            ));
             const replacement = byId('fixture-stream').querySelector(
                 `.details-button[data-fixture-id="${CSS.escape(selectedFixtureId)}"]`,
             );

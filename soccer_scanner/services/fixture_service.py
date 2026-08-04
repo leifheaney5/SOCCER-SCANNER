@@ -162,6 +162,7 @@ class CanonicalFixtureService:
             'date': requested_date.isoformat(),
             'timezone': timezone_name,
             'matches': matches,
+            'matchStatistics': self._statistics(matches, local_zone),
             'lastUpdated': last_updated,
             'providers': {
                 name: self._public_outcome(outcome, provider_cache.get(name, 'miss'))
@@ -242,6 +243,27 @@ class CanonicalFixtureService:
         if values <= {'fresh', 'filled'} and 'filled' in values:
             return 'filled' if values == {'filled'} else 'mixed'
         return 'mixed'
+
+    @staticmethod
+    def _statistics(matches, local_zone):
+        slots = {'morning': 0, 'afternoon': 0, 'evening': 0, 'lateNight': 0}
+        for match in matches:
+            try:
+                kickoff = datetime.fromisoformat(match['utcDate'].replace('Z', '+00:00'))
+                if kickoff.tzinfo is None:
+                    kickoff = kickoff.replace(tzinfo=timezone.utc)
+                hour = kickoff.astimezone(local_zone).hour
+            except (KeyError, TypeError, ValueError):
+                continue
+            if 6 <= hour < 12:
+                slots['morning'] += 1
+            elif 12 <= hour < 18:
+                slots['afternoon'] += 1
+            elif 18 <= hour < 24:
+                slots['evening'] += 1
+            else:
+                slots['lateNight'] += 1
+        return {'total': len(matches), 'byTimeSlot': slots}
 
     @staticmethod
     def _public_outcome(outcome, cache_status):

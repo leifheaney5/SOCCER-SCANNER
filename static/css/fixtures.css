@@ -92,6 +92,23 @@ body {
 .date-controls {
     flex: 0 0 auto;
     gap: 4px;
+    position: relative;
+}
+
+.field-error {
+    position: absolute;
+    inset-block-start: calc(100% + 8px);
+    inset-inline-start: 0;
+    z-index: 2;
+    width: max-content;
+    max-width: min(320px, 90vw);
+    margin: 0;
+    padding: 8px 10px;
+    border: 1px solid color-mix(in srgb, var(--danger) 55%, transparent);
+    border-radius: 6px;
+    background: var(--bg-card);
+    color: var(--danger);
+    font-size: 12px;
 }
 
 .secondary-filters {
