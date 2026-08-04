@@ -71,6 +71,9 @@ class SoccerScannerRoutesTest(unittest.TestCase):
         self.assertIn('timings', metrics.json)
         self.assertEqual(ready.json['status'], 'ready')
         self.assertEqual(ready.json['build'], version.json)
+        self.assertIn('cache', ready.json)
+        self.assertIn('backend', ready.json['cache'])
+        self.assertIn('shared', ready.json['cache'])
         self.assertRegex(version.json['version'], r'^\d+\.\d+\.\d+$')
         self.assertIn('commitSha', version.json)
         self.assertIn('buildTimestamp', version.json)
@@ -100,6 +103,23 @@ class SoccerScannerRoutesTest(unittest.TestCase):
         self.assertLessEqual(app.config['PROVIDER_RETRY_AFTER_MAX'], 60)
         self.assertLessEqual(app.config['PROVIDER_POOL_CONNECTIONS'], 16)
         self.assertLessEqual(app.config['PROVIDER_POOL_MAXSIZE'], 32)
+
+    def test_production_readiness_reports_missing_shared_cache_as_degraded(self):
+        environment = {
+            'APP_ENVIRONMENT': 'production',
+            'GIT_COMMIT_SHA': '0123456789abcdef0123456789abcdef01234567',
+        }
+        with patch.dict(os.environ, environment, clear=False):
+            production_app = create_app({'TESTING': False, 'REDIS_URL': None})
+            ready = production_app.test_client().get('/health/ready')
+
+        self.assertEqual(ready.status_code, 200)
+        self.assertEqual(ready.json['status'], 'ready')
+        self.assertEqual(ready.json['cache'], {
+            'backend': 'memory',
+            'shared': False,
+            'status': 'degraded',
+        })
 
     def test_production_requires_a_valid_commit_sha(self):
         environment = {

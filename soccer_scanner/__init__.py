@@ -3,7 +3,7 @@ import re
 from time import monotonic
 from uuid import uuid4
 
-from flask import Flask, g, request
+from flask import Flask, g, jsonify, request
 
 from .build_info import load_build_info
 from .config import Config
@@ -12,8 +12,10 @@ from .routes.api import api
 from .routes.health import health
 from .routes.pages import pages
 from .services.cache import TTLCache
+from .services.cache_backend import build_cache_backend
 from .services.fixtures import FixtureService
 from .services.football_data import FootballDataClient
+from .services.rate_limit import MemoryRateLimiter
 from .services.teams import TeamAnalysisService
 
 
@@ -26,6 +28,16 @@ def create_app(config=None):
     build_info = load_build_info(os.environ)
     app.extensions['build_info'] = build_info
     app.extensions['metrics'] = MetricsRegistry()
+    app.extensions['cache_backend'] = build_cache_backend(
+        app.config,
+        app.extensions['metrics'],
+        environment=build_info.environment,
+    )
+    app.extensions['rate_limiter'] = MemoryRateLimiter(
+        limit=app.config['RATE_LIMIT_MAX_REQUESTS'],
+        window_seconds=app.config['RATE_LIMIT_WINDOW_SECONDS'],
+        max_keys=app.config['RATE_LIMIT_MAX_KEYS'],
+    )
 
     request_id_pattern = re.compile(r'^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$')
 
@@ -38,6 +50,36 @@ def create_app(config=None):
             else str(uuid4())
         )
         g.request_started = monotonic()
+
+    @app.before_request
+    def enforce_expensive_route_rate_limit():
+        expensive_endpoints = {
+            'api.competitions',
+            'api.competition_teams',
+            'api.team',
+            'api.team_analysis',
+            'api.fixtures_by_date',
+        }
+        if request.endpoint not in expensive_endpoints:
+            return None
+        client_key = request.remote_addr or 'unknown'
+        decision = app.extensions['rate_limiter'].check(
+            f'{request.endpoint}:{client_key}',
+        )
+        if decision.allowed:
+            return None
+        response = jsonify({
+            'error': {
+                'code': 'rate_limited',
+                'message': 'Too many requests. Please retry shortly.',
+                'retryable': True,
+                'retryAfterSeconds': decision.retryAfterSeconds,
+                'requestId': g.request_id,
+            },
+        })
+        response.status_code = 429
+        response.headers['Retry-After'] = str(decision.retryAfterSeconds)
+        return response
 
     @app.context_processor
     def inject_build_info():

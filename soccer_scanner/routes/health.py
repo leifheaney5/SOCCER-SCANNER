@@ -17,6 +17,7 @@ def ready():
         'status': status,
         'missing': missing,
         'build': current_app.extensions['build_info'].as_public_dict(),
+        'cache': current_app.extensions['cache_backend'].health(),
     }), 200 if not missing else 503
 
 
