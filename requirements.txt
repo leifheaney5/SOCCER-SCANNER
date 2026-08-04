@@ -3,4 +3,7 @@ requests==2.34.2
 python-dotenv==1.2.2
 gunicorn==23.0.0
 redis==6.4.0
+SQLAlchemy==2.0.43
+alembic==1.16.5
+psycopg[binary]==3.2.9
 async-timeout==4.0.3; python_version < "3.11"
