@@ -9,6 +9,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 
 from .build_info import load_build_info
 from .config import Config
+from .domain.capabilities import build_capability_manifest
 from .observability import MetricsRegistry, log_event
 from .providers.espn import EspnProvider
 from .providers.football_data import FootballDataProvider
@@ -50,6 +51,9 @@ def create_app(config=None):
         limit=app.config['RATE_LIMIT_MAX_REQUESTS'],
         window_seconds=app.config['RATE_LIMIT_WINDOW_SECONDS'],
         max_keys=app.config['RATE_LIMIT_MAX_KEYS'],
+    )
+    app.extensions['provider_capabilities'] = build_capability_manifest(
+        football_data_configured=bool(app.config.get('FOOTBALL_DATA_API_KEY')),
     )
 
     request_id_pattern = re.compile(r'^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$')

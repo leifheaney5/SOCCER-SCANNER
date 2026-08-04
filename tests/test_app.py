@@ -121,6 +121,14 @@ class SoccerScannerRoutesTest(unittest.TestCase):
         self.assertFalse(response.json['error']['retryable'])
         self.assertEqual(response.json['error']['requestId'], response.headers['X-Request-ID'])
 
+    def test_v2_capabilities_never_fabricate_provider_gated_data(self):
+        response = self.client.get('/api/v2/capabilities')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json['capabilities']['events']['status'], 'not_supported')
+        self.assertEqual(response.json['capabilities']['squads']['status'], 'unavailable')
+        self.assertNotIn('data', response.json['capabilities']['events'])
+
     def test_health_endpoints_and_security_headers(self):
         live = self.client.get('/health/live')
         ready = self.client.get('/health/ready')

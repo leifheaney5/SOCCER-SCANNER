@@ -157,6 +157,13 @@ def fixtures_v2():
     return _fixtures_by_date(versioned=True)
 
 
+@api.get('/v2/capabilities')
+def capabilities_v2():
+    return jsonify({
+        'capabilities': current_app.extensions['provider_capabilities'],
+    })
+
+
 @api.get('/v2/fixtures/<canonical_fixture_id>')
 def fixture_v2(canonical_fixture_id):
     if not re.fullmatch(r'fx_[a-f0-9]{24}', canonical_fixture_id):
