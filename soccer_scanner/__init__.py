@@ -14,6 +14,13 @@ from .observability import MetricsRegistry, log_event
 from .providers.espn import EspnProvider
 from .providers.football_data import FootballDataProvider
 from .providers.http import ProviderHttpClient
+from .persistence.database import (
+    Base,
+    DatabaseRuntime,
+    SCHEMA_VERSION,
+    SchemaMetadata,
+)
+from .persistence.fixture_identities import FixtureIdentityRepository
 from .routes.api import api
 from .routes.health import health
 from .routes.pages import pages
@@ -46,6 +53,23 @@ def create_app(config=None):
         app.config,
         app.extensions['metrics'],
         environment=build_info.environment,
+    )
+    database_url = app.config.get('DATABASE_URL')
+    database_config = dict(app.config)
+    if not database_url:
+        database_config['DATABASE_URL'] = 'sqlite://'
+    database_runtime = DatabaseRuntime.from_config(database_config)
+    if not database_url:
+        Base.metadata.create_all(database_runtime.engine)
+        with database_runtime.session_scope() as session:
+            session.add(SchemaMetadata(
+                key='schema_version',
+                value=SCHEMA_VERSION,
+            ))
+    app.extensions['database_runtime'] = database_runtime
+    app.extensions['fixture_identities'] = FixtureIdentityRepository(
+        database_runtime,
+        durable=bool(database_url),
     )
     app.extensions['rate_limiter'] = MemoryRateLimiter(
         limit=app.config['RATE_LIMIT_MAX_REQUESTS'],
@@ -158,6 +182,7 @@ def create_app(config=None):
         cache_ttl_seconds=app.config['FIXTURE_CACHE_TTL'],
         stale_ttl_seconds=app.config['FIXTURE_STALE_TTL'],
         provider_budget_seconds=app.config['FIXTURE_FETCH_DEADLINE'],
+        identity_registry=app.extensions['fixture_identities'],
     )
     app.register_blueprint(pages)
     app.register_blueprint(api)

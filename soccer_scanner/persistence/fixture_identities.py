@@ -68,8 +68,9 @@ def _aware(value):
 
 
 class FixtureIdentityRepository:
-    def __init__(self, database):
+    def __init__(self, database, *, durable=True):
         self.database = database
+        self.durable = bool(durable)
 
     def resolve(self, group, match_evidence):
         last_error = None

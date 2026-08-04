@@ -99,6 +99,14 @@ def test_kickoff_tolerance_edge_reversed_teams_and_different_teams_do_not_merge(
     assert not fixtures_refer_to_same_event(original, different_team)
 
 
+def test_different_event_ids_from_the_same_provider_do_not_merge():
+    first = fixture('espn', '401')
+    second = fixture('espn', '402', '2026-08-03T19:05:00Z')
+
+    assert not fixtures_refer_to_same_event(first, second)
+    assert len(merge_fixtures([first, second])) == 2
+
+
 def test_merge_keeps_both_provider_ids_and_uses_fresh_reliable_fields():
     espn = fixture('espn', '401')
     espn.update({

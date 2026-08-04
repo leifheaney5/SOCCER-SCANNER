@@ -140,6 +140,7 @@ class SoccerScannerRoutesTest(unittest.TestCase):
         self.assertEqual(ready.status_code, 200)
         self.assertEqual(version.status_code, 200)
         self.assertEqual(metrics.status_code, 200)
+
         self.assertIn('counters', metrics.json)
         self.assertIn('timings', metrics.json)
         self.assertEqual(ready.json['status'], 'ready')
@@ -160,6 +161,12 @@ class SoccerScannerRoutesTest(unittest.TestCase):
         self.assertIn("object-src 'none'", live.headers['Content-Security-Policy'])
         self.assertIn("frame-ancestors 'self'", live.headers['Content-Security-Policy'])
         self.assertNotIn('Access-Control-Allow-Origin', live.headers)
+
+    def test_application_fixture_service_uses_the_shared_identity_registry(self):
+        self.assertIs(
+            self.app.extensions['fixture_service'].identity_registry,
+            self.app.extensions['fixture_identities'],
+        )
 
     def test_api_responses_are_not_stored_and_html_has_canonical_metadata(self):
         api_response = self.client.get('/api/v2/fixtures?date=invalid')

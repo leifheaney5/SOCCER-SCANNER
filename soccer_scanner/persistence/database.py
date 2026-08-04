@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
+from sqlalchemy.pool import StaticPool
 
 
 SCHEMA_VERSION = '20260804_01'
@@ -118,6 +119,8 @@ class DatabaseRuntime:
         options = {'pool_pre_ping': True, 'future': True}
         if database_url.startswith('sqlite:'):
             options['connect_args'] = {'check_same_thread': False}
+            if database_url in {'sqlite://', 'sqlite:///:memory:'}:
+                options['poolclass'] = StaticPool
         else:
             options.update({
                 'pool_size': max(1, int(config.get('DATABASE_POOL_SIZE', 5))),

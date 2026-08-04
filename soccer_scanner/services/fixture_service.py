@@ -20,6 +20,23 @@ class _ProviderFailure(RuntimeError):
         self.outcome = outcome
 
 
+class FixtureIdentityInvariantError(RuntimeError):
+    """Raised before returning or caching a response with unsafe public IDs."""
+
+
+def assert_unique_fixture_ids(matches):
+    seen = set()
+    for match in matches:
+        fixture_id = match.get('canonicalFixtureId')
+        if not fixture_id:
+            raise FixtureIdentityInvariantError('Fixture is missing a public fixture ID.')
+        if fixture_id in seen:
+            raise FixtureIdentityInvariantError(
+                f'Duplicate public fixture ID detected: {fixture_id}'
+            )
+        seen.add(fixture_id)
+
+
 def _outcome_dict(outcome):
     payload = asdict(outcome)
     payload['status'] = outcome.status.value
@@ -56,6 +73,7 @@ class CanonicalFixtureService:
         cache_ttl_seconds=60,
         stale_ttl_seconds=900,
         provider_budget_seconds=4,
+        identity_registry=None,
         now=None,
     ):
         self.providers = (espn_provider, football_data_provider)
@@ -63,6 +81,7 @@ class CanonicalFixtureService:
         self.cache_ttl_seconds = cache_ttl_seconds
         self.stale_ttl_seconds = stale_ttl_seconds
         self.provider_budget_seconds = provider_budget_seconds
+        self.identity_registry = identity_registry
         self.now = now or (lambda: datetime.now(timezone.utc))
 
     def fixtures_for_date(self, requested_date, timezone_name='UTC'):
@@ -210,12 +229,53 @@ class CanonicalFixtureService:
                 continue
         return response
 
-    def lookup_fixture(self, canonical_fixture_id):
+    def lookup_fixture(self, canonical_fixture_id, timezone_name='UTC'):
+        resolved_fixture_id = canonical_fixture_id
+        if self.identity_registry is not None:
+            resolved_fixture_id = (
+                self.identity_registry.resolve_public_alias(canonical_fixture_id)
+                or canonical_fixture_id
+            )
         lookup = self.cache.get(
-            f'fixture-lookup:{canonical_fixture_id}',
+            f'fixture-lookup:{resolved_fixture_id}',
             allow_stale=True,
         )
-        return lookup.value if lookup.status in {'fresh', 'stale'} else None
+        if lookup.status in {'fresh', 'stale'}:
+            return lookup.value
+        if self.identity_registry is None:
+            return None
+        identity = self.identity_registry.get(resolved_fixture_id)
+        if identity is None or not identity.get('kickoffUtc'):
+            return None
+        try:
+            local_zone = ZoneInfo(timezone_name)
+            kickoff = datetime.fromisoformat(
+                identity['kickoffUtc'].replace('Z', '+00:00')
+            )
+            if kickoff.tzinfo is None:
+                kickoff = kickoff.replace(tzinfo=timezone.utc)
+            local_date = kickoff.astimezone(local_zone).date()
+        except (TypeError, ValueError):
+            return None
+        for offset in (0, -1, 1):
+            try:
+                response = self.fixtures_for_date(
+                    local_date + timedelta(days=offset),
+                    timezone_name,
+                )
+            except FixtureUnavailable:
+                continue
+            match = next(
+                (
+                    candidate
+                    for candidate in response['matches']
+                    if candidate.get('canonicalFixtureId') == resolved_fixture_id
+                ),
+                None,
+            )
+            if match is not None:
+                return match
+        return None
 
     @staticmethod
     def _provider_name(provider):
@@ -237,10 +297,10 @@ class CanonicalFixtureService:
             local_end.astimezone(timezone.utc).date(),
         )
 
-    @staticmethod
-    def _compose(outcomes, requested_date, local_zone):
+    def _compose(self, outcomes, requested_date, local_zone):
         merged = merge_fixtures(
-            fixture for outcome in outcomes for fixture in outcome.fixtures
+            (fixture for outcome in outcomes for fixture in outcome.fixtures),
+            identity_registry=self.identity_registry,
         )
         matches = []
         for match in merged:
@@ -255,6 +315,7 @@ class CanonicalFixtureService:
                 continue
             matches.append({**match, 'localDate': local_date.isoformat()})
         matches.sort(key=lambda match: (match.get('utcDate') or '', match['canonicalFixtureId']))
+        assert_unique_fixture_ids(matches)
         return matches
 
     @staticmethod
