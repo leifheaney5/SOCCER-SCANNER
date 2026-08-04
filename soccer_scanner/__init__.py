@@ -204,6 +204,9 @@ def create_app(config=None):
             response.headers['Cache-Control'] = 'no-store'
         elif not request.path.startswith('/static/'):
             response.headers.setdefault('Cache-Control', 'no-cache')
+        if request.path == '/static/sw.js':
+            response.headers['Service-Worker-Allowed'] = '/'
+            response.headers['Cache-Control'] = 'no-cache'
         if request.is_secure and build_info.environment == 'production':
             response.headers.setdefault(
                 'Strict-Transport-Security',

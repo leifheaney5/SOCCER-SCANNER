@@ -199,6 +199,16 @@ class SoccerScannerRoutesTest(unittest.TestCase):
         self.assertEqual(missing_api.status_code, 404)
         self.assertEqual(missing_api.json['error']['code'], 'not_found')
 
+    def test_offline_shell_and_service_worker_scope_are_available(self):
+        home = self.client.get('/')
+        offline = self.client.get('/offline')
+        worker = self.client.get('/static/sw.js')
+
+        self.assertEqual(offline.status_code, 200)
+        self.assertIn(b'You are offline', offline.data)
+        self.assertIn(b'/static/js/pwa.js', home.data)
+        self.assertEqual(worker.headers['Service-Worker-Allowed'], '/')
+
     def test_request_id_is_validated_and_echoed(self):
         accepted = self.client.get('/health/live', headers={'X-Request-ID': 'client-123'})
         generated = self.client.get('/health/live', headers={'X-Request-ID': 'not valid!'})

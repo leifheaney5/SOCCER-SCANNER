@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+
+{% block title %}Offline — Soccer Scanner{% endblock %}
+
+{% block content %}
+<section class="content-page" aria-labelledby="offline-title">
+    <p class="eyebrow">Connection unavailable</p>
+    <h1 id="offline-title">You are offline</h1>
+    <p>The application shell is available, but current fixtures need a network connection.</p>
+    <p>Previously saved fixture snapshots are always marked stale, omit live matches, and contain no scores.</p>
+    <a class="control-button" href="/">Try Soccer Scanner again</a>
+</section>
+{% endblock %}

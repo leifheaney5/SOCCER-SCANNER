@@ -41,6 +41,11 @@ def data_sources():
     return render_template('data_sources.html')
 
 
+@pages.get('/offline')
+def offline():
+    return render_template('offline.html')
+
+
 def _fixture_from_link(canonical_fixture_id):
     if not re.fullmatch(r'fx_[a-f0-9]{24}', canonical_fixture_id):
         return None

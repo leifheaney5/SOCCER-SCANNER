@@ -61,6 +61,7 @@
         </div>
     </footer>
     <script src="{{ url_for('static', filename='js/dom.js', v=build.assetVersion) }}" defer></script>
+    <script type="module" src="{{ url_for('static', filename='js/pwa.js', v=build.assetVersion) }}"></script>
     {% block page_scripts %}{% endblock %}
 </body>
 </html>
