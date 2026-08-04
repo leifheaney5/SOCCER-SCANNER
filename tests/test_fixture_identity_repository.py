@@ -1,8 +1,10 @@
 import importlib
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import contextmanager
 from threading import Barrier
 
 import pytest
+from sqlalchemy import event
 
 
 def repository_types():
@@ -204,3 +206,72 @@ def test_concurrent_first_observation_returns_one_public_identity(tmp_path):
     assert len(set(public_ids)) == 1
     first_runtime.dispose()
     second_runtime.dispose()
+
+
+def test_resolve_many_uses_one_transaction_for_the_full_response(tmp_path):
+    runtime, repository = create_repository(tmp_path / 'identity.db')
+    original_session_scope = runtime.session_scope
+    calls = 0
+
+    @contextmanager
+    def counted_session_scope():
+        nonlocal calls
+        calls += 1
+        with original_session_scope() as session:
+            yield session
+
+    runtime.session_scope = counted_session_scope
+    matches = [
+        fixture(
+            'espn',
+            f'event-{index}',
+            kickoff=f'2026-08-04T{index % 24:02d}:00:00Z',
+            home=f'home-{index}',
+            away=f'away-{index}',
+        )
+        for index in range(50)
+    ]
+
+    select_statements = []
+
+    def track_selects(_connection, _cursor, statement, _parameters, _context, _executemany):
+        if statement.lstrip().upper().startswith('SELECT'):
+            select_statements.append(statement)
+
+    event.listen(runtime.engine, 'before_cursor_execute', track_selects)
+    try:
+        public_ids = repository.resolve_many([
+            ([match], match)
+            for match in matches
+        ])
+        cold_selects = len(select_statements)
+        select_statements.clear()
+        repeated_public_ids = repository.resolve_many([
+            ([match], match)
+            for match in matches
+        ])
+        warm_selects = len(select_statements)
+    finally:
+        event.remove(runtime.engine, 'before_cursor_execute', track_selects)
+
+    assert calls == 2
+    assert cold_selects <= 3
+    assert warm_selects <= 3
+    assert len(public_ids) == 50
+    assert len(set(public_ids)) == 50
+    assert repeated_public_ids == public_ids
+    runtime.dispose()
+
+
+def test_same_provider_conflicting_event_ids_never_share_a_public_identity(tmp_path):
+    runtime, repository = create_repository(tmp_path / 'identity.db')
+    first = fixture('espn', '401001')
+    second = fixture('espn', '401002', kickoff='2026-08-04T19:05:00Z')
+
+    first_id, second_id = repository.resolve_many([
+        ([first], first),
+        ([second], second),
+    ])
+
+    assert first_id != second_id
+    runtime.dispose()

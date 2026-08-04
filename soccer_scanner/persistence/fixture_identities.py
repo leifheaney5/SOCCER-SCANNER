@@ -2,7 +2,7 @@
 
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import func, select, text, tuple_, update
+from sqlalchemy import func, or_, select, text, tuple_, update
 from sqlalchemy.exc import IntegrityError
 
 from soccer_scanner.domain.identity import (
@@ -73,25 +73,70 @@ class FixtureIdentityRepository:
         self.durable = bool(durable)
 
     def resolve(self, group, match_evidence):
+        return self.resolve_many([(group, match_evidence)])[0]
+
+    def resolve_many(self, entries):
+        pending = list(entries)
+        if not pending:
+            return []
         last_error = None
         for _attempt in range(3):
             try:
-                return self._resolve_once(group, match_evidence)
+                return self._resolve_many_once(pending)
             except IntegrityError as error:
                 last_error = error
         raise FixtureIdentityError(
             'Concurrent fixture identity resolution did not converge.'
         ) from last_error
 
-    def _resolve_once(self, group, match_evidence):
-        provider_identities = _provider_identities(group)
-        if not provider_identities:
-            raise FixtureIdentityError('Fixture is missing a provider event identity.')
-        evidence = _canonical_evidence(match_evidence)
+    def _resolve_many_once(self, entries):
         now = utc_now()
+        records = []
+        provider_identities = set()
+        fallback_public_ids = set()
+        kickoffs = []
+        for group, match_evidence in entries:
+            aliases = _provider_identities(group)
+            if not aliases:
+                raise FixtureIdentityError(
+                    'Fixture is missing a provider event identity.'
+                )
+            providers = {}
+            for provider, event_id in aliases:
+                providers.setdefault(provider, set()).add(event_id)
+            if any(len(event_ids) > 1 for event_ids in providers.values()):
+                raise FixtureIdentityError(
+                    'Fixture contains conflicting identities for one provider.'
+                )
+            preferred = min(
+                (
+                    fixture
+                    for fixture in group
+                    if fixture.get('providerIds')
+                ),
+                key=lambda fixture: tuple(sorted(
+                    (str(provider), str(provider_id))
+                    for provider, provider_id in (
+                        fixture.get('providerIds') or {}
+                    ).items()
+                )),
+            )
+            evidence = _canonical_evidence(match_evidence)
+            fallback_public_id = provider_fallback_public_id(preferred)
+            records.append({
+                'match': match_evidence,
+                'provider_identities': aliases,
+                'provider_map': providers,
+                'evidence': evidence,
+                'fallback_public_id': fallback_public_id,
+            })
+            provider_identities.update(aliases)
+            fallback_public_ids.add(fallback_public_id)
+            if evidence['kickoff_utc'] is not None:
+                kickoffs.append(evidence['kickoff_utc'])
 
         with self.database.session_scope() as session:
-            existing_aliases = session.scalars(
+            current_aliases = session.scalars(
                 select(FixtureProviderAlias).where(
                     tuple_(
                         FixtureProviderAlias.provider,
@@ -99,63 +144,165 @@ class FixtureIdentityRepository:
                     ).in_(provider_identities)
                 )
             ).all()
+            aliased_public_ids = {
+                alias.public_id
+                for alias in current_aliases
+            }
+            identity_conditions = [
+                FixtureIdentity.public_id.in_(fallback_public_ids)
+            ]
+            if aliased_public_ids:
+                identity_conditions.append(
+                    FixtureIdentity.public_id.in_(aliased_public_ids)
+                )
+            if kickoffs:
+                identity_conditions.append(
+                    FixtureIdentity.kickoff_utc.between(
+                        min(kickoffs) - MATCH_TOLERANCE,
+                        max(kickoffs) + MATCH_TOLERANCE,
+                    )
+                )
+            identities = session.scalars(
+                select(FixtureIdentity).where(or_(*identity_conditions))
+            ).all()
+            identity_map = {
+                identity.public_id: identity
+                for identity in identities
+            }
+
+            if identity_map:
+                existing_aliases = session.scalars(
+                    select(FixtureProviderAlias).where(
+                        FixtureProviderAlias.public_id.in_(identity_map)
+                    )
+                ).all()
+            else:
+                existing_aliases = current_aliases
             alias_map = {
                 (alias.provider, alias.provider_event_id): alias
                 for alias in existing_aliases
             }
-            existing_public_ids = {
-                alias_map[identity].public_id
-                for identity in provider_identities
-                if identity in alias_map
-            }
+            aliases_by_public_id = {}
+            for alias in existing_aliases:
+                aliases_by_public_id.setdefault(alias.public_id, []).append(alias)
 
-            if existing_public_ids:
-                public_id = self._reconcile(session, existing_public_ids, now)
-            else:
-                public_id = self._find_canonical_candidate(session, evidence)
-                if public_id is None:
-                    preferred = min(
-                        (
-                            fixture
-                            for fixture in group
-                            if fixture.get('providerIds')
-                        ),
-                        key=lambda fixture: tuple(sorted(
-                            (str(provider), str(provider_id))
-                            for provider, provider_id in (
-                                fixture.get('providerIds') or {}
-                            ).items()
-                        )),
-                    )
-                    public_id = provider_fallback_public_id(preferred)
-                    collision = session.get(FixtureIdentity, public_id)
-                    if collision is not None:
-                        raise FixtureIdentityError(
-                            'Provider-qualified public fixture identity collision.'
+            public_ids = []
+            for record in records:
+                aliases = record['provider_identities']
+                evidence = record['evidence']
+                existing_public_ids = {
+                    alias_map[provider_identity].public_id
+                    for provider_identity in aliases
+                    if provider_identity in alias_map
+                }
+                if existing_public_ids:
+                    if len(existing_public_ids) == 1:
+                        public_id = next(iter(existing_public_ids))
+                    else:
+                        public_id = self._reconcile(
+                            session,
+                            existing_public_ids,
+                            now,
                         )
-                    session.add(FixtureIdentity(public_id=public_id, **evidence))
+                    identity = identity_map.get(public_id)
+                    if identity is None:
+                        raise FixtureIdentityError(
+                            'Provider alias points to a missing fixture identity.'
+                        )
+                else:
+                    identity = self._find_preloaded_candidate(
+                        identity_map.values(),
+                        aliases_by_public_id,
+                        record['provider_map'],
+                        evidence,
+                    )
+                    if identity is None:
+                        public_id = record['fallback_public_id']
+                        if public_id in identity_map:
+                            raise FixtureIdentityError(
+                                'Provider-qualified public fixture identity collision.'
+                            )
+                        identity = FixtureIdentity(public_id=public_id, **evidence)
+                        session.add(identity)
+                        identity_map[public_id] = identity
+                    else:
+                        public_id = identity.public_id
 
-            identity = session.get(FixtureIdentity, public_id)
-            if identity is None:
-                raise FixtureIdentityError('Durable fixture identity could not be resolved.')
-            for field, value in evidence.items():
-                if value is not None:
-                    setattr(identity, field, value)
-            identity.updated_at = now
+                for field, value in evidence.items():
+                    if value is not None:
+                        setattr(identity, field, value)
+                identity.updated_at = now
 
-            for provider, event_id in provider_identities:
-                alias = alias_map.get((provider, event_id))
-                if alias is None:
-                    session.add(FixtureProviderAlias(
-                        provider=provider,
-                        provider_event_id=event_id,
-                        public_id=public_id,
-                    ))
-                elif alias.public_id != public_id:
-                    alias.public_id = public_id
+                for provider, event_id in aliases:
+                    alias = alias_map.get((provider, event_id))
+                    if alias is None:
+                        alias = FixtureProviderAlias(
+                            provider=provider,
+                            provider_event_id=event_id,
+                            public_id=public_id,
+                        )
+                        session.add(alias)
+                        alias_map[(provider, event_id)] = alias
+                        aliases_by_public_id.setdefault(public_id, []).append(alias)
+                    elif alias.public_id != public_id:
+                        previous_public_id = alias.public_id
+                        alias.public_id = public_id
+                        aliases_by_public_id[previous_public_id].remove(alias)
+                        aliases_by_public_id.setdefault(public_id, []).append(alias)
+                public_ids.append(public_id)
 
-            self._record_unresolved_entities(session, match_evidence, now)
-            return public_id
+            self._record_unresolved_batch(
+                session,
+                (record['match'] for record in records),
+                now,
+            )
+            return public_ids
+
+    @staticmethod
+    def _find_preloaded_candidate(
+        identities,
+        aliases_by_public_id,
+        provider_map,
+        evidence,
+    ):
+        required = (
+            'canonical_competition_id',
+            'canonical_home_team_id',
+            'canonical_away_team_id',
+            'kickoff_utc',
+        )
+        if any(evidence[field] is None for field in required):
+            return None
+        candidates = []
+        for identity in identities:
+            kickoff = _aware(identity.kickoff_utc)
+            if (
+                identity.canonical_competition_id
+                != evidence['canonical_competition_id']
+                or identity.canonical_home_team_id
+                != evidence['canonical_home_team_id']
+                or identity.canonical_away_team_id
+                != evidence['canonical_away_team_id']
+                or identity.season_key != evidence['season_key']
+                or identity.stage_key != evidence['stage_key']
+                or kickoff is None
+                or abs((kickoff - evidence['kickoff_utc']).total_seconds())
+                > MATCH_TOLERANCE.total_seconds()
+            ):
+                continue
+            candidate_provider_ids = {}
+            for alias in aliases_by_public_id.get(identity.public_id, ()):
+                candidate_provider_ids.setdefault(alias.provider, set()).add(
+                    alias.provider_event_id
+                )
+            if any(
+                candidate_provider_ids[provider] != event_ids
+                for provider, event_ids in provider_map.items()
+                if provider in candidate_provider_ids
+            ):
+                continue
+            candidates.append(identity)
+        return candidates[0] if len(candidates) == 1 else None
 
     def resolve_public_alias(self, public_id):
         with self.database.session_scope() as session:
@@ -246,33 +393,6 @@ class FixtureIdentityRepository:
         }
 
     @staticmethod
-    def _find_canonical_candidate(session, evidence):
-        required = (
-            'canonical_competition_id',
-            'canonical_home_team_id',
-            'canonical_away_team_id',
-            'kickoff_utc',
-        )
-        if any(evidence[field] is None for field in required):
-            return None
-        kickoff = evidence['kickoff_utc']
-        candidates = session.scalars(
-            select(FixtureIdentity).where(
-                FixtureIdentity.canonical_competition_id
-                == evidence['canonical_competition_id'],
-                FixtureIdentity.canonical_home_team_id
-                == evidence['canonical_home_team_id'],
-                FixtureIdentity.canonical_away_team_id
-                == evidence['canonical_away_team_id'],
-                FixtureIdentity.season_key == evidence['season_key'],
-                FixtureIdentity.stage_key == evidence['stage_key'],
-                FixtureIdentity.kickoff_utc >= kickoff - MATCH_TOLERANCE,
-                FixtureIdentity.kickoff_utc <= kickoff + MATCH_TOLERANCE,
-            )
-        ).all()
-        return candidates[0].public_id if len(candidates) == 1 else None
-
-    @staticmethod
     def _reconcile(session, public_ids, now):
         identities = session.scalars(
             select(FixtureIdentity)
@@ -306,37 +426,57 @@ class FixtureIdentityRepository:
         return survivor.public_id
 
     @staticmethod
-    def _record_unresolved_entities(session, match, now):
-        entities = (
-            ('competition', match.get('competition')),
-            ('team', match.get('homeTeam')),
-            ('team', match.get('awayTeam')),
-        )
-        for kind, entity in entities:
-            if not isinstance(entity, dict) or entity.get('canonicalId'):
-                continue
-            provider = str(entity.get('provider') or '').strip().casefold()
-            provider_id = str(entity.get('providerId') or '').strip()
-            if not provider or not provider_id:
-                continue
-            issue = session.scalar(
-                select(IdentityResolutionIssue).where(
-                    IdentityResolutionIssue.kind == kind,
-                    IdentityResolutionIssue.provider == provider,
-                    IdentityResolutionIssue.provider_id == provider_id,
-                )
+    def _record_unresolved_batch(session, matches, now):
+        observations = {}
+        for match in matches:
+            entities = (
+                ('competition', match.get('competition')),
+                ('team', match.get('homeTeam')),
+                ('team', match.get('awayTeam')),
             )
+            for kind, entity in entities:
+                if not isinstance(entity, dict) or entity.get('canonicalId'):
+                    continue
+                provider = str(entity.get('provider') or '').strip().casefold()
+                provider_id = str(entity.get('providerId') or '').strip()
+                if not provider or not provider_id:
+                    continue
+                key = (kind, provider, provider_id)
+                observation = observations.setdefault(key, {
+                    'display_name': str(entity.get('name') or '').strip() or None,
+                    'occurrences': 0,
+                })
+                observation['occurrences'] += 1
+
+        if not observations:
+            return
+        issues = session.scalars(
+            select(IdentityResolutionIssue).where(
+                tuple_(
+                    IdentityResolutionIssue.kind,
+                    IdentityResolutionIssue.provider,
+                    IdentityResolutionIssue.provider_id,
+                ).in_(observations)
+            )
+        ).all()
+        issue_map = {
+            (issue.kind, issue.provider, issue.provider_id): issue
+            for issue in issues
+        }
+        for key, observation in observations.items():
+            issue = issue_map.get(key)
             if issue is None:
+                kind, provider, provider_id = key
                 session.add(IdentityResolutionIssue(
                     kind=kind,
                     provider=provider,
                     provider_id=provider_id,
-                    display_name=str(entity.get('name') or '').strip() or None,
-                    occurrences=1,
+                    display_name=observation['display_name'],
+                    occurrences=observation['occurrences'],
                     first_seen_at=now,
                     last_seen_at=now,
                     resolved=False,
                 ))
             else:
-                issue.occurrences += 1
+                issue.occurrences += observation['occurrences']
                 issue.last_seen_at = now
