@@ -100,6 +100,35 @@ def test_normalizes_provider_qualified_teams_nullable_scores_and_sourced_fields(
     assert normalized['referees'] is None
 
 
+def test_normalizes_only_named_espn_streaming_services():
+    normalized = normalize_event(
+        event(competition={
+            'broadcasts': [
+                {
+                    'type': {'shortName': 'STREAMING'},
+                    'media': {'shortName': 'Apple TV'},
+                    'region': 'us',
+                },
+                {
+                    'type': {'shortName': 'STREAMING'},
+                    'media': {'shortName': 'Apple TV'},
+                },
+                {
+                    'type': {'shortName': 'TV'},
+                    'media': {'shortName': 'ESPN'},
+                },
+                {'type': {'shortName': 'STREAMING'}, 'media': {}},
+            ],
+        }),
+        'bra.1',
+        'Brasileirao',
+    )
+
+    assert normalized['broadcasts'] == [
+        {'name': 'Apple TV', 'type': 'STREAMING', 'region': 'us'},
+    ]
+
+
 def test_missing_optional_fields_remain_null_and_malformed_competitors_are_rejected():
     minimal = event()
     minimal.pop('season')
@@ -111,6 +140,7 @@ def test_missing_optional_fields_remain_null_and_malformed_competitors_are_rejec
     assert normalized['matchday'] is None
     assert normalized['venue'] is None
     assert normalized['referees'] is None
+    assert normalized['broadcasts'] == []
     assert normalize_event(event(competitors=[]), 'arg.1', 'Liga Profesional') is None
     assert normalize_event(event(competitors=[{'homeAway': 'home'}]), 'arg.1', 'Liga Profesional') is None
 

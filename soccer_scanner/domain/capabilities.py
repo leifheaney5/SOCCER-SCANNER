@@ -35,7 +35,6 @@ def build_capability_manifest(*, football_data_configured):
         Capability.EVENTS: 'No contracted event-feed adapter is implemented.',
         Capability.LINEUPS: 'No contracted lineup-feed adapter is implemented.',
         Capability.STATISTICS: 'No contracted match-statistics adapter is implemented.',
-        Capability.BROADCASTS: 'No licensed broadcast-listing source is configured.',
         Capability.NOTIFICATIONS: 'Notification delivery and consent infrastructure are not implemented.',
     }
     manifest = {
@@ -45,6 +44,11 @@ def build_capability_manifest(*, football_data_configured):
         ).as_dict()
         for capability, reason in not_implemented.items()
     }
+    manifest[Capability.BROADCASTS.value] = CapabilityOutcome(
+        CapabilityStatus.SUPPORTED,
+        'ESPN supplies streaming services for some fixtures; availability is region-dependent.',
+        provider='espn',
+    ).as_dict()
     provider_status = (
         CapabilityStatus.SUPPORTED
         if football_data_configured

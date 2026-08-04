@@ -590,6 +590,16 @@ body {
     line-height: 1.25;
 }
 
+.fixture-broadcast {
+    overflow: hidden;
+    color: var(--accent-secondary);
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1.25;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .live-dot {
     width: 6px;
     height: 6px;
@@ -1399,6 +1409,11 @@ dialog::backdrop {
         flex-direction: row;
         align-items: center;
         gap: 8px;
+    }
+
+    .fixture-broadcast {
+        margin-left: auto;
+        max-width: 55vw;
     }
 
     .fixture-teams {

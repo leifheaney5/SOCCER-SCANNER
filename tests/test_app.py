@@ -30,8 +30,9 @@ class SoccerScannerRoutesTest(unittest.TestCase):
         self.assertIn('aria-labelledby="team-drawer-title"', html)
         self.assertIn('aria-labelledby="match-context-dialog-title"', html)
         self.assertNotIn('class="suite-rail"', html)
-        self.assertIn('>Teams</a>', html)
-        self.assertIn('>Calendar</a>', html)
+        self.assertNotIn('>Teams</a>', html)
+        self.assertNotIn('>Calendar</a>', html)
+        self.assertNotIn('>Tables</a>', html)
         self.assertIn('>Favorites</a>', html)
 
     def test_team_analysis_has_a_stable_route(self):

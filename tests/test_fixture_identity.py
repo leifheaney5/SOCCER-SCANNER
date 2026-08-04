@@ -100,6 +100,20 @@ def test_merge_keeps_both_provider_ids_and_uses_fresh_reliable_fields():
     assert 'referees' in match['dataQuality']['missingFields']
 
 
+def test_merge_keeps_provider_sourced_broadcasts():
+    espn = fixture('espn', '401')
+    espn['broadcasts'] = [
+        {'name': 'Apple TV', 'type': 'STREAMING', 'region': 'us'},
+    ]
+    football_data = fixture('football-data', '9001')
+
+    merged = merge_fixtures([football_data, espn])
+
+    assert merged[0]['broadcasts'] == [
+        {'name': 'Apple TV', 'type': 'STREAMING', 'region': 'us'},
+    ]
+
+
 def test_freshness_conflict_is_deterministic_regardless_of_input_order():
     older = fixture('espn', '401')
     older['venue'] = 'Old venue'

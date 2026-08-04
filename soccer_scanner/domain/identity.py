@@ -148,6 +148,7 @@ def _merge_group(group):
         'venue': _first_value(group, 'venue'),
         'referees': _first_value(group, 'referees'),
         'aggregate': _first_value(group, 'aggregate'),
+        'broadcasts': _first_value(group, 'broadcasts', provider_first=True) or [],
         'sourceUpdatedAt': max(
             (fixture.get('sourceUpdatedAt') for fixture in group if _instant(fixture.get('sourceUpdatedAt'))),
             key=lambda value: _instant(value),

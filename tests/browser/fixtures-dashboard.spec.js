@@ -157,6 +157,8 @@ test('fixtures render paired identities, crest fallbacks, groups, and live-first
     await expect(page.locator('[data-fixture-id="postponed"] .score-display')).toHaveText('Postponed');
     await expect(page.locator('.fixture-card').first()).not.toContainText(' vs ');
     await expect(page.locator('.fixture-card[data-fixture-id="live-secret"] .fixture-freshness')).toContainText('Updated');
+    await expect(page.locator('[data-fixture-id="live-secret"] .fixture-broadcast')).toHaveText('Streaming: Apple TV');
+    await expect(page.locator('[data-fixture-id="upcoming"] .fixture-broadcast')).toHaveCount(0);
 });
 
 test('date navigation, search, status, competition, and clear controls stay in sync', async ({page}) => {

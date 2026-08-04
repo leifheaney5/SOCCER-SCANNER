@@ -174,6 +174,20 @@ function createFavoriteButton(match, isFavorite) {
     return button;
 }
 
+function streamingServiceNames(match) {
+    const seen = new Set();
+    const names = [];
+    for (const item of (Array.isArray(match?.broadcasts) ? match.broadcasts : [])) {
+        if (item?.type !== 'STREAMING' || typeof item?.name !== 'string') continue;
+        const name = item.name.trim();
+        const key = name.toLocaleLowerCase();
+        if (!name || seen.has(key)) continue;
+        seen.add(key);
+        names.push(name);
+    }
+    return names;
+}
+
 function createFixtureCard(match, revealed, selectedId = null, isFavorite = null) {
     const id = fixtureId(match);
     const kind = statusKind(match);
@@ -191,6 +205,10 @@ function createFixtureCard(match, revealed, selectedId = null, isFavorite = null
     if (kind !== 'upcoming') status.append(node('span', 'fixture-kickoff', formatKickoff(match?.utcDate)));
     const freshness = formatFreshness(match?.sourceUpdatedAt || match?.lastUpdated);
     if (freshness) status.append(node('span', 'fixture-freshness', freshness));
+    const services = streamingServiceNames(match);
+    if (services.length) {
+        status.append(node('span', 'fixture-broadcast', `Streaming: ${services.join(', ')}`));
+    }
 
     const action = node('div', 'fixture-action');
     action.append(createFavoriteButton(match, isFavorite), createDetailsButton(match));

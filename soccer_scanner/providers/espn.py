@@ -81,6 +81,36 @@ def _nullable_int(value):
         return None
 
 
+def _streaming_services(competition_event):
+    broadcasts = competition_event.get('broadcasts')
+    if not isinstance(broadcasts, list):
+        return []
+    services = []
+    seen = set()
+    for broadcast in broadcasts:
+        if not isinstance(broadcast, dict):
+            continue
+        broadcast_type = broadcast.get('type')
+        kind = _nullable_text(
+            broadcast_type.get('shortName') if isinstance(broadcast_type, dict) else None
+        )
+        if kind != 'STREAMING':
+            continue
+        media = broadcast.get('media')
+        name = _nullable_text(
+            (media.get('shortName') or media.get('name')) if isinstance(media, dict) else None
+        )
+        if not name or name.casefold() in seen:
+            continue
+        seen.add(name.casefold())
+        services.append({
+            'name': name,
+            'type': kind,
+            'region': _nullable_text(broadcast.get('region')),
+        })
+    return services
+
+
 def _team(competitor, identities=None):
     if not isinstance(competitor, dict):
         return None
@@ -239,6 +269,7 @@ def normalize_event(
         'venue': venue,
         'referees': None,
         'aggregate': None,
+        'broadcasts': _streaming_services(competition_event),
         'sourceUpdatedAt': source_updated_at,
         'sources': ['espn'],
         'dataQuality': {'missingFields': []},
