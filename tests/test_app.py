@@ -140,6 +140,7 @@ class SoccerScannerRoutesTest(unittest.TestCase):
         self.assertEqual(ready.status_code, 200)
         self.assertEqual(version.status_code, 200)
         self.assertEqual(metrics.status_code, 200)
+
         self.assertIn('counters', metrics.json)
         self.assertIn('timings', metrics.json)
         self.assertEqual(ready.json['status'], 'ready')
@@ -160,6 +161,12 @@ class SoccerScannerRoutesTest(unittest.TestCase):
         self.assertIn("object-src 'none'", live.headers['Content-Security-Policy'])
         self.assertIn("frame-ancestors 'self'", live.headers['Content-Security-Policy'])
         self.assertNotIn('Access-Control-Allow-Origin', live.headers)
+
+    def test_application_fixture_service_uses_the_shared_identity_registry(self):
+        self.assertIs(
+            self.app.extensions['fixture_service'].identity_registry,
+            self.app.extensions['fixture_identities'],
+        )
 
     def test_api_responses_are_not_stored_and_html_has_canonical_metadata(self):
         api_response = self.client.get('/api/v2/fixtures?date=invalid')
@@ -245,13 +252,89 @@ class SoccerScannerRoutesTest(unittest.TestCase):
             production_app = create_app({'TESTING': False, 'REDIS_URL': None})
             ready = production_app.test_client().get('/health/ready')
 
-        self.assertEqual(ready.status_code, 200)
-        self.assertEqual(ready.json['status'], 'ready')
+        self.assertEqual(ready.status_code, 503)
+        self.assertEqual(ready.json['status'], 'not_ready')
         self.assertEqual(ready.json['cache'], {
             'backend': 'memory',
             'shared': False,
             'status': 'degraded',
         })
+        self.assertFalse(ready.json['database']['durable'])
+        self.assertEqual(ready.json['database']['status'], 'ready')
+        self.assertEqual(
+            ready.json['blocking'],
+            ['database_not_durable', 'shared_cache_not_ready'],
+        )
+
+    def test_production_readiness_accepts_ready_durable_dependencies(self):
+        environment = {
+            'APP_ENVIRONMENT': 'production',
+            'GIT_COMMIT_SHA': '0123456789abcdef0123456789abcdef01234567',
+        }
+        with patch.dict(os.environ, environment, clear=False):
+            production_app = create_app({'TESTING': False})
+        production_app.extensions['fixture_identities'] = Mock(
+            durable=True,
+            health=Mock(return_value={
+                'backend': 'database',
+                'reachable': True,
+                'schemaVersion': '20260804_01',
+                'status': 'ready',
+            }),
+        )
+        production_app.extensions['cache_backend'] = Mock(
+            health=Mock(return_value={
+                'backend': 'redis',
+                'shared': True,
+                'status': 'ready',
+            }),
+        )
+
+        ready = production_app.test_client().get('/health/ready')
+
+        self.assertEqual(ready.status_code, 200)
+        self.assertEqual(ready.json['status'], 'ready')
+        self.assertEqual(ready.json['blocking'], [])
+        self.assertTrue(ready.json['database']['durable'])
+
+    def test_identity_report_requires_ops_token_and_bounds_the_query(self):
+        report = {
+            'total': 1,
+            'items': [{
+                'kind': 'team',
+                'provider': 'espn',
+                'providerId': '123',
+                'displayName': 'Unmapped FC',
+                'occurrences': 2,
+                'firstSeenAt': '2026-08-04T00:00:00+00:00',
+                'lastSeenAt': '2026-08-04T01:00:00+00:00',
+            }],
+        }
+        operations_app = create_app({
+            'TESTING': True,
+            'OPS_ADMIN_TOKEN': 'test-ops-token',
+        })
+        repository = Mock()
+        repository.unresolved_report.return_value = report
+        operations_app.extensions['fixture_identities'] = repository
+        client = operations_app.test_client()
+
+        missing = client.get('/api/internal/identity-report')
+        wrong = client.get(
+            '/api/internal/identity-report',
+            headers={'Authorization': 'Bearer wrong-token'},
+        )
+        allowed = client.get(
+            '/api/internal/identity-report?limit=900',
+            headers={'Authorization': 'Bearer test-ops-token'},
+        )
+
+        self.assertEqual(missing.status_code, 401)
+        self.assertEqual(wrong.status_code, 401)
+        self.assertEqual(missing.json['error']['code'], 'unauthorized')
+        self.assertEqual(allowed.status_code, 200)
+        self.assertEqual(allowed.json, report)
+        repository.unresolved_report.assert_called_once_with(limit=500)
 
     def test_production_requires_a_valid_commit_sha(self):
         environment = {

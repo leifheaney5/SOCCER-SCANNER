@@ -13,7 +13,7 @@ Soccer Scanner 2.0 is a spoiler-safe football fixture workspace built with Flask
 
 ## Runtime architecture
 
-The browser calls the versioned canonical endpoint `GET /api/v2/fixtures`. Flask coordinates typed ESPN and optional Football-Data.org adapters through a bounded provider deadline. Results are normalized, assigned canonical identities, merged, cached, and filtered back to the requested local date. Redis provides shared cache and single-flight coordination when configured; a size-bounded memory cache is the development fallback and reports degraded readiness in production.
+The browser calls the versioned canonical endpoint `GET /api/v2/fixtures`. Flask coordinates typed ESPN and optional Football-Data.org adapters through a bounded provider deadline. Results are normalized, assigned durable provider-qualified identities, merged, cached, and filtered back to the requested local date. PostgreSQL persists public IDs and aliases. Redis provides shared cache and single-flight coordination; bounded in-memory SQLite/cache fallbacks are development-only and block production readiness.
 
 See [architecture](docs/architecture.md), [API contract](docs/api.md), [data sources](docs/data-sources.md), [provider mapping](docs/provider-mapping.md), and [provider capabilities](docs/provider-capabilities.md).
 
@@ -40,15 +40,19 @@ Open `http://127.0.0.1:5000`. ESPN fixture coverage works without a credential. 
 | Variable | Purpose | Default |
 |---|---|---|
 | `FOOTBALL_DATA_API_KEY` | Optional team, squad, and standings provider credential | unset |
-| `REDIS_URL` | Shared production cache and cross-worker single-flight | memory fallback |
+| `DATABASE_URL` | Durable fixture identity and alias registry | in-memory SQLite outside production |
+| `REDIS_URL` | Shared production cache and cross-worker single-flight | memory fallback outside production |
+| `OPS_ADMIN_TOKEN` | Bearer token for protected identity diagnostics | unset |
+| `DATABASE_POOL_*` | Bounded SQL connection-pool controls | values in `.env.example` |
 | `APP_ENVIRONMENT` | Build/runtime environment; production requires a commit SHA | Railway environment or `development` |
+| `APP_VERSION` | Semantic application version override | package version |
 | `GIT_COMMIT_SHA` | Exact deployed Git revision | Railway commit SHA fallback |
 | `PUBLIC_BASE_URL` | Canonical public origin | `https://soccerscanner.pro` |
 | `TRUSTED_PROXY_HOPS` | Number of trusted reverse-proxy hops | `1` |
 | `PORT` | HTTP port | `5000` |
 | `WEB_CONCURRENCY` | Gunicorn workers | `2` |
 
-The remaining timeout, cache, rate-limit, and provider bounds are defined in `soccer_scanner/config.py` and documented in [deployment](docs/deployment.md).
+The remaining timeout, cache, rate-limit, and provider bounds are defined in `soccer_scanner/config.py`. See [deployment](docs/deployment.md), [Railway architecture](docs/railway-architecture.md), and the [Railway runbook](docs/railway-runbook.md).
 
 ## Tests
 

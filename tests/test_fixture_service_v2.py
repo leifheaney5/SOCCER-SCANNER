@@ -10,6 +10,8 @@ from soccer_scanner.domain.models import (
 )
 from soccer_scanner.services.cache_backend import MemoryCacheBackend
 from soccer_scanner.services.fixture_service import CanonicalFixtureService
+from soccer_scanner.persistence.database import Base, DatabaseRuntime, SchemaMetadata
+from soccer_scanner.persistence.fixture_identities import FixtureIdentityRepository
 
 
 class Clock:
@@ -71,23 +73,50 @@ def fixture(provider, identifier):
     }
 
 
-def service(espn_outcome, football_outcome, *, clock=None):
+def service(espn_outcome, football_outcome, *, clock=None, cache=None, identity_registry=None):
     clock = clock or Clock()
-    cache = MemoryCacheBackend(
+    cache = cache or MemoryCacheBackend(
         default_ttl_seconds=10,
         default_stale_ttl_seconds=30,
         clock=clock,
     )
     espn = Provider(espn_outcome)
     football = Provider(football_outcome)
+    options = {
+        'cache_ttl_seconds': 10,
+        'stale_ttl_seconds': 30,
+        'provider_budget_seconds': 2,
+    }
+    if identity_registry is not None:
+        options['identity_registry'] = identity_registry
     return CanonicalFixtureService(
         espn,
         football,
         cache,
-        cache_ttl_seconds=10,
-        stale_ttl_seconds=30,
-        provider_budget_seconds=2,
+        **options,
     ), espn, football
+
+
+def repository(tmp_path):
+    runtime = DatabaseRuntime.from_config({
+        'DATABASE_URL': f'sqlite:///{(tmp_path / "identity.db").as_posix()}',
+    })
+    Base.metadata.create_all(runtime.engine)
+    with runtime.session_scope() as session:
+        session.add(SchemaMetadata(key='schema_version', value='20260804_01'))
+    return runtime, FixtureIdentityRepository(runtime)
+
+
+def unmapped_fixture(identifier, kickoff='2026-08-03T19:00:00Z'):
+    match = fixture('espn', identifier)
+    match['utcDate'] = kickoff
+    for field in ('homeTeam', 'awayTeam', 'competition'):
+        entity = match[field]
+        entity['canonicalId'] = None
+        entity['provider'] = 'espn'
+        entity['providerId'] = f'{field}-{identifier}'
+        entity['providerIds'] = {'espn': f'{field}-{identifier}'}
+    return match
 
 
 def test_full_success_and_authoritative_empty_have_distinct_states():
@@ -220,3 +249,79 @@ def test_dst_local_day_filters_once_and_analytics_use_local_hours():
     assert len(result['matches']) == 2
     assert {match['providerIds']['espn'] for match in result['matches']} == {'after', 'jump'}
     assert result['matchStatistics']['byTimeSlot']['lateNight'] == 2
+
+
+def test_full_response_identity_registry_keeps_ten_same_kickoff_events_unique(tmp_path):
+    runtime, identity_registry = repository(tmp_path)
+    fixtures = [unmapped_fixture(f'event-{index}') for index in range(10)]
+    scanner, _, _ = service(
+        outcome('espn', ProviderStatus.SUCCESS, fixtures),
+        outcome('football-data', ProviderStatus.DISABLED, completed=()),
+        identity_registry=identity_registry,
+    )
+
+    result = scanner.fixtures_for_date(date(2026, 8, 3), 'UTC')
+
+    assert len(result['matches']) == 10
+    assert len({match['canonicalFixtureId'] for match in result['matches']}) == 10
+    runtime.dispose()
+
+
+def test_duplicate_public_ids_fail_before_fixture_lookup_cache_writes():
+    class CollidingRegistry:
+        def resolve(self, _group, _match):
+            return 'fx_' + ('a' * 24)
+
+    class TrackingCache(MemoryCacheBackend):
+        def __init__(self):
+            super().__init__()
+            self.set_keys = []
+
+        def set(self, key, value, *, ttl_seconds=None, stale_ttl_seconds=None):
+            self.set_keys.append(key)
+            return super().set(
+                key,
+                value,
+                ttl_seconds=ttl_seconds,
+                stale_ttl_seconds=stale_ttl_seconds,
+            )
+
+    cache = TrackingCache()
+    scanner, _, _ = service(
+        outcome('espn', ProviderStatus.SUCCESS, [
+            unmapped_fixture('event-1'),
+            unmapped_fixture('event-2'),
+        ]),
+        outcome('football-data', ProviderStatus.DISABLED, completed=()),
+        cache=cache,
+        identity_registry=CollidingRegistry(),
+    )
+
+    with pytest.raises(RuntimeError, match='Duplicate public fixture ID'):
+        scanner.fixtures_for_date(date(2026, 8, 3), 'UTC')
+
+    assert not any(key.startswith('fixture-lookup:') for key in cache.set_keys)
+
+
+def test_deep_link_recovers_after_cache_loss_and_kickoff_correction(tmp_path):
+    runtime, identity_registry = repository(tmp_path)
+    original = unmapped_fixture('event-1')
+    scanner, _, _ = service(
+        outcome('espn', ProviderStatus.SUCCESS, [original]),
+        outcome('football-data', ProviderStatus.DISABLED, completed=()),
+        identity_registry=identity_registry,
+    )
+    first = scanner.fixtures_for_date(date(2026, 8, 3), 'UTC')['matches'][0]
+
+    corrected = unmapped_fixture('event-1', kickoff='2026-08-03T19:45:00Z')
+    restarted, _, _ = service(
+        outcome('espn', ProviderStatus.SUCCESS, [corrected]),
+        outcome('football-data', ProviderStatus.DISABLED, completed=()),
+        identity_registry=identity_registry,
+    )
+
+    recovered = restarted.lookup_fixture(first['canonicalFixtureId'], 'UTC')
+
+    assert recovered['canonicalFixtureId'] == first['canonicalFixtureId']
+    assert recovered['utcDate'] == '2026-08-03T19:45:00Z'
+    runtime.dispose()

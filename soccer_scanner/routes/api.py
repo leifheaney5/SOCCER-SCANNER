@@ -1,4 +1,5 @@
 from datetime import date
+import hmac
 import re
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -162,6 +163,31 @@ def capabilities_v2():
     return jsonify({
         'capabilities': current_app.extensions['provider_capabilities'],
     })
+
+
+@api.get('/internal/identity-report')
+def identity_report():
+    configured_token = str(current_app.config.get('OPS_ADMIN_TOKEN') or '')
+    authorization = request.headers.get('Authorization', '')
+    supplied_token = (
+        authorization[7:]
+        if authorization.startswith('Bearer ')
+        else ''
+    )
+    if not configured_token or not hmac.compare_digest(supplied_token, configured_token):
+        return _fixture_error(
+            'unauthorized',
+            'Valid operations credentials are required.',
+            401,
+        )
+    raw_limit = request.args.get('limit', '100')
+    try:
+        limit = min(500, max(1, int(raw_limit)))
+    except ValueError:
+        return _fixture_error('invalid_request', 'Limit must be an integer.', 400)
+    return jsonify(
+        current_app.extensions['fixture_identities'].unresolved_report(limit=limit)
+    )
 
 
 @api.get('/v2/fixtures/<canonical_fixture_id>')

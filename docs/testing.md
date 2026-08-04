@@ -7,6 +7,7 @@ $env:PYTEST_DISABLE_PLUGIN_AUTOLOAD='1'
 python -m pytest -q
 python -m compileall -q app.py wsgi.py soccer_scanner
 Get-ChildItem static,tests -Recurse -File -Include *.js,*.mjs | ForEach-Object { node --check $_.FullName }
+npm run test:smoke-invariants
 npm audit --audit-level=high
 pip-audit -r requirements.txt
 npx playwright test --project=chromium --project=webkit
@@ -24,9 +25,12 @@ The concurrency/load suite is deterministic and does not call external providers
 ```powershell
 $env:BASE_URL='https://soccerscanner.pro'
 $env:EXPECTED_SHA=(git rev-parse HEAD)
+$env:EXPECTED_ENVIRONMENT='production'
 npm run smoke:production
 ```
 
-The smoke requires a full 40-character SHA and fails on SHA/environment/asset mismatch, unhealthy endpoints, invalid fixture contracts, static or console errors, revealed-by-default scores, or horizontal overflow at 320 px.
+The smoke requires a full 40-character SHA and fails on SHA/environment/asset mismatch, non-durable or schema-incompatible persistence, unshared Redis, missing/malformed/duplicate fixture IDs, invalid fixture contracts, static or console errors, revealed-by-default scores, or horizontal overflow at 320 px.
+
+For staging, set its public `BASE_URL` and `EXPECTED_ENVIRONMENT=staging`; all other dependency, identity, browser, and exact-SHA checks remain identical.
 
 Production responses are live evidence and may legitimately show a stable provider error. They must never be replaced with mocked data during this check.
