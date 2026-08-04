@@ -584,6 +584,12 @@ body {
     font-size: 11px;
 }
 
+.fixture-freshness {
+    color: var(--text-muted);
+    font-size: 10px;
+    line-height: 1.25;
+}
+
 .live-dot {
     width: 6px;
     height: 6px;
@@ -855,6 +861,24 @@ body {
 
 .context-actions a {
     text-decoration: none;
+}
+
+.source-inspector {
+    margin-top: 16px;
+    border-top: 1px solid #282828;
+    color: var(--text-secondary);
+    font-size: 11px;
+}
+
+.source-inspector summary {
+    padding: 12px 0;
+    cursor: pointer;
+    color: var(--text-secondary);
+    font-weight: 600;
+}
+
+.source-inspector-list {
+    margin: 0;
 }
 
 .context-meta-item {

@@ -34,6 +34,9 @@ const baseMatch = ({
     stage: 'REGULAR_SEASON',
     group: null,
     lastUpdated: '2026-08-03T18:30:00Z',
+    sourceUpdatedAt: '2026-08-03T18:30:00Z',
+    sources: ['espn'],
+    dataQuality: {missingFields: ['referees', 'aggregate']},
     homeTeam: teamIdentity(`${id}-home`, home, homeCrest),
     awayTeam: teamIdentity(`${id}-away`, away, awayCrest),
     score: {

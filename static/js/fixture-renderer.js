@@ -136,6 +136,19 @@ function fixtureId(match) {
     return String(match?.canonicalFixtureId || match?.id || `${match?.homeTeam?.name || 'home'}-${match?.awayTeam?.name || 'away'}-${match?.utcDate || ''}`);
 }
 
+export function formatFreshness(value, now = new Date()) {
+    const updated = new Date(value);
+    if (Number.isNaN(updated.getTime())) return '';
+    const elapsedSeconds = Math.max(0, Math.floor((now.getTime() - updated.getTime()) / 1000));
+    if (elapsedSeconds < 60) return 'Updated just now';
+    const elapsedMinutes = Math.floor(elapsedSeconds / 60);
+    if (elapsedMinutes < 60) return `Updated ${elapsedMinutes}m ago`;
+    const elapsedHours = Math.floor(elapsedMinutes / 60);
+    if (elapsedHours < 24) return `Updated ${elapsedHours}h ago`;
+    const elapsedDays = Math.floor(elapsedHours / 24);
+    return `Updated ${elapsedDays}d ago`;
+}
+
 function createDetailsButton(match, featured = false) {
     const label = featured ? 'Open match details' : 'Details';
     const button = node('button', featured ? 'details-button details-button--featured' : 'details-button');
@@ -176,6 +189,8 @@ function createFixtureCard(match, revealed, selectedId = null, isFavorite = null
     if (kind === 'live') label.prepend(node('span', 'live-dot'));
     status.append(label);
     if (kind !== 'upcoming') status.append(node('span', 'fixture-kickoff', formatKickoff(match?.utcDate)));
+    const freshness = formatFreshness(match?.sourceUpdatedAt || match?.lastUpdated);
+    if (freshness) status.append(node('span', 'fixture-freshness', freshness));
 
     const action = node('div', 'fixture-action');
     action.append(createFavoriteButton(match, isFavorite), createDetailsButton(match));
@@ -265,8 +280,9 @@ export function renderSummary(container, matches, payload) {
         ['summary-upcoming', `${summary.upcoming} upcoming`],
         ['summary-finished', `${summary.finished} finished`],
     ].map(([className, text]) => node('span', className, text));
-    if (payload?.last_updated) {
-        const updated = new Date(payload.last_updated);
+    const lastUpdated = payload?.lastUpdated || payload?.last_updated;
+    if (lastUpdated) {
+        const updated = new Date(lastUpdated);
         if (!Number.isNaN(updated.getTime())) {
             items.push(node('span', 'summary-updated', `Updated ${updated.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}`));
         }

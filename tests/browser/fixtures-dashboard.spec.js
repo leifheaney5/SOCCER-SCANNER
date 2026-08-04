@@ -156,6 +156,7 @@ test('fixtures render paired identities, crest fallbacks, groups, and live-first
     await expect(page.locator('[data-fixture-id="postponed"] .fixture-status-label')).toHaveText('POSTPONED');
     await expect(page.locator('[data-fixture-id="postponed"] .score-display')).toHaveText('Postponed');
     await expect(page.locator('.fixture-card').first()).not.toContainText(' vs ');
+    await expect(page.locator('.fixture-card[data-fixture-id="live-secret"] .fixture-freshness')).toContainText('Updated');
 });
 
 test('date navigation, search, status, competition, and clear controls stay in sync', async ({page}) => {
@@ -331,6 +332,9 @@ test('desktop fixture selection populates complete spoiler-safe match context', 
     await expect(context).toContainText('Scanner Stadium');
     await expect(context.getByRole('button', {name: 'Copy fixture link'})).toBeVisible();
     await expect(context.getByRole('link', {name: 'Add to calendar'})).toHaveAttribute('href', '/fixtures/live-secret.ics');
+    await context.getByText('Source and freshness').click();
+    await expect(context).toContainText('ESPN');
+    await expect(context).toContainText('Missing verified fields');
     await expect(context).toContainText('Matchday 4');
     await expect(context).toContainText('Regular season');
     await expect(context).toContainText('ESPN');

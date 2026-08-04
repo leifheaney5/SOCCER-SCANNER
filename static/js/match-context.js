@@ -8,7 +8,7 @@ const [crestModule, fixtureRendererModule, fixtureStateModule] = await Promise.a
     import(versionedModule('./fixture-state.js')),
 ]);
 const {createCrest} = crestModule;
-const {createScoreNode} = fixtureRendererModule;
+const {createScoreNode, formatFreshness} = fixtureRendererModule;
 const {statusKind} = fixtureStateModule;
 
 function node(tag, className = '', text = '') {
@@ -73,6 +73,39 @@ function addMeta(list, label, value) {
     list.append(item);
 }
 
+function sourceLabel(value) {
+    const labels = {
+        espn: 'ESPN',
+        'football-data': 'Football-Data.org',
+        football_data: 'Football-Data.org',
+    };
+    return labels[String(value || '').toLocaleLowerCase()] || sentenceCase(value);
+}
+
+function createSourceInspector(match) {
+    const inspector = node('details', 'source-inspector');
+    inspector.append(node('summary', '', 'Source and freshness'));
+    const evidence = node('dl', 'source-inspector-list');
+    const sources = Array.isArray(match?.sources) ? match.sources.map(sourceLabel).filter(Boolean) : [];
+    const updatedAt = match?.sourceUpdatedAt || match?.lastUpdated;
+    const freshness = formatFreshness(updatedAt);
+    addMeta(evidence, 'Source', sources.join(', ') || 'Source unavailable');
+    if (updatedAt) {
+        const updated = new Date(updatedAt);
+        addMeta(evidence, 'Freshness', Number.isNaN(updated.getTime())
+            ? freshness
+            : `${freshness} · ${updated.toLocaleString()}`);
+    }
+    const missingFields = match?.dataQuality?.missingFields;
+    if (Array.isArray(missingFields) && missingFields.length) {
+        addMeta(evidence, 'Missing verified fields', missingFields.map(sentenceCase).join(', '));
+    } else {
+        addMeta(evidence, 'Verification', 'No known gaps');
+    }
+    inspector.append(evidence);
+    return inspector;
+}
+
 function createContextContent(match, revealed, onTeam, headingId) {
     const fragment = document.createDocumentFragment();
     const competition = node('p', 'context-competition', match?.competition?.name || 'Competition unavailable');
@@ -111,7 +144,7 @@ function createContextContent(match, revealed, onTeam, headingId) {
         calendar.setAttribute('download', '');
         actions.append(copy, calendar);
     }
-    fragment.append(competition, heading, status, matchup, details, actions);
+    fragment.append(competition, heading, status, matchup, details, actions, createSourceInspector(match));
     return fragment;
 }
 
