@@ -103,6 +103,7 @@ def create_app(config=None):
             'api.fixtures_by_date',
             'api.fixtures_v2',
             'api.fixture_v2',
+            'api.identity_report',
         }
         if request.endpoint not in expensive_endpoints:
             return None
