@@ -318,8 +318,15 @@ class SoccerScannerRoutesTest(unittest.TestCase):
         self.assertEqual(ready.json['database']['status'], 'ready')
         self.assertEqual(
             ready.json['blocking'],
-            ['database_not_durable', 'shared_cache_not_ready'],
+            [
+                'database_not_durable',
+                'shared_cache_not_ready',
+                # Without Redis the limiter is per-worker, so production must
+                # not advertise itself as ready.
+                'shared_rate_limiter_not_ready',
+            ],
         )
+        self.assertFalse(ready.json['rateLimit']['shared'])
 
     def test_production_readiness_accepts_ready_durable_dependencies(self):
         environment = {
@@ -344,6 +351,7 @@ class SoccerScannerRoutesTest(unittest.TestCase):
                 'status': 'ready',
             }),
         )
+        production_app.extensions['rate_limiter'] = Mock(shared=True, degraded=False)
 
         ready = production_app.test_client().get('/health/ready')
 
@@ -351,6 +359,8 @@ class SoccerScannerRoutesTest(unittest.TestCase):
         self.assertEqual(ready.json['status'], 'ready')
         self.assertEqual(ready.json['blocking'], [])
         self.assertTrue(ready.json['database']['durable'])
+        self.assertEqual(ready.json['rateLimit']['status'], 'ready')
+        self.assertTrue(ready.json['rateLimit']['shared'])
 
     def test_identity_report_requires_ops_token_and_bounds_the_query(self):
         report = {
