@@ -1,11 +1,12 @@
 import unittest
 from datetime import datetime, timezone
 from unittest.mock import Mock
+from zoneinfo import ZoneInfo
 
 from soccer_scanner import create_app
 from soccer_scanner.domain.models import ProviderOutcome, ProviderStatus
 from soccer_scanner.services.cache_backend import MemoryCacheBackend
-from soccer_scanner.services.fixture_service import CanonicalFixtureService
+from soccer_scanner.services.fixture_service import CanonicalFixtureService, _outcome_dict
 from soccer_scanner.services.provider_health import ProviderHealthRegistry
 
 
@@ -40,6 +41,13 @@ def stub_provider(name, result):
     provider = Mock()
     provider.provider_name = name
     provider.fetch_range = Mock(return_value=result)
+    return provider
+
+
+def stub_provider_raising(name, exception):
+    provider = Mock()
+    provider.provider_name = name
+    provider.fetch_range = Mock(side_effect=exception)
     return provider
 
 
@@ -227,6 +235,105 @@ class ProviderHealthRecordingTest(unittest.TestCase):
         self.assertEqual(recorded['espn']['detail'], 'internal_error')
         self.assertNotIn('boom', recorded['espn']['detail'])
         self.assertNotIn('XYZ123', recorded['espn']['detail'])
+
+    def test_a_generic_provider_exception_reports_partial_not_empty_confirmed(self):
+        # The half-outage case: provider A raises a non-_ProviderFailure
+        # exception while provider B legitimately returns zero fixtures. If
+        # the failed provider's outcome is dropped, `state` resolves to
+        # empty_confirmed and a real half-outage reports fully healthy.
+        registry = ProviderHealthRegistry()
+        espn = stub_provider_raising('espn', ValueError('boom'))
+        football_data = stub_provider(
+            'football-data', outcome('football-data', ProviderStatus.SUCCESS)
+        )
+        service = CanonicalFixtureService(
+            espn,
+            football_data,
+            MemoryCacheBackend(),
+            provider_health=registry,
+            now=lambda: datetime(2026, 8, 5, 12, tzinfo=timezone.utc),
+        )
+
+        response = service.fixtures_for_date(datetime(2026, 8, 5).date(), 'UTC')
+
+        self.assertEqual(response['state'], 'partial')
+        self.assertNotEqual(response['state'], 'empty_confirmed')
+
+    def test_the_second_provider_is_still_attempted_after_a_generic_exception(self):
+        registry = ProviderHealthRegistry()
+        espn = stub_provider_raising('espn', ValueError('boom'))
+        football_data = stub_provider(
+            'football-data', outcome('football-data', ProviderStatus.SUCCESS)
+        )
+        service = CanonicalFixtureService(
+            espn,
+            football_data,
+            MemoryCacheBackend(),
+            provider_health=registry,
+            now=lambda: datetime(2026, 8, 5, 12, tzinfo=timezone.utc),
+        )
+
+        service.fixtures_for_date(datetime(2026, 8, 5).date(), 'UTC')
+
+        self.assertEqual(football_data.fetch_range.call_count, 1)
+
+    def test_a_generic_provider_exception_is_recorded_unavailable_without_leaking_the_exception(self):
+        registry = ProviderHealthRegistry()
+        espn = stub_provider_raising('espn', ValueError('boom: secret-token-XYZ123'))
+        football_data = stub_provider(
+            'football-data', outcome('football-data', ProviderStatus.SUCCESS)
+        )
+        service = CanonicalFixtureService(
+            espn,
+            football_data,
+            MemoryCacheBackend(),
+            provider_health=registry,
+            now=lambda: datetime(2026, 8, 5, 12, tzinfo=timezone.utc),
+        )
+
+        service.fixtures_for_date(datetime(2026, 8, 5).date(), 'UTC')
+
+        recorded = {
+            item['name']: item for item in registry.snapshot()['providers']
+        }
+        self.assertEqual(recorded['espn']['status'], 'unavailable')
+        self.assertEqual(recorded['espn']['detail'], 'internal_error')
+        self.assertNotIn('secret-token-XYZ123', recorded['espn']['detail'])
+
+    def test_a_stale_snapshot_is_still_served_after_a_generic_exception(self):
+        # Today's single-provider production (ESPN only): an internal fault
+        # must not return a 503 when a within-TTL stale snapshot exists.
+        target_date = datetime(2026, 8, 5).date()
+        provider_start, provider_end = CanonicalFixtureService._provider_range(
+            target_date, ZoneInfo('UTC')
+        )
+        espn_cache_key = (
+            f'provider-fixtures:espn:{provider_start.isoformat()}:{provider_end.isoformat()}'
+        )
+        real_cache = MemoryCacheBackend()
+        real_cache.set(
+            espn_cache_key,
+            _outcome_dict(outcome('espn', ProviderStatus.SUCCESS)),
+            ttl_seconds=0,
+            stale_ttl_seconds=900,
+        )
+        cache = _RaisesForKeySubstring(real_cache, 'espn')
+        registry = ProviderHealthRegistry()
+        espn = stub_provider('espn', outcome('espn', ProviderStatus.SUCCESS))
+        football_data = stub_provider(
+            'football-data', outcome('football-data', ProviderStatus.UNAVAILABLE, ('timeout',))
+        )
+        service = CanonicalFixtureService(
+            espn,
+            football_data,
+            cache,
+            provider_health=registry,
+            now=lambda: datetime(2026, 8, 5, 12, tzinfo=timezone.utc),
+        )
+
+        response = service.fixtures_for_date(target_date, 'UTC')
+
+        self.assertEqual(response['state'], 'stale')
 
     def test_the_registry_is_wired_into_the_application_service(self):
         app = create_app({'TESTING': True})
