@@ -23,6 +23,14 @@ def _rate_limit_health():
     }
 
 
+def _provider_health():
+    registry = current_app.extensions.get('provider_health')
+    if registry is None:
+        return {'status': 'unknown', 'providers': [], 'lastSuccessAt': None,
+                'singleProvider': False}
+    return registry.snapshot()
+
+
 @health.get('/live')
 def live():
     return jsonify({'status': 'ok'})
@@ -37,6 +45,7 @@ def ready():
     database_health = identities.health()
     database_health['durable'] = identities.durable
     rate_limit_health = _rate_limit_health()
+    provider_health = _provider_health()
     blocking = [f'missing_service:{name}' for name in missing]
     environment = current_app.extensions['build_info'].environment.lower()
     if environment in {'production', 'prod'}:
@@ -62,6 +71,7 @@ def ready():
         'cache': cache_health,
         'database': database_health,
         'rateLimit': rate_limit_health,
+        'providers': provider_health,
     }), 200 if not blocking else 503
 
 
@@ -86,3 +96,10 @@ def metrics():
                 },
             }), 401
     return jsonify(current_app.extensions['metrics'].snapshot())
+
+
+@health.get('/providers')
+def providers():
+    # Always 200: this reports upstream state and is polled by monitoring,
+    # which needs to distinguish "app is down" from "data is down".
+    return jsonify(_provider_health())
