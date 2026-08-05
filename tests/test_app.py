@@ -93,6 +93,58 @@ class SoccerScannerRoutesTest(unittest.TestCase):
         self.assertNotIn('97', calendar.get_data(as_text=True))
         self.assertNotIn('96', calendar.get_data(as_text=True))
 
+    def _deep_link_for(self, query=''):
+        """Redirect a fixture kicking off just after UTC midnight."""
+        fixture_id = 'fx_' + ('b' * 24)
+        match = {
+            'canonicalFixtureId': fixture_id,
+            # 20:30 on 4 Aug in New York, 09:30 on 5 Aug in Tokyo.
+            'utcDate': '2026-08-05T00:30:00Z',
+            'localDate': '2026-08-04',
+        }
+        service = Mock()
+        service.lookup_fixture.return_value = match
+        original = self.app.extensions['fixture_service']
+        self.app.extensions['fixture_service'] = service
+        try:
+            return self.client.get(f'/fixtures/{fixture_id}{query}')
+        finally:
+            self.app.extensions['fixture_service'] = original
+
+    def test_deep_link_preserves_a_supplied_timezone_and_derives_that_day(self):
+        for timezone_name, expected_date in (
+            ('America/New_York', '2026-08-04'),
+            ('America/Los_Angeles', '2026-08-04'),
+            ('Europe/London', '2026-08-05'),
+            ('Asia/Tokyo', '2026-08-05'),
+            ('Australia/Sydney', '2026-08-05'),
+        ):
+            with self.subTest(timezone=timezone_name):
+                response = self._deep_link_for(f'?timezone={timezone_name}')
+                location = response.headers['Location']
+
+                self.assertEqual(response.status_code, 302)
+                self.assertIn(f'date={expected_date}', location)
+                self.assertIn(f'timezone={timezone_name}', location)
+
+    def test_deep_link_without_a_timezone_uses_utc_consistently(self):
+        response = self._deep_link_for()
+        location = response.headers['Location']
+
+        # The instant is 00:30Z, so the UTC day is the 5th — not the stored
+        # localDate of the 4th, which belongs to a different zone entirely.
+        self.assertIn('date=2026-08-05', location)
+        self.assertIn('timezone=UTC', location)
+
+    def test_deep_link_rejects_an_unusable_timezone_without_shifting_the_day(self):
+        response = self._deep_link_for('?timezone=Mars%2FOlympus')
+        location = response.headers['Location']
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('timezone=UTC', location)
+        self.assertIn('date=2026-08-05', location)
+        self.assertNotIn('Mars', location)
+
     def test_team_and_competition_deep_pages_have_stable_routes(self):
         team = self.client.get('/teams/arsenal')
         competition = self.client.get('/competitions/premier-league')

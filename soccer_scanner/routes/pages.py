@@ -1,7 +1,9 @@
 from datetime import datetime, timedelta, timezone
 import re
 
-from flask import Blueprint, Response, current_app, redirect, render_template, url_for
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
+from flask import Blueprint, Response, current_app, redirect, render_template, request, url_for
 
 pages = Blueprint('pages', __name__)
 
@@ -52,15 +54,44 @@ def _fixture_from_link(canonical_fixture_id):
     return current_app.extensions['fixture_service'].lookup_fixture(canonical_fixture_id)
 
 
+def _resolved_timezone(requested):
+    """Honour an explicit, valid IANA zone; otherwise fall back to UTC.
+
+    A stored ``localDate`` belongs to whichever zone produced it, so it can
+    never be reused as if it were a UTC day.
+    """
+    if not requested:
+        return timezone.utc, 'UTC'
+    try:
+        return ZoneInfo(str(requested)), str(requested)
+    except (ZoneInfoNotFoundError, ValueError):
+        return timezone.utc, 'UTC'
+
+
+def _fixture_day_in_zone(match, zone):
+    """The calendar day a fixture belongs to, in the supplied zone."""
+    raw = str(match.get('utcDate') or '').strip()
+    if not raw:
+        return None
+    try:
+        instant = datetime.fromisoformat(raw.replace('Z', '+00:00'))
+    except ValueError:
+        return None
+    if instant.tzinfo is None:
+        instant = instant.replace(tzinfo=timezone.utc)
+    return instant.astimezone(zone).date().isoformat()
+
+
 @pages.get('/fixtures/<canonical_fixture_id>')
 def fixture_link(canonical_fixture_id):
     match = _fixture_from_link(canonical_fixture_id)
     if match is None:
         return render_template('fixture_link_unavailable.html'), 404
+    zone, zone_name = _resolved_timezone(request.args.get('timezone'))
     return redirect(url_for(
         'pages.fixtures',
-        date=match.get('localDate'),
-        timezone='UTC',
+        date=_fixture_day_in_zone(match, zone) or match.get('localDate'),
+        timezone=zone_name,
         fixture=canonical_fixture_id,
     ))
 
