@@ -61,8 +61,13 @@ final class FixtureFlowUITests: XCTestCase {
     func testAFailedLoadOffersRetry() {
         let app = launchApp(arguments: ["-UITestFailure", "YES"])
 
-        XCTAssertTrue(element(app, "fixtures-error").waitForExistence(timeout: 30))
-        XCTAssertTrue(element(app, "fixtures-retry").exists)
+        // Assert on the control rather than its container: the retry button is
+        // the affordance under test, and buttons expose identifiers reliably.
+        XCTAssertTrue(
+            app.buttons["fixtures-retry"].waitForExistence(timeout: 30),
+            "a retryable failure must offer a retry action"
+        )
+        XCTAssertFalse(element(app, "fixtures-list").exists)
     }
 
     func testLayoutSurvivesLargestDynamicTypeSize() {

@@ -120,6 +120,9 @@ public struct FixtureListView: View {
                 .accessibilityIdentifier("fixtures-retry")
             }
         }
+        // Without `.contain` the view is not an accessibility container, so the
+        // identifier is not queryable by assistive technology or UI tests.
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("fixtures-error")
     }
 }
