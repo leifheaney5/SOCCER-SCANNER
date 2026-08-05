@@ -433,7 +433,6 @@ git commit -m "feat: report provider health without failing readiness"
 
 **Files:**
 - Modify: `soccer_scanner/services/fixture_service.py` (constructor and the provider loop starting near line 95)
-- Modify: `soccer_scanner/observability.py` (add metric name)
 - Test: `tests/test_provider_health_recording.py`
 
 **Interfaces:**
