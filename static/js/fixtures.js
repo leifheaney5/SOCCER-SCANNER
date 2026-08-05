@@ -37,6 +37,7 @@ const {
     renderRequestError,
     renderSummary,
     renderUpdateFailure,
+    setRenderTimeZone,
 } = fixtureRendererModule;
 const {createMatchContext} = matchContextModule;
 const {createTeamDrawer} = teamDrawerModule;
@@ -133,6 +134,8 @@ function populateCompetitions(matches) {
 
 function reflectCurrentResults() {
     if (!payload) return;
+    // Every date and time rendered below must use the selected zone.
+    setRenderTimeZone(state.timezone);
     const filteredMatches = filterMatches(payload.matches, state);
     const matches = sortMatches(filteredMatches, state.sort);
     if (selectedFixtureId && !matches.some(match => (
@@ -152,7 +155,7 @@ function reflectCurrentResults() {
     if (matches.length === 0) {
         renderEmptyState(byId('fixture-stream'), {filtered: payload.matches.length > 0});
     } else {
-        renderFixtureStream(byId('fixture-stream'), groupMatches(matches), {
+        renderFixtureStream(byId('fixture-stream'), groupMatches(matches, state.sort), {
             revealed: scoresRevealed,
             expandedGroups,
             selectedId: selectedFixtureId,
@@ -402,7 +405,11 @@ function init() {
     bindEvents();
     refreshController = createRefreshController({
         load: loadFixtures,
-        getContext: () => ({date: state.date, matches: payload?.matches || []}),
+        getContext: () => ({
+            date: state.date,
+            matches: payload?.matches || [],
+            timezone: state.timezone,
+        }),
     });
     loadFixtures().finally(() => refreshController.start());
 }

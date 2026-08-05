@@ -2,14 +2,35 @@ const assetVersion = new URL(import.meta.url).searchParams.get('v');
 const versionedModule = path => (
     assetVersion ? `${path}?v=${encodeURIComponent(assetVersion)}` : path
 );
-const [crestModule, fixtureStateModule, scorePreferenceModule] = await Promise.all([
+const [crestModule, fixtureStateModule, scorePreferenceModule, statusModule, timeZoneModule] = await Promise.all([
     import(versionedModule('./crest.js')),
     import(versionedModule('./fixture-state.js')),
     import(versionedModule('./score-preference.js')),
+    import(versionedModule('./match-status.js')),
+    import(versionedModule('./time-zone.js')),
 ]);
 const {createCrest} = crestModule;
 const {selectFeatured, statusKind, statusValue, summarizeMatches} = fixtureStateModule;
 const {validScore} = scorePreferenceModule;
+const {describeStatus, statusShortLabel, statusLabel: canonicalStatusLabel} = statusModule;
+const {
+    formatKickoff: formatKickoffInZone,
+    formatFixtureDate,
+    resolveTimeZone,
+} = timeZoneModule;
+
+// The selected zone is page-level state; every renderer entry point reads it
+// rather than each signature threading it through.
+let activeTimeZone = 'UTC';
+
+export function setRenderTimeZone(timeZone) {
+    activeTimeZone = resolveTimeZone(timeZone, activeTimeZone);
+    return activeTimeZone;
+}
+
+export function renderTimeZone() {
+    return activeTimeZone;
+}
 
 const GROUP_PREVIEW_LIMIT = 6;
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -48,36 +69,22 @@ function detailsIcon() {
     return icon(['M9 18l6-6-6-6']);
 }
 
-export function formatKickoff(value) {
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return 'Time TBC';
-    return date.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+export function formatKickoff(value, timeZone = activeTimeZone) {
+    return formatKickoffInZone(value, timeZone);
 }
 
 function formatDate(value) {
-    const date = new Date(`${value}T12:00:00`);
-    if (Number.isNaN(date.getTime())) return 'Selected date';
-    return date.toLocaleDateString([], {weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'});
+    return formatFixtureDate(value, activeTimeZone);
 }
 
+// HT, ET, PEN, DELAYED, POSTPONED and ABANDONED all come from the canonical
+// taxonomy instead of collapsing into a generic LIVE/UPCOMING badge.
 function statusLabel(match) {
-    const status = statusValue(match);
-    if (status === 'PAUSED' || status === 'HALFTIME') return 'HT';
-    const kind = statusKind(match);
-    if (kind === 'live') return 'LIVE';
-    if (kind === 'finished') return 'FT';
-    if (kind === 'postponed') return 'POSTPONED';
-    if (kind === 'cancelled') return 'CANCELLED';
-    if (kind === 'suspended') return 'SUSPENDED';
-    return 'UPCOMING';
+    return statusShortLabel(match);
 }
 
 function statusDescription(match) {
-    const label = statusLabel(match);
-    if (label === 'LIVE') return 'Live now';
-    if (label === 'HT') return 'Half-time';
-    if (label === 'FT') return 'Full-time';
-    return label.charAt(0) + label.slice(1).toLocaleLowerCase();
+    return canonicalStatusLabel(match);
 }
 
 export function createScoreNode(match, revealed, {featured = false} = {}) {
@@ -182,6 +189,10 @@ function createFixtureCard(match, revealed, selectedId = null) {
 
     const status = node('div', 'fixture-status');
     const label = node('span', 'fixture-status-label', statusLabel(match));
+    // The short badge is an abbreviation, so expose the full meaning to
+    // assistive technology and on hover.
+    label.title = describeStatus(match);
+    label.setAttribute('aria-label', canonicalStatusLabel(match));
     if (kind === 'live') label.prepend(node('span', 'live-dot'));
     status.append(label);
     if (kind !== 'upcoming') status.append(node('span', 'fixture-kickoff', formatKickoff(match?.utcDate)));
