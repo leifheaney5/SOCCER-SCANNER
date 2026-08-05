@@ -257,11 +257,43 @@ bundle ID" install failure; and UI queries that assumed SwiftUI's UIKit element 
 | 1 | Staging served `robots.txt` with `Allow: /` and its own sitemap, so it would index duplicate content against production | fixed — non-production returns `Disallow: /` |
 | 2 | The timezone and status modules sat two levels deep in a dynamic-import waterfall, making WebKit's first render marginal and producing an intermittent test failure | fixed — `modulepreload` for the critical path; 9/9 on a repeated WebKit run |
 | 3 | `.accessibilityElement(children: .combine)` on the fixture row hid the score elements from assistive technology as well as tests | fixed — `.contain` |
-| 4 | **Staging cannot fetch fixture data at all**; `/api/v2/fixtures` returns `provider_unavailable` on every attempt while production succeeds | **open** |
+| 4 | **Staging cannot fetch fixture data at all**; `/api/v2/fixtures` returns `provider_unavailable` on every attempt while production succeeds | **did not reproduce (2026-08-05) — transient, see follow-up below** |
 | 5 | **Neither environment sets `FOOTBALL_DATA_API_KEY`**, so ESPN is a single point of failure with no fallback provider | **open** |
 | 6 | Production briefly returned `provider_unavailable` during this session and recovered without intervention; `/health/ready` stayed `ready` throughout, so provider health is invisible to monitoring | **open** |
 
-Findings 4–6 are pre-existing and unrelated to this branch. Finding 6 means an outage of the
+#### Finding 4 — follow-up (2026-08-05)
+
+On redeploy to staging (commit `15386c3d4250c857f0b61accc167e4500d11bd37`), the fixture-fetch
+failure described in Finding 4 did not reproduce: `/api/v2/fixtures` succeeded, returning
+`coverage.espn: {completed: 20, requested: 20}`. No code change was made and no root cause was
+diagnosed — the earlier failure is confirmed transient, not an environment-level block such as
+egress blocking or IP reputation. `football-data` reported `completed: 0, requested: 1` and
+`status: "disabled"`, which is expected because `FOOTBALL_DATA_API_KEY` is unset on staging
+(Finding 5, unchanged). The provider health registry added on this branch was exercised
+end-to-end in this real deployment: before the fixture request, `/health/providers` returned
+`status: "unknown"`, `providers: []`, `lastSuccessAt: null`; after the request it returned
+`espn` as `status: "ok"` with populated `lastObservedAt`/`lastSuccessAt` and `detail: null`,
+`football-data` as `status: "disabled"`, and overall `status: "ok"`, `singleProvider: true`.
+`detail` being `null` for the successful provider is consistent with the design that `detail`
+carries only controlled failure categories, never free text. Production still returns HTTP 404
+for `/health/providers` because it runs the older revision `d665414`, which predates this
+branch; production served 54 fixtures successfully at the same moment. Finding 6's underlying
+gap is addressed in code on this branch but is **not yet deployed to production**, so Finding 6
+remains open.
+
+```
+staging /health/version         commitSha 15386c3d4250c857f0b61accc167e4500d11bd37
+staging /api/v2/fixtures        coverage.espn {completed:20, requested:20}
+                                 coverage.football-data {completed:0, requested:1, status:"disabled"}
+staging /health/providers (before)  status:"unknown", providers:[], lastSuccessAt:null
+staging /health/providers (after)   espn:"ok" (lastObservedAt/lastSuccessAt set, detail:null)
+                                     football-data:"disabled"
+                                     overall status:"ok", singleProvider:true
+production /health/providers    HTTP 404 (older revision d665414)
+production /api/v2/fixtures     54 matches
+```
+
+Findings 5–6 are pre-existing and unrelated to this branch. Finding 6 means an outage of the
 core product surface would not trigger any alert, which reinforces the missing-monitoring gap
 recorded in section E.
 
