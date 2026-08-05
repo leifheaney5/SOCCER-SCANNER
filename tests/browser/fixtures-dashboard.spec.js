@@ -69,20 +69,25 @@ test('impossible URL dates show specific inline validation and never reach provi
     expect(fixtureRequests).toBe(1);
 });
 
-test('score preference defaults hidden and persists after reload', async ({page}) => {
+test('score preference defaults hidden and persists only for the tab session', async ({page}) => {
     await mockFixtures(page);
+    await page.addInitScript(() => {
+        localStorage.setItem('soccer-scanner:reveal-scores', 'true');
+    });
     await page.goto('/?date=2026-08-03');
 
     const toggle = page.locator('#score-toggle');
     await expect(toggle).toHaveAttribute('aria-pressed', 'false');
     await expect(toggle).toHaveAccessibleName('Reveal scores');
     await expect(toggle.locator('svg')).toHaveAttribute('data-icon', 'eye-off');
-    await expect.poll(() => page.evaluate(() => localStorage.getItem('soccer-scanner:reveal-scores'))).toBeNull();
+    await expect.poll(() => page.evaluate(() => sessionStorage.getItem('soccer-scanner:reveal-scores'))).toBeNull();
+    await expect.poll(() => page.evaluate(() => localStorage.getItem('soccer-scanner:reveal-scores'))).toBe('true');
 
     await toggle.click();
     await expect(toggle).toHaveAttribute('aria-pressed', 'true');
     await expect(toggle).toHaveAccessibleName('Hide scores');
     await expect(toggle.locator('svg')).toHaveAttribute('data-icon', 'eye');
+    await expect.poll(() => page.evaluate(() => sessionStorage.getItem('soccer-scanner:reveal-scores'))).toBe('true');
     await expect.poll(() => page.evaluate(() => localStorage.getItem('soccer-scanner:reveal-scores'))).toBe('true');
 
     await page.reload();

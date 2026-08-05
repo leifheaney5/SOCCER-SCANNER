@@ -69,7 +69,6 @@ export function createState(search = '', defaultTimezone = 'UTC') {
         sort: SORT_VALUES.has(params.get('sort')) ? params.get('sort') : 'kickoff',
         timeWindow: TIME_WINDOWS.has(params.get('time')) ? params.get('time') : 'all',
         hideFinished: params.get('hideFinished') === '1',
-        favoritesOnly: params.get('favorites') === '1',
         fixture: (params.get('fixture') || '').slice(0, 120),
         query: params.get('q') || '',
         toSearchParams() {
@@ -82,7 +81,6 @@ export function createState(search = '', defaultTimezone = 'UTC') {
             if (this.sort !== 'kickoff') next.set('sort', this.sort);
             if (this.timeWindow !== 'all') next.set('time', this.timeWindow);
             if (this.hideFinished) next.set('hideFinished', '1');
-            if (this.favoritesOnly) next.set('favorites', '1');
             if (this.fixture) next.set('fixture', this.fixture);
             if (this.query) next.set('q', this.query);
             return next;
@@ -91,7 +89,7 @@ export function createState(search = '', defaultTimezone = 'UTC') {
     return state;
 }
 
-export function filterMatches(matches, state, {isFavorite = () => false} = {}) {
+export function filterMatches(matches, state) {
     const normalizeSearch = value => String(value || '')
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
@@ -126,7 +124,6 @@ export function filterMatches(matches, state, {isFavorite = () => false} = {}) {
             && (!state.country || country === state.country)
             && (state.status === 'all' || statusKind(match) === state.status)
             && (!state.hideFinished || statusKind(match) !== 'finished')
-            && (!state.favoritesOnly || isFavorite(match))
             && inTimeWindow
             && (!query || normalizedSearchable.includes(query));
     });
@@ -184,19 +181,15 @@ export function summarizeMatches(matches) {
     return summary;
 }
 
-export function selectFeatured(matches, {isFavorite = () => false} = {}) {
+export function selectFeatured(matches) {
     const list = Array.isArray(matches) ? matches : [];
     const mostInteresting = kind => list.reduce((selected, match) => {
         if (statusKind(match) !== kind) return selected;
-        const favorite = Number(isFavorite(match));
-        const selectedFavorite = Number(selected && isFavorite(selected));
         const interest = Number(match?.interestEstimate ?? match?.enhanced_info?.importance_score ?? 0);
         const selectedInterest = Number(
             selected?.interestEstimate ?? selected?.enhanced_info?.importance_score ?? 0,
         );
-        return !selected || favorite > selectedFavorite || (
-            favorite === selectedFavorite && interest > selectedInterest
-        ) ? match : selected;
+        return !selected || interest > selectedInterest ? match : selected;
     }, null);
     return mostInteresting('live')
         || mostInteresting('upcoming')

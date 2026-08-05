@@ -36,9 +36,8 @@
             </button>
             <nav id="primary-navigation" class="nav-links" aria-label="Primary navigation">
                 {% set fixture_page = request.path in ['/', '/matches-today'] %}
-                <a href="/" class="nav-link{% if fixture_page and request.args.get('status') != 'live' and request.args.get('favorites') != '1' %} active{% endif %}"{% if fixture_page and request.args.get('status') != 'live' and request.args.get('favorites') != '1' %} aria-current="page"{% endif %}>Fixtures</a>
+                <a href="/" class="nav-link{% if fixture_page and request.args.get('status') != 'live' %} active{% endif %}"{% if fixture_page and request.args.get('status') != 'live' %} aria-current="page"{% endif %}>Fixtures</a>
                 <a href="/?status=live" class="nav-link{% if fixture_page and request.args.get('status') == 'live' %} active{% endif %}"{% if fixture_page and request.args.get('status') == 'live' %} aria-current="page"{% endif %}>Live</a>
-                <a href="/?favorites=1" class="nav-link{% if fixture_page and request.args.get('favorites') == '1' %} active{% endif %}"{% if fixture_page and request.args.get('favorites') == '1' %} aria-current="page"{% endif %}>Favorites</a>
                 <a class="nav-link nav-link-external" href="https://select-xi.pro/" target="_blank" rel="noopener noreferrer">
                     Select XI
                     <span aria-hidden="true">↗</span>

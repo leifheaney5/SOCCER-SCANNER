@@ -18,9 +18,6 @@ test('capture synthetic desktop release states', async ({page}, testInfo) => {
     await page.screenshot({path: testInfo.outputPath('desktop-filtered.png'), fullPage: true});
     await page.locator('.fixture-card[data-fixture-id="live-secret"] .details-button').click();
     await page.screenshot({path: testInfo.outputPath('desktop-context.png'), fullPage: true});
-    await page.locator('.fixture-card[data-fixture-id="live-secret"] .favorite-button').click();
-    await page.screenshot({path: testInfo.outputPath('desktop-favorite.png'), fullPage: true});
-
     await page.evaluate(async () => {
         const version = new URL(document.querySelector('script[src*="fixtures.js"]').src).searchParams.get('v');
         const renderer = await import(`/static/js/fixture-renderer.js?v=${encodeURIComponent(version)}`);

@@ -138,7 +138,7 @@ for (const mode of ['agenda', 'grid']) {
 }
 byId('score-toggle').addEventListener('click', () => {
     revealed = !revealed;
-    writeScorePreference(localStorage, revealed);
+    writeScorePreference(sessionStorage, revealed);
     syncControls();
     loadWindow();
 });

@@ -33,7 +33,9 @@ class SoccerScannerRoutesTest(unittest.TestCase):
         self.assertNotIn('>Teams</a>', html)
         self.assertNotIn('>Calendar</a>', html)
         self.assertNotIn('>Tables</a>', html)
-        self.assertIn('>Favorites</a>', html)
+        self.assertNotIn('>Favorites</a>', html)
+        self.assertNotIn('id="favorites-only"', html)
+        self.assertNotIn('id="export-favorites"', html)
 
     def test_team_analysis_has_a_stable_route(self):
         response = self.client.get('/teams')
@@ -206,7 +208,8 @@ class SoccerScannerRoutesTest(unittest.TestCase):
 
         self.assertEqual(privacy.status_code, 200)
         self.assertIn(b'Privacy', privacy.data)
-        self.assertIn(b'localStorage', privacy.data)
+        self.assertIn(b'sessionStorage', privacy.data)
+        self.assertIn(b'no account', privacy.data)
         self.assertEqual(sources.status_code, 200)
         self.assertIn(b'ESPN', sources.data)
         self.assertIn(b'Football-data.org', sources.data)

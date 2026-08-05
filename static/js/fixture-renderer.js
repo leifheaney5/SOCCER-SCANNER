@@ -48,10 +48,6 @@ function detailsIcon() {
     return icon(['M9 18l6-6-6-6']);
 }
 
-function starIcon() {
-    return icon(['m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-2.9-5.6 2.9 1.1-6.2-4.5-4.4 6.2-.9L12 3Z']);
-}
-
 export function formatKickoff(value) {
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return 'Time TBC';
@@ -160,20 +156,6 @@ function createDetailsButton(match, featured = false) {
     return button;
 }
 
-function createFavoriteButton(match, isFavorite) {
-    const id = fixtureId(match);
-    const selected = Boolean(isFavorite?.(match));
-    const button = node('button', 'favorite-button');
-    button.type = 'button';
-    button.dataset.action = 'toggle-favorite';
-    button.dataset.favoriteType = 'fixtures';
-    button.dataset.favoriteId = id;
-    button.setAttribute('aria-pressed', String(selected));
-    button.setAttribute('aria-label', `${selected ? 'Remove' : 'Add'} ${match?.homeTeam?.name || 'home team'} and ${match?.awayTeam?.name || 'away team'} ${selected ? 'from' : 'to'} favorites`);
-    button.append(starIcon());
-    return button;
-}
-
 function streamingServiceNames(match) {
     const seen = new Set();
     const names = [];
@@ -188,7 +170,7 @@ function streamingServiceNames(match) {
     return names;
 }
 
-function createFixtureCard(match, revealed, selectedId = null, isFavorite = null) {
+function createFixtureCard(match, revealed, selectedId = null) {
     const id = fixtureId(match);
     const kind = statusKind(match);
     const card = node('article', `fixture-card fixture-card--${kind}`);
@@ -211,7 +193,7 @@ function createFixtureCard(match, revealed, selectedId = null, isFavorite = null
     }
 
     const action = node('div', 'fixture-action');
-    action.append(createFavoriteButton(match, isFavorite), createDetailsButton(match));
+    action.append(createDetailsButton(match));
     const mobileMeta = node('span', 'fixture-mobile-meta', match?.competition?.name || 'Competition');
     card.append(status, createTeamRows(match), createScoreNode(match, revealed), mobileMeta, action);
     return card;
@@ -230,7 +212,7 @@ function createCompetitionIdentity(competition) {
 }
 
 function createCompetitionGroup(group, options) {
-    const {revealed, expandedGroups, selectedId, isFavorite, favoriteRepository} = options;
+    const {revealed, expandedGroups, selectedId} = options;
     const section = node('section', 'competition-group');
     const contentId = `competition-${group.key.replace(/[^a-zA-Z0-9_-]/g, '-')}`;
     section.dataset.competition = group.key;
@@ -240,19 +222,6 @@ function createCompetitionGroup(group, options) {
     const meta = node('div', 'competition-meta');
     const count = group.matches.length;
     meta.append(node('span', 'competition-count', `${count} ${count === 1 ? 'match' : 'matches'}`));
-    const competitionId = String(group.competition?.canonicalId || group.competition?.id || '');
-    if (competitionId) {
-        const selected = Boolean(favoriteRepository?.has('competitions', competitionId));
-        const favorite = node('button', 'competition-favorite');
-        favorite.type = 'button';
-        favorite.dataset.action = 'toggle-favorite';
-        favorite.dataset.favoriteType = 'competitions';
-        favorite.dataset.favoriteId = competitionId;
-        favorite.setAttribute('aria-pressed', String(selected));
-        favorite.setAttribute('aria-label', `${selected ? 'Remove' : 'Add'} ${group.competition?.name || 'competition'} ${selected ? 'from' : 'to'} favorites`);
-        favorite.append(starIcon());
-        meta.append(favorite);
-    }
     const expandable = count > GROUP_PREVIEW_LIMIT;
     const expanded = expandedGroups.has(group.key);
     if (expandable) {
@@ -269,7 +238,7 @@ function createCompetitionGroup(group, options) {
     const fixtures = node('div', 'competition-fixtures');
     fixtures.id = contentId;
     const visible = expandable && !expanded ? group.matches.slice(0, GROUP_PREVIEW_LIMIT) : group.matches;
-    fixtures.append(...visible.map(match => createFixtureCard(match, revealed, selectedId, isFavorite)));
+    fixtures.append(...visible.map(match => createFixtureCard(match, revealed, selectedId)));
     section.append(header, fixtures);
     return section;
 }
@@ -323,8 +292,8 @@ export function renderNotice(container, payload) {
     container.hidden = false;
 }
 
-export function renderFeatured(container, matches, revealed, {isFavorite = () => false} = {}) {
-    const match = selectFeatured(matches, {isFavorite});
+export function renderFeatured(container, matches, revealed) {
+    const match = selectFeatured(matches);
     container.replaceChildren();
     if (!match) {
         container.hidden = true;
