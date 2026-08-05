@@ -58,6 +58,8 @@ platform :ios do
       scheme: SCHEME,
       configuration: "Release",
       export_method: "app-store",
+      # Supplied only at release time so no Apple identifiers live in the repo.
+      xcargs: "DEVELOPMENT_TEAM=#{ENV.fetch('APPLE_TEAM_ID')} PRODUCT_BUNDLE_IDENTIFIER=#{ENV.fetch('APPLE_BUNDLE_ID')}",
       output_directory: "../build",
       output_name: "SoccerScanner.ipa"
     )
