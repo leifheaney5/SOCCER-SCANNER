@@ -45,6 +45,15 @@ class TermsRouteTest(unittest.TestCase):
         for invented in ('Inc.', 'LLC', 'Ltd.', 'GmbH'):
             self.assertNotIn(invented, html, invented)
 
+    def test_terms_carries_a_noindex_robots_tag(self):
+        # The page is a labelled engineering draft and must not be advertised
+        # to crawlers, but it still needs to be reachable by visitors.
+        response = self.client.get('/terms')
+        html = response.get_data(as_text=True)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('name="robots" content="noindex, follow"', html)
+
     def test_footer_links_terms_privacy_and_data_sources(self):
         html = self.client.get('/').get_data(as_text=True)
 
@@ -99,8 +108,10 @@ class RobotsAndSitemapTest(unittest.TestCase):
         self.assertIn('application/xml', response.mimetype)
         self.assertIn('<urlset', body)
         self.assertIn('<loc>https://soccerscanner.pro/</loc>', body)
-        self.assertIn('<loc>https://soccerscanner.pro/terms</loc>', body)
         self.assertIn('<loc>https://soccerscanner.pro/privacy</loc>', body)
+        # /terms is a labelled draft (noindex) and must never be advertised
+        # to crawlers via the sitemap, though the route itself stays live.
+        self.assertNotIn('<loc>https://soccerscanner.pro/terms</loc>', body)
         # Never advertise non-indexable surfaces.
         self.assertNotIn('/api/', body)
         self.assertNotIn('/health/', body)

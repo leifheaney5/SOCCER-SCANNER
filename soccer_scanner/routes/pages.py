@@ -64,7 +64,9 @@ _SITEMAP_ROUTES = (
     ('/league-tables', 'weekly', '0.6'),
     ('/data-sources', 'monthly', '0.3'),
     ('/privacy', 'yearly', '0.2'),
-    ('/terms', 'yearly', '0.2'),
+    # /terms is a labelled engineering draft (see templates/terms.html) and
+    # carries its own noindex meta tag; it stays reachable via the route and
+    # footer link but is deliberately excluded from the sitemap.
 )
 
 

@@ -1,5 +1,10 @@
 {% extends "base.html" %}
 {% block title %}Terms of Service · Soccer Scanner{% endblock %}
+{# This page is a labelled engineering draft (see the banner below) and must
+   never be indexed or advertised to crawlers until legal review completes.
+   The route and footer link stay reachable to visitors; only indexing is
+   suppressed. #}
+{% block robots_meta %}<meta name="robots" content="noindex, follow">{% endblock %}
 {% block content %}
 <main class="legal-page" id="main-content">
     <h1>Terms of Service</h1>
