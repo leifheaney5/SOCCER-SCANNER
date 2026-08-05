@@ -58,6 +58,17 @@ ESPN is the default fixture source and requires no configured key. Football-Data
 
 Never put provider credentials in client code, logs, screenshots, build artifacts, or committed environment files.
 
+## Provider redundancy
+
+As of 2026-08-05 neither `production` nor `staging` sets `FOOTBALL_DATA_API_KEY`,
+so ESPN is the only fixture source. A verified production outage on 2026-08-05
+returned `provider_unavailable` from `/api/v2/fixtures` while `/health/ready`
+continued reporting `ready`.
+
+Set `FOOTBALL_DATA_API_KEY` on both Railway services to activate the fallback.
+`/health/providers` reports `singleProvider: true` until a second provider is
+usable.
+
 ## Rollback
 
 Use Railway's deployment history to redeploy the last known-good commit only when its schema expectations remain compatible with the migrated database. Alembic downgrades are not an automatic rollback mechanism. Follow [database migrations](database-migrations.md) and [backup and recovery](backup-and-recovery.md), then run production smoke with the rollback SHA.
