@@ -53,6 +53,31 @@ jobs:
       - name: Validate the privacy manifest
         run: plutil -lint SoccerScanner/PrivacyInfo.xcprivacy SoccerScanner/SoccerScanner.entitlements
 
+      - name: Select an available simulator
+        id: simulator
+        # Pinning a device name breaks whenever the runner image ships a new
+        # iPhone generation, so resolve a UDID from what is actually installed.
+        run: |
+          UDID=$(xcrun simctl list devices available --json | python3 -c "
+          import json, sys
+          runtimes = json.load(sys.stdin)['devices']
+          candidates = []
+          for runtime, devices in runtimes.items():
+              if 'iOS' not in runtime:
+                  continue
+              version = runtime.rsplit('.', 1)[-1].replace('-', '.')
+              for device in devices:
+                  if device.get('isAvailable') and device['name'].startswith('iPhone'):
+                      candidates.append((version, device['name'], device['udid']))
+          if not candidates:
+              raise SystemExit('no available iPhone simulator')
+          # Newest runtime, then shortest name to prefer the base model.
+          version, name, udid = sorted(candidates, key=lambda c: (c[0], -len(c[1])))[-1]
+          print(udid)
+          sys.stderr.write(f'selected {name} on iOS {version}\n')
+          ")
+          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
+
       - name: Build and test
         # Signing is disabled for simulator test runs so pull requests from
         # forks do not need signing secrets.
@@ -61,7 +86,7 @@ jobs:
           xcodebuild test \
             -project SoccerScanner.xcodeproj \
             -scheme SoccerScanner \
-            -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
+            -destination "id=${{ steps.simulator.outputs.udid }}" \
             -resultBundlePath build/TestResults.xcresult \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGN_IDENTITY="" \

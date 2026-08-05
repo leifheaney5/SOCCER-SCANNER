@@ -38,7 +38,7 @@ platform :ios do
     run_tests(
       project: XCODEPROJ,
       scheme: SCHEME,
-      devices: ["iPhone 16"],
+      # Device is resolved by CI; fastlane falls back to the newest installed.
       clean: true,
       result_bundle: true,
       output_directory: "../build/test-results"
