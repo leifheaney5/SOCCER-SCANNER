@@ -82,3 +82,7 @@ test-results/
 
 # Subagent-driven development scratch workspace
 .superpowers/
+
+# Unfilled orchestrator templates - do not commit placeholder docs
+AGENTS.md
+CLAUDE.md
