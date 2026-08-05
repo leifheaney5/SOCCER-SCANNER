@@ -96,6 +96,9 @@ public struct FixtureListView: View {
                         )
                     }
                     .buttonStyle(.plain)
+                    // The identifier belongs on the control, not its label:
+                    // the Button is the element that is queried and tapped.
+                    .accessibilityIdentifier("fixture-row")
                 }
             }
         }
@@ -164,8 +167,10 @@ struct FixtureRow: View {
         .padding(.vertical, Theme.Spacing.xs)
         .frame(minHeight: Theme.minimumTapTarget)
         .contentShape(Rectangle())
-        .accessibilityElement(children: .combine)
-        .accessibilityIdentifier("fixture-row")
+        // Children are deliberately left addressable rather than combined:
+        // `.combine` would flatten the row and hide the score elements from
+        // both assistive technology queries and UI tests.
+        .accessibilityElement(children: .contain)
     }
 }
 

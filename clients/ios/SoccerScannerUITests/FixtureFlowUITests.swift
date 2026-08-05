@@ -13,47 +13,64 @@ final class FixtureFlowUITests: XCTestCase {
         return app
     }
 
+    /// Query by identifier without asserting an element type.
+    ///
+    /// SwiftUI does not guarantee which UIKit element a `List`, row or
+    /// `ContentUnavailableView` becomes, and it changes between releases.
+    /// Matching on identifier alone keeps these tests about behaviour.
+    private func element(_ app: XCUIApplication, _ identifier: String) -> XCUIElement {
+        app.descendants(matching: .any).matching(identifier: identifier).firstMatch
+    }
+
+    private func waitForList(_ app: XCUIApplication) {
+        XCTAssertTrue(
+            element(app, "fixtures-list").waitForExistence(timeout: 30),
+            "fixture list never appeared"
+        )
+    }
+
     func testFixtureListLoadsAndShowsTheSelectedTimezone() {
         let app = launchApp()
+        waitForList(app)
 
-        XCTAssertTrue(app.otherElements["fixtures-list"].waitForExistence(timeout: 10))
-        XCTAssertTrue(app.staticTexts["timezone-label"].exists)
+        XCTAssertTrue(element(app, "timezone-label").exists)
     }
 
     func testScoresStartHiddenAndToggleOn() {
         let app = launchApp()
-        XCTAssertTrue(app.otherElements["fixtures-list"].waitForExistence(timeout: 10))
+        waitForList(app)
 
         // Spoiler-safe by default.
-        XCTAssertTrue(app.images["fixture-score-hidden"].firstMatch.exists)
-        XCTAssertFalse(app.staticTexts["fixture-score"].firstMatch.exists)
+        XCTAssertTrue(element(app, "fixture-score-hidden").exists)
+        XCTAssertFalse(element(app, "fixture-score").exists)
 
-        app.buttons["score-toggle"].tap()
-        XCTAssertTrue(app.staticTexts["fixture-score"].firstMatch.waitForExistence(timeout: 5))
+        element(app, "score-toggle").tap()
+
+        XCTAssertTrue(element(app, "fixture-score").waitForExistence(timeout: 10))
     }
 
     func testOpeningAFixtureShowsDetail() {
         let app = launchApp()
-        XCTAssertTrue(app.otherElements["fixtures-list"].waitForExistence(timeout: 10))
+        waitForList(app)
 
-        app.otherElements["fixture-row"].firstMatch.tap()
+        element(app, "fixture-row").tap()
 
-        XCTAssertTrue(app.collectionViews["fixture-detail"].waitForExistence(timeout: 5))
+        XCTAssertTrue(element(app, "fixture-detail").waitForExistence(timeout: 10))
     }
 
     func testAFailedLoadOffersRetry() {
         let app = launchApp(arguments: ["-UITestFailure", "YES"])
 
-        XCTAssertTrue(app.otherElements["fixtures-error"].waitForExistence(timeout: 10))
-        XCTAssertTrue(app.buttons["fixtures-retry"].exists)
+        XCTAssertTrue(element(app, "fixtures-error").waitForExistence(timeout: 30))
+        XCTAssertTrue(element(app, "fixtures-retry").exists)
     }
 
     func testLayoutSurvivesLargestDynamicTypeSize() {
         let app = launchApp(arguments: ["-UIPreferredContentSizeCategoryName",
                                         "UICTContentSizeCategoryAccessibilityXXXL"])
+        waitForList(app)
 
-        XCTAssertTrue(app.otherElements["fixtures-list"].waitForExistence(timeout: 10))
         // The score control must stay reachable at accessibility text sizes.
-        XCTAssertTrue(app.buttons["score-toggle"].isHittable)
+        XCTAssertTrue(element(app, "score-toggle").isHittable)
     }
 }

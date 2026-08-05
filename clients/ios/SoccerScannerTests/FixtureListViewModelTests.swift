@@ -19,7 +19,9 @@ final class FixtureListViewModelTests: XCTestCase {
             return XCTFail("expected loaded, got \(viewModel.state)")
         }
         XCTAssertEqual(data.fixtures.count, 3)
-        XCTAssertEqual(data.timeZoneIdentifier, "UTC")
+        // Apple normalises the "UTC" alias to the "GMT" identifier, so compare
+        // against the resolved zone rather than the string that was requested.
+        XCTAssertEqual(data.timeZoneIdentifier, TimeZone(identifier: "UTC")!.identifier)
     }
 
     func testAPartialDayIsNotPresentedAsComplete() async {
