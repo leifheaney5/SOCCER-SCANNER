@@ -180,7 +180,50 @@ These steps require interactive dashboard authentication. The Railway MCP server
 | Sorting not overwritten by grouping | `not_implemented` | `groupMatches()` in `fixtures.js` |
 | `popstate` restores fixture context | `not_implemented` | `selectedFixtureId` reset unconditionally |
 
-## G. Summary counts
+## G. Completion pass — work landed in this session
+
+Branch `feat/deliberate-guest-mode`. Each item below is backed by a passing test, not by documentation.
+
+| # | Commit | Requirement | New status | Evidence |
+| --- | --- | --- | --- | --- |
+| 1 | `53bba48` | Remove persistent guest favorites, hide favorites nav/controls, session-scope score preference | `implemented` | `tests/browser/favorites.spec.js`, `tests/test_app.py` guest assertions |
+| 2 | `2b20d81` | Evidence-backed recommendation validation matrix | `implemented` | this document; `artifacts/release-evidence/d665414…/baseline.md` |
+| 3 | `5f2de6e` | Shared timezone module (`formatKickoff`, `formatFixtureDate`, `calendarDateInZone`, `todayInZone`, `formatTimezoneLabel`) | `implemented` | `tests/time-zone.test.mjs` — 9 tests incl. DST transition and 5-zone midnight crossover |
+| 4 | `5f2de6e` | Canonical 12-state match-status taxonomy with full behaviour contract | `implemented` | `tests/match-status.test.mjs` — 9 tests |
+| 5 | `5f2de6e` | Deep-link timezone repair | `implemented` | `tests/test_app.py` — 3 tests across New York, Los Angeles, London, Tokyo, Sydney |
+| 6 | `827cfef` | Shared Redis rate limiting with atomic single-round-trip check | `implemented` | `tests/test_rate_limit.py` — cross-worker, atomicity, per-key isolation, degradation |
+| 7 | `827cfef` | Per-surface rate-limit policies and `RateLimit-*` headers | `implemented` | `tests/test_rate_limit.py` |
+| 8 | `827cfef` | Readiness blocks production when limiting is not shared | `implemented` | `tests/test_app.py` production readiness tests |
+| 9 | `827cfef` | `/health/metrics` protected by operations token | `implemented` | `tests/test_rate_limit.py` |
+| 10 | `0addb19` | `/terms` route, required sections, footer link, no invented legal entity | `implemented` | `tests/test_public_routes.py` |
+| 11 | `0addb19` | `robots.txt` and XML sitemap excluding API/health | `implemented` | `tests/test_public_routes.py` |
+| 12 | `0addb19` | Server-enforced feature flags with owner and expiry | `implemented` | `soccer_scanner/services/feature_flags.py`, app-config tests |
+| 13 | `0addb19` | `/api/v2/app-config` with no secret leakage | `implemented` | `tests/test_public_routes.py` |
+| 14 | `0addb19` | AASA served as JSON without redirect, only when Apple IDs configured | `implemented_with_follow_up` | `tests/test_public_routes.py`; **blocked** on real Apple Team/bundle ID |
+| 15 | `f2a750a` | Client renders every kickoff/date in the selected zone | `implemented` | Chromium + WebKit 51/51; server log confirms `time-zone.js` loaded |
+| 16 | `f2a750a` | HT/ET/PEN/DELAYED/ABANDONED render distinctly; abandoned terminal; suspended keeps refreshing | `implemented` | `tests/match-status.test.mjs`, browser suites |
+| 17 | `f2a750a` | Grouping no longer discards the selected sort | `implemented` | `groupMatches(matches, sort)`; browser suites |
+
+### Gate results after this work
+
+| Gate | Result |
+| --- | --- |
+| Python | 144 passed, 5 subtests |
+| Node module tests | 22 passed |
+| Playwright Chromium | 51 passed |
+| Playwright WebKit | 51 passed |
+| `node --check` | all pass |
+| `npm audit --audit-level=high` | 0 vulnerabilities |
+
+### Deployment status
+
+**Not deployed.** All work above is committed to `feat/deliberate-guest-mode` and has **not** been merged, staged, or promoted. Production remains on `d665414`. Steps 32–36 of the implementation order (staging deploy, exact-SHA staging smoke, production deploy, exact-SHA production smoke, final matrix evidence) are outstanding.
+
+### Not started
+
+Streaming registry and UI; header timezone control and searchable selector; header logo and full icon suite; country-filter resolution; browser-history fixture restoration; calendar range endpoint and partial-failure handling; team intelligence partial states; standings season configuration; ESPN truncation detection and single provider deadline; PWA offline recomputation; global search; mobile-first 320px pass; operations dashboard; monitoring and alerting; SLO/analytics/notification ADRs; SEO documentation; marketing workspace; release governance; OpenAPI contract; iOS SwiftUI project, vertical slice and CI; APNs.
+
+## H. Summary counts
 
 | Status | Count |
 | --- | --- |
