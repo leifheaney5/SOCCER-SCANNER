@@ -42,6 +42,16 @@ Phases are ordered by *risk retired per unit of effort*, not by the original aud
 
 **Detailed plan:** `2026-08-05-phase-1-provider-reliability.md`
 
+**Status (2026-08-05): tasks 1-7 implemented, one residual defect open.** All seven tasks are
+committed and reviewed; CI is green; the branch is deployed to staging and the synthetic
+monitor passes 4/4 there. The final whole-branch review produced 8 Important findings, all
+fixed; the scoped re-review confirmed all 9 addressed but found that the fix wave itself
+introduced a load-bearing regression: the new generic exception arm in
+`fixture_service.py` records provider health but does not append to `failed`, so a
+half-outage (one provider dead, the other legitimately empty) yields `empty_confirmed`
+and the monitor reports fully green. Phase 1's exit criteria are NOT met until that is
+closed and the branch is deployed to production.
+
 ---
 
 ## Phase 2 — Remaining P0 user-facing gaps
