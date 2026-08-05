@@ -215,9 +215,62 @@ Branch `feat/deliberate-guest-mode`. Each item below is backed by a passing test
 | `node --check` | all pass |
 | `npm audit --audit-level=high` | 0 vulnerabilities |
 
+### Staging verification — 2026-08-05
+
+Branch head `0646b76d67fa51920b2b984f9b95ae306b8a24ec` deployed to Railway `staging` and verified.
+
+| Check | Result |
+| --- | --- |
+| Deployed SHA matches branch head | `0646b76d67fa…` via `/health/version` |
+| Railway deployment | `SUCCESS` |
+| `/health/ready` | `ready`, `blocking: []` |
+| **Shared rate limiter live** | `{"backend":"redis","shared":true,"degraded":false,"status":"ready"}` |
+| Durable PostgreSQL | `durable: true`, schema `20260804_01` |
+| `/terms` | 200, legal-review placeholder present |
+| `robots.txt` (staging) | `Disallow: /` — non-production refuses indexing |
+| `sitemap.xml` | valid XML, absolute URLs |
+| AASA | 404 — correct while Apple identifiers are unconfigured |
+| `/api/v2/app-config` | 200, guest-mode flags, no secrets |
+| `RateLimit-*` headers | present on 200 responses |
+| `/health/metrics` unauthenticated | 401 |
+
+The production readiness risk is resolved: the new blocking condition passes against a real
+shared Redis limiter rather than only in tests.
+
+### CI verification — 2026-08-05
+
+| Workflow | Result |
+| --- | --- |
+| `CI` (backend, browser, audits) | success |
+| `iOS` (`macos-latest`) | success — **36 unit + 5 UI, 0 failures** |
+
+iOS required four fix cycles from a cold start; local compilation had never been possible.
+Fixed in order: a pinned simulator that no longer exists on the runner image; invalid
+optional chaining (`try?` already flattens `decodeIfPresent`); a `PRODUCT_BUNDLE_IDENTIFIER`
+referencing an undefined build setting, which produced an empty bundle ID and a "Missing
+bundle ID" install failure; and UI queries that assumed SwiftUI's UIKit element types.
+
+### Defects found during verification
+
+| # | Finding | Status |
+| --- | --- | --- |
+| 1 | Staging served `robots.txt` with `Allow: /` and its own sitemap, so it would index duplicate content against production | fixed — non-production returns `Disallow: /` |
+| 2 | The timezone and status modules sat two levels deep in a dynamic-import waterfall, making WebKit's first render marginal and producing an intermittent test failure | fixed — `modulepreload` for the critical path; 9/9 on a repeated WebKit run |
+| 3 | `.accessibilityElement(children: .combine)` on the fixture row hid the score elements from assistive technology as well as tests | fixed — `.contain` |
+| 4 | **Staging cannot fetch fixture data at all**; `/api/v2/fixtures` returns `provider_unavailable` on every attempt while production succeeds | **open** |
+| 5 | **Neither environment sets `FOOTBALL_DATA_API_KEY`**, so ESPN is a single point of failure with no fallback provider | **open** |
+| 6 | Production briefly returned `provider_unavailable` during this session and recovered without intervention; `/health/ready` stayed `ready` throughout, so provider health is invisible to monitoring | **open** |
+
+Findings 4–6 are pre-existing and unrelated to this branch. Finding 6 means an outage of the
+core product surface would not trigger any alert, which reinforces the missing-monitoring gap
+recorded in section E.
+
 ### Deployment status
 
-**Not deployed.** All work above is committed to `feat/deliberate-guest-mode` and has **not** been merged, staged, or promoted. Production remains on `d665414`. Steps 32–36 of the implementation order (staging deploy, exact-SHA staging smoke, production deploy, exact-SHA production smoke, final matrix evidence) are outstanding.
+**Staged, not promoted.** `feat/deliberate-guest-mode` is pushed, CI and iOS are green, and the
+branch head is deployed to `staging` and verified at its exact SHA. It has **not** been merged
+to `main` and production remains on `d665414`. Outstanding: merge, production deploy, and
+exact-SHA production smoke.
 
 ### Not started
 
