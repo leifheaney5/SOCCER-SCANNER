@@ -1,0 +1,4 @@
+# Local verification gates. CI installs these explicitly in .github/workflows/ci.yml.
+-r requirements.txt
+pytest==8.3.4
+pip-audit==2.9.0

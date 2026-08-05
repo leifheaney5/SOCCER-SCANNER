@@ -8,7 +8,9 @@
     "test:chromium": "playwright test --project=chromium",
     "test:webkit": "playwright test --project=webkit",
     "test:smoke-invariants": "node --test tests/production-smoke-invariants.test.mjs",
-    "smoke:production": "node tests/production-smoke.mjs"
+    "test:node": "node --test tests/*.test.mjs",
+    "smoke:production": "node tests/production-smoke.mjs",
+    "monitor:production": "node tests/synthetic-monitor.mjs"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.10.2",

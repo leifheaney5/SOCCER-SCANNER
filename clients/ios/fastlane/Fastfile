@@ -1,0 +1,109 @@
+# Soccer Scanner iOS release automation.
+#
+# Authentication uses an App Store Connect API key (Issuer ID + Key ID + .p8),
+# never an Apple ID password. API keys are designed for CI: they are
+# non-interactive and are not subject to two-factor prompts.
+#
+# Required CI secrets:
+#   APP_STORE_CONNECT_ISSUER_ID
+#   APP_STORE_CONNECT_KEY_ID
+#   APP_STORE_CONNECT_PRIVATE_KEY   (contents of the .p8)
+#   APPLE_TEAM_ID
+#   APPLE_BUNDLE_ID
+#   MATCH_PASSWORD / MATCH_GIT_URL  (only if using fastlane match for signing)
+
+default_platform(:ios)
+
+XCODEPROJ = "SoccerScanner.xcodeproj"
+SCHEME = "SoccerScanner"
+
+def api_key
+  app_store_connect_api_key(
+    key_id: ENV.fetch("APP_STORE_CONNECT_KEY_ID"),
+    issuer_id: ENV.fetch("APP_STORE_CONNECT_ISSUER_ID"),
+    key_content: ENV.fetch("APP_STORE_CONNECT_PRIVATE_KEY"),
+    in_house: false
+  )
+end
+
+platform :ios do
+  desc "Generate the Xcode project from project.yml"
+  lane :generate do
+    sh("xcodegen generate --spec ../project.yml --project ..")
+  end
+
+  desc "Run unit and UI tests on a simulator"
+  lane :test do
+    generate
+    run_tests(
+      project: XCODEPROJ,
+      scheme: SCHEME,
+      # Device is resolved by CI; fastlane falls back to the newest installed.
+      clean: true,
+      result_bundle: true,
+      output_directory: "../build/test-results"
+    )
+  end
+
+  desc "Build a signed App Store archive"
+  lane :build do
+    generate
+    # Build number must be monotonic; the CI run number guarantees that.
+    increment_build_number(
+      xcodeproj: XCODEPROJ,
+      build_number: ENV.fetch("BUILD_NUMBER", Time.now.strftime("%Y%m%d%H%M"))
+    )
+    build_app(
+      project: XCODEPROJ,
+      scheme: SCHEME,
+      configuration: "Release",
+      export_method: "app-store",
+      # Supplied only at release time so no Apple identifiers live in the repo.
+      xcargs: "DEVELOPMENT_TEAM=#{ENV.fetch('APPLE_TEAM_ID')} PRODUCT_BUNDLE_IDENTIFIER=#{ENV.fetch('APPLE_BUNDLE_ID')}",
+      output_directory: "../build",
+      output_name: "SoccerScanner.ipa"
+    )
+  end
+
+  desc "Upload a build to TestFlight (no public release)"
+  lane :beta do
+    build
+    upload_to_testflight(
+      api_key: api_key,
+      skip_waiting_for_build_processing: true,
+      distribute_external: false
+    )
+  end
+
+  desc "Upload binary and metadata to App Store Connect WITHOUT submitting for review"
+  lane :release_upload do
+    build
+    upload_to_app_store(
+      api_key: api_key,
+      # Deliberately does not submit. A human reviews the listing in App Store
+      # Connect and presses Submit. Flip to true only when the listing,
+      # screenshots and privacy answers have been reviewed at least once.
+      submit_for_review: false,
+      automatic_release: false,
+      force: true,
+      skip_screenshots: false,
+      skip_metadata: false,
+      precheck_include_in_app_purchases: false
+    )
+  end
+
+  desc "Full submission for review. Requires an explicitly reviewed listing."
+  lane :release_submit do
+    build
+    upload_to_app_store(
+      api_key: api_key,
+      submit_for_review: true,
+      automatic_release: false,
+      force: true,
+      submission_information: {
+        add_id_info_uses_idfa: false,
+        export_compliance_uses_encryption: false
+      }
+    )
+  end
+end

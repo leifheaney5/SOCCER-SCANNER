@@ -1,3 +1,5 @@
+import {isOfflineEligible} from './match-status.js';
+
 const SCORE_KEYS = new Set([
     'score',
     'scores',
@@ -5,25 +7,6 @@ const SCORE_KEYS = new Set([
     'awayscore',
     'displayvalue',
 ]);
-
-function statusTokens(match) {
-    const status = match?.status;
-    if (status && typeof status === 'object') {
-        return [status.code, status.raw, status.type, status.name]
-            .filter(Boolean)
-            .map(value => String(value).toLocaleLowerCase());
-    }
-    return [String(status || '').toLocaleLowerCase()];
-}
-
-export function isLiveFixture(match) {
-    return statusTokens(match).some(value => (
-        value.includes('live')
-        || value.includes('progress')
-        || value.includes('half')
-        || value.includes('paused')
-    ));
-}
 
 function withoutScores(value) {
     if (Array.isArray(value)) return value.map(withoutScores);
@@ -37,8 +20,13 @@ function withoutScores(value) {
 
 export function sanitizeFixturePayload(payload, cachedAt = new Date().toISOString()) {
     const clean = withoutScores(payload || {});
+    // Only statuses the canonical taxonomy marks offlineEligible are safe to
+    // freeze into the snapshot. Anything still in flight — live, half time,
+    // extra time, penalties, suspended, delayed, or a status the taxonomy
+    // could not classify — must be excluded, or a cached in-progress score
+    // is served back as if it were final.
     const matches = Array.isArray(clean.matches)
-        ? clean.matches.filter(match => !isLiveFixture(match))
+        ? clean.matches.filter(match => isOfflineEligible(match))
         : [];
     return {
         ...clean,

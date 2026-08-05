@@ -1,0 +1,30 @@
+name: Synthetic monitor
+
+# Railway healthchecks gate deploys only. This is the continuous check: a
+# failed run notifies via GitHub's normal workflow-failure notifications.
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Base URL to probe'
+        required: false
+        default: 'https://soccerscanner.pro'
+
+concurrency:
+  group: synthetic-monitor
+  cancel-in-progress: true
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Probe the deployment
+        run: node tests/synthetic-monitor.mjs
+        env:
+          MONITOR_BASE_URL: ${{ inputs.target || 'https://soccerscanner.pro' }}

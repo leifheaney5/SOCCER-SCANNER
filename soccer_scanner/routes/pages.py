@@ -1,7 +1,10 @@
 from datetime import datetime, timedelta, timezone
+import json
 import re
 
-from flask import Blueprint, Response, current_app, redirect, render_template, url_for
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
+from flask import Blueprint, Response, current_app, redirect, render_template, request, url_for
 
 pages = Blueprint('pages', __name__)
 
@@ -46,10 +49,132 @@ def offline():
     return render_template('offline.html')
 
 
+@pages.get('/terms')
+def terms():
+    return render_template('terms.html')
+
+
+# Surfaces that must never be advertised to crawlers or listed in the sitemap.
+_NON_INDEXABLE = ('/api/', '/health/', '/offline')
+
+_SITEMAP_ROUTES = (
+    ('/', 'daily', '1.0'),
+    ('/calendar', 'daily', '0.8'),
+    ('/teams', 'weekly', '0.6'),
+    ('/league-tables', 'weekly', '0.6'),
+    ('/data-sources', 'monthly', '0.3'),
+    ('/privacy', 'yearly', '0.2'),
+    # /terms is a labelled engineering draft (see templates/terms.html) and
+    # carries its own noindex meta tag; it stays reachable via the route and
+    # footer link but is deliberately excluded from the sitemap.
+)
+
+
+def _is_production():
+    return current_app.extensions['build_info'].environment.lower() in {'production', 'prod'}
+
+
+@pages.get('/robots.txt')
+def robots():
+    base = current_app.config['PUBLIC_BASE_URL'].rstrip('/')
+    # A crawlable staging environment competes with production for the same
+    # content, so every non-production deployment refuses indexing outright.
+    if not _is_production():
+        return Response('User-agent: *\nDisallow: /\n', mimetype='text/plain')
+    lines = ['User-agent: *', 'Allow: /']
+    lines += [f'Disallow: {path}' for path in _NON_INDEXABLE]
+    lines += ['', f'Sitemap: {base}/sitemap.xml', '']
+    return Response('\n'.join(lines), mimetype='text/plain')
+
+
+@pages.get('/sitemap.xml')
+def sitemap():
+    base = current_app.config['PUBLIC_BASE_URL'].rstrip('/')
+    today = datetime.now(timezone.utc).date().isoformat()
+    entries = [
+        '  <url>'
+        f'<loc>{base}{path}</loc>'
+        f'<lastmod>{today}</lastmod>'
+        f'<changefreq>{frequency}</changefreq>'
+        f'<priority>{priority}</priority>'
+        '</url>'
+        for path, frequency, priority in _SITEMAP_ROUTES
+    ]
+    document = '\n'.join([
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+        *entries,
+        '</urlset>',
+        '',
+    ])
+    return Response(document, mimetype='application/xml')
+
+
+@pages.get('/.well-known/apple-app-site-association')
+def apple_app_site_association():
+    """Served only when real Apple identifiers are configured.
+
+    Apple requires this file be returned as JSON with no redirect. Publishing
+    placeholder identifiers would break universal links for whoever really
+    owns them, so an unconfigured deployment returns 404 instead.
+    """
+    team_id = current_app.config.get('APPLE_TEAM_ID')
+    bundle_id = current_app.config.get('APPLE_BUNDLE_ID')
+    if not team_id or not bundle_id:
+        return render_template('404.html'), 404
+    payload = {
+        'applinks': {
+            'details': [{
+                'appIDs': [f'{team_id}.{bundle_id}'],
+                'components': [
+                    {'/': '/fixtures/*', 'comment': 'Fixture detail'},
+                    {'/': '/teams/*', 'comment': 'Team detail'},
+                    {'/': '/competitions/*', 'comment': 'Competition detail'},
+                    {'/': '/calendar', 'comment': 'Calendar'},
+                ],
+            }],
+        },
+        'webcredentials': {'apps': [f'{team_id}.{bundle_id}']},
+    }
+    return Response(
+        json.dumps(payload, indent=2),
+        mimetype='application/json',
+        headers={'Cache-Control': 'public, max-age=3600'},
+    )
+
+
 def _fixture_from_link(canonical_fixture_id):
     if not re.fullmatch(r'fx_[a-f0-9]{24}', canonical_fixture_id):
         return None
     return current_app.extensions['fixture_service'].lookup_fixture(canonical_fixture_id)
+
+
+def _resolved_timezone(requested):
+    """Honour an explicit, valid IANA zone; otherwise fall back to UTC.
+
+    A stored ``localDate`` belongs to whichever zone produced it, so it can
+    never be reused as if it were a UTC day.
+    """
+    if not requested:
+        return timezone.utc, 'UTC'
+    try:
+        return ZoneInfo(str(requested)), str(requested)
+    except (ZoneInfoNotFoundError, ValueError):
+        return timezone.utc, 'UTC'
+
+
+def _fixture_day_in_zone(match, zone):
+    """The calendar day a fixture belongs to, in the supplied zone."""
+    raw = str(match.get('utcDate') or '').strip()
+    if not raw:
+        return None
+    try:
+        instant = datetime.fromisoformat(raw.replace('Z', '+00:00'))
+    except ValueError:
+        return None
+    if instant.tzinfo is None:
+        instant = instant.replace(tzinfo=timezone.utc)
+    return instant.astimezone(zone).date().isoformat()
 
 
 @pages.get('/fixtures/<canonical_fixture_id>')
@@ -57,10 +182,11 @@ def fixture_link(canonical_fixture_id):
     match = _fixture_from_link(canonical_fixture_id)
     if match is None:
         return render_template('fixture_link_unavailable.html'), 404
+    zone, zone_name = _resolved_timezone(request.args.get('timezone'))
     return redirect(url_for(
         'pages.fixtures',
-        date=match.get('localDate'),
-        timezone='UTC',
+        date=_fixture_day_in_zone(match, zone) or match.get('localDate'),
+        timezone=zone_name,
         fixture=canonical_fixture_id,
     ))
 

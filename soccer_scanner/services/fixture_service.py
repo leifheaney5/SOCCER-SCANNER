@@ -2,6 +2,7 @@
 
 from dataclasses import asdict
 from datetime import datetime, time, timedelta, timezone
+import logging
 from zoneinfo import ZoneInfo
 
 from soccer_scanner.domain.identity import merge_fixtures
@@ -12,6 +13,15 @@ from soccer_scanner.domain.models import (
     ProviderStatus,
 )
 from soccer_scanner.providers.http import RequestBudget
+
+logger = logging.getLogger(__name__)
+
+# Provider outcome -> the vocabulary ProviderHealthRegistry accepts.
+_HEALTH_BY_STATUS = {
+    ProviderStatus.SUCCESS: 'ok',
+    ProviderStatus.PARTIAL: 'degraded',
+    ProviderStatus.DISABLED: 'disabled',
+}
 
 
 class _ProviderFailure(RuntimeError):
@@ -74,6 +84,7 @@ class CanonicalFixtureService:
         stale_ttl_seconds=900,
         provider_budget_seconds=4,
         identity_registry=None,
+        provider_health=None,
         now=None,
     ):
         self.providers = (espn_provider, football_data_provider)
@@ -82,6 +93,7 @@ class CanonicalFixtureService:
         self.stale_ttl_seconds = stale_ttl_seconds
         self.provider_budget_seconds = provider_budget_seconds
         self.identity_registry = identity_registry
+        self.provider_health = provider_health
         self.now = now or (lambda: datetime.now(timezone.utc))
 
     def fixtures_for_date(self, requested_date, timezone_name='UTC'):
@@ -121,16 +133,66 @@ class CanonicalFixtureService:
                 )
                 provider_cache[provider_name] = lookup.status
                 outcome = _dict_outcome(lookup.value)
+                self._record_provider_health(outcome)
                 if outcome.status is not ProviderStatus.DISABLED:
                     current.append(outcome)
                 else:
                     current.append(outcome)
             except _ProviderFailure as error:
                 failed.append(error.outcome)
+                self._record_provider_health(error.outcome)
                 provider_cache[provider_name] = 'miss'
                 stale_lookup = self.cache.get(cache_key, allow_stale=True)
                 if stale_lookup.status == 'stale':
                     stale.append(_dict_outcome(stale_lookup.value))
+            except Exception as error:
+                # Anything else (a cache-layer fault such as an oversized or
+                # unserializable value, a Redis timeout, a parse error in
+                # _outcome_dict, ...) must not take the whole request down:
+                # the other provider still deserves a chance. But this
+                # provider's outcome must be recorded as failed — both in
+                # `failed` (so `is_partial` and the response's
+                # `providers`/`coverage` blocks reflect reality instead of
+                # being composed as if only healthy providers existed) and
+                # in the health registry — and a within-TTL stale snapshot
+                # should still be served if one exists. `detail` stays a
+                # fixed, controlled string — never the exception message —
+                # because it is echoed by the public unauthenticated
+                # /health/providers endpoint; the exception itself is logged
+                # server-side only.
+                logger.exception(
+                    'Unhandled error while fetching fixtures from provider %r',
+                    provider_name,
+                )
+                provider_cache[provider_name] = 'miss'
+                failure_outcome = ProviderOutcome(
+                    provider=provider_name,
+                    status=ProviderStatus.UNAVAILABLE,
+                    fixtures=(),
+                    requestedResources=(),
+                    completedResources=(),
+                    requestCount=0,
+                    timeoutCount=0,
+                    rateLimitCount=0,
+                    sourceUpdatedAt=None,
+                    durationMs=0,
+                    failureCategories=('internal_error',),
+                )
+                failed.append(failure_outcome)
+                self._record_provider_health(failure_outcome)
+                try:
+                    stale_lookup = self.cache.get(cache_key, allow_stale=True)
+                except Exception:
+                    # The cache itself may be what just failed; a second
+                    # exception here must not escape and kill the request.
+                    logger.exception(
+                        'Stale-cache fallback also failed for provider %r',
+                        provider_name,
+                    )
+                    stale_lookup = None
+                if stale_lookup is not None and stale_lookup.status == 'stale':
+                    stale.append(_dict_outcome(stale_lookup.value))
+                continue
 
         usable_current = [
             outcome for outcome in current
@@ -276,6 +338,23 @@ class CanonicalFixtureService:
             if match is not None:
                 return match
         return None
+
+    def _record_provider_health(self, outcome):
+        # Runs on every request, including a cache hit (see `get_or_load`
+        # above), so a status of 'ok' here stamps `lastSuccessAt` even when no
+        # upstream call happened this request. It therefore means "this
+        # provider's data last served a request successfully", not "the
+        # provider was last actually reached upstream". The two can diverge
+        # by at most `cache_ttl_seconds` (60s in production via
+        # FIXTURE_CACHE_TTL), which is an accepted, bounded skew.
+        if self.provider_health is None:
+            return
+        categories = ','.join(outcome.failureCategories)
+        self.provider_health.record(
+            outcome.provider,
+            _HEALTH_BY_STATUS.get(outcome.status, 'unavailable'),
+            detail=categories or None,
+        )
 
     @staticmethod
     def _provider_name(provider):

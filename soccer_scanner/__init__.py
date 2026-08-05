@@ -27,7 +27,9 @@ from .routes.pages import pages
 from .services.cache_backend import build_cache_backend
 from .services.fixture_service import CanonicalFixtureService
 from .services.football_data import FootballDataClient
-from .services.rate_limit import MemoryRateLimiter
+from .services.feature_flags import FeatureFlagRegistry
+from .services.provider_health import ProviderHealthRegistry
+from .services.rate_limit import RATE_LIMIT_POLICIES, build_rate_limiter
 from .services.teams import TeamAnalysisService
 from .services.team_identity import TeamIdentityResolver
 
@@ -71,11 +73,14 @@ def create_app(config=None):
         database_runtime,
         durable=bool(database_url),
     )
-    app.extensions['rate_limiter'] = MemoryRateLimiter(
-        limit=app.config['RATE_LIMIT_MAX_REQUESTS'],
-        window_seconds=app.config['RATE_LIMIT_WINDOW_SECONDS'],
-        max_keys=app.config['RATE_LIMIT_MAX_KEYS'],
+    app.extensions['rate_limiter'] = build_rate_limiter(
+        app.config,
+        metrics=app.extensions['metrics'],
     )
+    app.extensions['feature_flags'] = FeatureFlagRegistry(
+        overrides=app.config.get('FEATURE_FLAG_OVERRIDES'),
+    )
+    app.extensions['provider_health'] = ProviderHealthRegistry()
     app.extensions['provider_capabilities'] = build_capability_manifest(
         football_data_configured=bool(app.config.get('FOOTBALL_DATA_API_KEY')),
     )
@@ -92,25 +97,39 @@ def create_app(config=None):
         )
         g.request_started = monotonic()
 
+    # Each protected surface draws on its own budget so an expensive endpoint
+    # cannot exhaust plain fixture reads, and vice versa.
+    endpoint_policies = {
+        'api.competitions': 'fixtures',
+        'api.competition_teams': 'fixtures',
+        'api.team': 'team_analysis',
+        'api.team_analysis': 'team_analysis',
+        'api.canonical_team_analysis': 'team_analysis',
+        'api.fixtures_by_date': 'fixtures',
+        'api.fixtures_v2': 'fixtures',
+        'api.fixture_v2': 'fixtures',
+        'api.identity_report': 'operations',
+    }
+
     @app.before_request
     def enforce_expensive_route_rate_limit():
-        expensive_endpoints = {
-            'api.competitions',
-            'api.competition_teams',
-            'api.team',
-            'api.team_analysis',
-            'api.canonical_team_analysis',
-            'api.fixtures_by_date',
-            'api.fixtures_v2',
-            'api.fixture_v2',
-            'api.identity_report',
-        }
-        if request.endpoint not in expensive_endpoints:
+        policy_name = endpoint_policies.get(request.endpoint)
+        if policy_name is None:
             return None
+        policy = RATE_LIMIT_POLICIES[policy_name]
+        # An explicit test/config override stays authoritative over the
+        # per-policy defaults so existing envelope tests remain meaningful.
+        configured_limit = app.config['RATE_LIMIT_MAX_REQUESTS']
+        configured_window = app.config['RATE_LIMIT_WINDOW_SECONDS']
+        limit = min(policy.limit, configured_limit)
+        window = configured_window if configured_limit <= policy.limit else policy.window_seconds
         client_key = request.remote_addr or 'unknown'
         decision = app.extensions['rate_limiter'].check(
-            f'{request.endpoint}:{client_key}',
+            f'{policy.name}:{request.endpoint}:{client_key}',
+            limit=limit,
+            window_seconds=window,
         )
+        g.rate_limit_decision = decision
         if decision.allowed:
             return None
         response = jsonify({
@@ -124,6 +143,15 @@ def create_app(config=None):
         })
         response.status_code = 429
         response.headers['Retry-After'] = str(decision.retryAfterSeconds)
+        return response
+
+    @app.after_request
+    def advertise_rate_limit_budget(response):
+        decision = g.pop('rate_limit_decision', None)
+        if decision is not None:
+            response.headers['RateLimit-Limit'] = str(decision.limit)
+            response.headers['RateLimit-Remaining'] = str(decision.remaining)
+            response.headers['RateLimit-Reset'] = str(decision.resetSeconds)
         return response
 
     @app.context_processor
@@ -184,6 +212,7 @@ def create_app(config=None):
         stale_ttl_seconds=app.config['FIXTURE_STALE_TTL'],
         provider_budget_seconds=app.config['FIXTURE_FETCH_DEADLINE'],
         identity_registry=app.extensions['fixture_identities'],
+        provider_health=app.extensions['provider_health'],
     )
     app.register_blueprint(pages)
     app.register_blueprint(api)

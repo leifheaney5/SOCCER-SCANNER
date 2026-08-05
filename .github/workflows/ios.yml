@@ -1,0 +1,135 @@
+name: iOS
+
+# Builds, tests and (on demand) ships the native client.
+#
+# This runs on macOS runners because Xcode, xcodebuild and the App Store upload
+# tooling are macOS-only. It is the verification path for the iOS client: the
+# project cannot be compiled on a Windows or Linux developer machine.
+
+on:
+  push:
+    paths:
+      - 'clients/ios/**'
+      - '.github/workflows/ios.yml'
+  pull_request:
+    paths:
+      - 'clients/ios/**'
+      - '.github/workflows/ios.yml'
+  workflow_dispatch:
+    inputs:
+      lane:
+        description: 'Release lane to run after tests'
+        required: true
+        default: 'none'
+        type: choice
+        options: [none, beta, release_upload, release_submit]
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: clients/ios
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate the Xcode project
+        run: xcodegen generate --spec project.yml
+        env:
+          APPLE_BUNDLE_ID: ${{ secrets.APPLE_BUNDLE_ID || 'pro.soccerscanner.app' }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID || '' }}
+          APPLE_BUNDLE_PREFIX: pro.soccerscanner
+
+      - name: Validate the privacy manifest
+        run: plutil -lint SoccerScanner/PrivacyInfo.xcprivacy SoccerScanner/SoccerScanner.entitlements
+
+      - name: Select an available simulator
+        id: simulator
+        # Pinning a device name breaks whenever the runner image ships a new
+        # iPhone generation, so resolve a UDID from what is actually installed.
+        run: |
+          UDID=$(xcrun simctl list devices available --json | python3 -c "
+          import json, sys
+          runtimes = json.load(sys.stdin)['devices']
+          candidates = []
+          for runtime, devices in runtimes.items():
+              if 'iOS' not in runtime:
+                  continue
+              version = runtime.rsplit('.', 1)[-1].replace('-', '.')
+              for device in devices:
+                  if device.get('isAvailable') and device['name'].startswith('iPhone'):
+                      candidates.append((version, device['name'], device['udid']))
+          if not candidates:
+              raise SystemExit('no available iPhone simulator')
+          # Newest runtime, then shortest name to prefer the base model.
+          version, name, udid = sorted(candidates, key=lambda c: (c[0], -len(c[1])))[-1]
+          print(udid)
+          sys.stderr.write(f'selected {name} on iOS {version}\n')
+          ")
+          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
+
+      - name: Build and test
+        # Signing is disabled for simulator test runs so pull requests from
+        # forks do not need signing secrets.
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -project SoccerScanner.xcodeproj \
+            -scheme SoccerScanner \
+            -destination "id=${{ steps.simulator.outputs.udid }}" \
+            -resultBundlePath build/TestResults.xcresult \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGN_IDENTITY="" \
+            | xcpretty && exit ${PIPESTATUS[0]}
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-test-results
+          path: clients/ios/build/TestResults.xcresult
+          retention-days: 7
+          if-no-files-found: ignore
+
+  release:
+    # Only runs when a lane is explicitly requested, never automatically.
+    needs: build-and-test
+    if: github.event_name == 'workflow_dispatch' && inputs.lane != 'none'
+    runs-on: macos-latest
+    environment: app-store
+    defaults:
+      run:
+        working-directory: clients/ios
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: true
+          working-directory: clients/ios
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Run the requested lane
+        run: bundle exec fastlane ${{ inputs.lane }}
+        env:
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_BUNDLE_ID: ${{ secrets.APPLE_BUNDLE_ID }}
+          APPLE_BUNDLE_PREFIX: pro.soccerscanner
+          BUILD_NUMBER: ${{ github.run_number }}
+          FASTLANE_SKIP_UPDATE_CHECK: '1'

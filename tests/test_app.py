@@ -33,7 +33,9 @@ class SoccerScannerRoutesTest(unittest.TestCase):
         self.assertNotIn('>Teams</a>', html)
         self.assertNotIn('>Calendar</a>', html)
         self.assertNotIn('>Tables</a>', html)
-        self.assertIn('>Favorites</a>', html)
+        self.assertNotIn('>Favorites</a>', html)
+        self.assertNotIn('id="favorites-only"', html)
+        self.assertNotIn('id="export-favorites"', html)
 
     def test_team_analysis_has_a_stable_route(self):
         response = self.client.get('/teams')
@@ -90,6 +92,58 @@ class SoccerScannerRoutesTest(unittest.TestCase):
         self.assertIn('LOCATION:Scanner Stadium', calendar.get_data(as_text=True))
         self.assertNotIn('97', calendar.get_data(as_text=True))
         self.assertNotIn('96', calendar.get_data(as_text=True))
+
+    def _deep_link_for(self, query=''):
+        """Redirect a fixture kicking off just after UTC midnight."""
+        fixture_id = 'fx_' + ('b' * 24)
+        match = {
+            'canonicalFixtureId': fixture_id,
+            # 20:30 on 4 Aug in New York, 09:30 on 5 Aug in Tokyo.
+            'utcDate': '2026-08-05T00:30:00Z',
+            'localDate': '2026-08-04',
+        }
+        service = Mock()
+        service.lookup_fixture.return_value = match
+        original = self.app.extensions['fixture_service']
+        self.app.extensions['fixture_service'] = service
+        try:
+            return self.client.get(f'/fixtures/{fixture_id}{query}')
+        finally:
+            self.app.extensions['fixture_service'] = original
+
+    def test_deep_link_preserves_a_supplied_timezone_and_derives_that_day(self):
+        for timezone_name, expected_date in (
+            ('America/New_York', '2026-08-04'),
+            ('America/Los_Angeles', '2026-08-04'),
+            ('Europe/London', '2026-08-05'),
+            ('Asia/Tokyo', '2026-08-05'),
+            ('Australia/Sydney', '2026-08-05'),
+        ):
+            with self.subTest(timezone=timezone_name):
+                response = self._deep_link_for(f'?timezone={timezone_name}')
+                location = response.headers['Location']
+
+                self.assertEqual(response.status_code, 302)
+                self.assertIn(f'date={expected_date}', location)
+                self.assertIn(f'timezone={timezone_name}', location)
+
+    def test_deep_link_without_a_timezone_uses_utc_consistently(self):
+        response = self._deep_link_for()
+        location = response.headers['Location']
+
+        # The instant is 00:30Z, so the UTC day is the 5th — not the stored
+        # localDate of the 4th, which belongs to a different zone entirely.
+        self.assertIn('date=2026-08-05', location)
+        self.assertIn('timezone=UTC', location)
+
+    def test_deep_link_rejects_an_unusable_timezone_without_shifting_the_day(self):
+        response = self._deep_link_for('?timezone=Mars%2FOlympus')
+        location = response.headers['Location']
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('timezone=UTC', location)
+        self.assertIn('date=2026-08-05', location)
+        self.assertNotIn('Mars', location)
 
     def test_team_and_competition_deep_pages_have_stable_routes(self):
         team = self.client.get('/teams/arsenal')
@@ -206,7 +260,8 @@ class SoccerScannerRoutesTest(unittest.TestCase):
 
         self.assertEqual(privacy.status_code, 200)
         self.assertIn(b'Privacy', privacy.data)
-        self.assertIn(b'localStorage', privacy.data)
+        self.assertIn(b'sessionStorage', privacy.data)
+        self.assertIn(b'no account', privacy.data)
         self.assertEqual(sources.status_code, 200)
         self.assertIn(b'ESPN', sources.data)
         self.assertIn(b'Football-data.org', sources.data)
@@ -263,8 +318,15 @@ class SoccerScannerRoutesTest(unittest.TestCase):
         self.assertEqual(ready.json['database']['status'], 'ready')
         self.assertEqual(
             ready.json['blocking'],
-            ['database_not_durable', 'shared_cache_not_ready'],
+            [
+                'database_not_durable',
+                'shared_cache_not_ready',
+                # Without Redis the limiter is per-worker, so production must
+                # not advertise itself as ready.
+                'shared_rate_limiter_not_ready',
+            ],
         )
+        self.assertFalse(ready.json['rateLimit']['shared'])
 
     def test_production_readiness_accepts_ready_durable_dependencies(self):
         environment = {
@@ -289,6 +351,7 @@ class SoccerScannerRoutesTest(unittest.TestCase):
                 'status': 'ready',
             }),
         )
+        production_app.extensions['rate_limiter'] = Mock(shared=True, degraded=False)
 
         ready = production_app.test_client().get('/health/ready')
 
@@ -296,6 +359,8 @@ class SoccerScannerRoutesTest(unittest.TestCase):
         self.assertEqual(ready.json['status'], 'ready')
         self.assertEqual(ready.json['blocking'], [])
         self.assertTrue(ready.json['database']['durable'])
+        self.assertEqual(ready.json['rateLimit']['status'], 'ready')
+        self.assertTrue(ready.json['rateLimit']['shared'])
 
     def test_identity_report_requires_ops_token_and_bounds_the_query(self):
         report = {

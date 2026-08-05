@@ -8,47 +8,24 @@ async function mockFixtures(page) {
     }));
 }
 
-test('favorites repository validates, deduplicates, exports, imports, and clears', async ({page}) => {
+test('guest mode does not expose favorites or account-like persistence', async ({page}) => {
     await mockFixtures(page);
-    await page.goto('/?date=2026-08-03');
-    const result = await page.evaluate(async () => {
-        const {createFavoritesRepository} = await import('/static/js/favorites.js');
-        localStorage.removeItem('soccer-scanner:favorites');
-        const repository = createFavoritesRepository(localStorage);
-        repository.toggle('teams', 'arsenal');
-        repository.toggle('teams', 'arsenal');
-        repository.toggle('teams', 'arsenal');
-        repository.toggle('competitions', 'premier-league');
-        repository.toggle('fixtures', 'fixture-1');
-        const exported = repository.exportText();
-        const imported = repository.importText(exported);
-        localStorage.setItem('soccer-scanner:favorites', '{broken');
-        const recovered = createFavoritesRepository(localStorage).snapshot();
-        repository.clear();
-        return {imported, recovered, cleared: repository.snapshot()};
+    await page.addInitScript(() => {
+        localStorage.setItem('soccer-scanner:favorites', JSON.stringify({
+            version: 1,
+            teams: ['arsenal'],
+            competitions: [],
+            fixtures: ['live-secret'],
+        }));
     });
+    await page.goto('/?date=2026-08-03&favorites=1');
 
-    expect(result.imported).toEqual({
-        version: 1,
-        teams: ['arsenal'],
-        competitions: ['premier-league'],
-        fixtures: ['fixture-1'],
-    });
-    expect(result.recovered).toEqual({version: 1, teams: [], competitions: [], fixtures: []});
-    expect(result.cleared).toEqual({version: 1, teams: [], competitions: [], fixtures: []});
-});
-
-test('fixture favorites persist and favorites-only is URL-backed', async ({page}) => {
-    await mockFixtures(page);
-    await page.goto('/?date=2026-08-03');
-    const favorite = page.locator('[data-fixture-id="live-secret"] [data-action="toggle-favorite"]');
-    await favorite.click();
-    await expect(favorite).toHaveAttribute('aria-pressed', 'true');
-
-    await page.reload();
-    await expect(page.locator('[data-fixture-id="live-secret"] [data-action="toggle-favorite"]')).toHaveAttribute('aria-pressed', 'true');
-    await page.locator('#favorites-only').check();
-    await expect(page.locator('#fixture-result-count')).toContainText('1 match');
-    await expect(page.getByRole('heading', {name: 'Your matches'})).toBeVisible();
-    await expect.poll(() => page.evaluate(() => location.search)).toContain('favorites=1');
+    await expect(page.locator('#fixture-result-count')).toContainText('13 matches');
+    await expect(page.getByRole('link', {name: 'Favorites'})).toHaveCount(0);
+    await expect(page.locator('#favorites-only')).toHaveCount(0);
+    await expect(page.locator('[data-action="toggle-favorite"]')).toHaveCount(0);
+    await expect(page.locator('#export-favorites, #import-favorites, #clear-favorites')).toHaveCount(0);
+    await page.locator('#fixture-search').fill('Arsenal');
+    await expect.poll(() => page.evaluate(() => location.search)).not.toContain('favorites=1');
+    await expect.poll(() => page.evaluate(() => localStorage.getItem('soccer-scanner:favorites'))).toContain('live-secret');
 });

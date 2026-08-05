@@ -108,20 +108,6 @@
                 <span>Hide finished</span>
             </label>
 
-            <label class="check-control">
-                <input id="favorites-only" type="checkbox">
-                <span>Favorites only</span>
-            </label>
-
-            <div class="favorite-data-actions" aria-label="Favorite data controls">
-                <button id="export-favorites" class="clear-filters" type="button">Export</button>
-                <label class="clear-filters favorite-import">
-                    <span>Import</span>
-                    <input id="import-favorites" class="sr-only" type="file" accept="application/json,.json">
-                </label>
-                <button id="clear-favorites" class="clear-filters" type="button">Clear favorites</button>
-            </div>
-
             <div class="status-filters" role="group" aria-label="Match status">
                 <button id="status-all" type="button" data-status="all" aria-pressed="true">All</button>
                 <button id="status-live" type="button" data-status="live" aria-pressed="false">Live</button>
@@ -199,4 +185,13 @@
 </dialog>
 {% endblock %}
 
-{% block page_scripts %}<script type="module" src="{{ url_for('static', filename='js/fixtures.js', v=build.assetVersion) }}"></script>{% endblock %}
+{% block page_scripts %}
+{# fixtures.js discovers these through two levels of dynamic import, so the
+   browser would otherwise fetch them serially after the graph resolves.
+   Preloading starts them immediately and flattens the waterfall. #}
+<link rel="modulepreload" href="{{ url_for('static', filename='js/fixture-state.js', v=build.assetVersion) }}">
+<link rel="modulepreload" href="{{ url_for('static', filename='js/fixture-renderer.js', v=build.assetVersion) }}">
+<link rel="modulepreload" href="{{ url_for('static', filename='js/match-status.js', v=build.assetVersion) }}">
+<link rel="modulepreload" href="{{ url_for('static', filename='js/time-zone.js', v=build.assetVersion) }}">
+<script type="module" src="{{ url_for('static', filename='js/fixtures.js', v=build.assetVersion) }}"></script>
+{% endblock %}

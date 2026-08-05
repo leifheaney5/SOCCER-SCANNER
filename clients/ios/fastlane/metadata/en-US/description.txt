@@ -1,0 +1,21 @@
+Soccer Scanner shows you the day's football fixtures without spoiling the result.
+
+SPOILER-SAFE BY DEFAULT
+Scores stay hidden until you choose to reveal them. Every launch starts hidden again, so opening the app before you watch a recording will not give the game away.
+
+YOUR TIMEZONE, NOT A GUESS
+Pick the timezone you actually care about. Kick-off times and the day a fixture belongs to both follow your selection, so a late kick-off does not quietly appear on the wrong date when you travel.
+
+STATUSES THAT SAY WHAT THEY MEAN
+Half time, extra time, penalties, delayed, postponed and abandoned are shown distinctly rather than being lumped together as "live".
+
+WHERE TO WATCH
+When a data provider reports a streaming service for a fixture, it is listed with its region. Availability varies by country, rights period and subscription, and listings may be incomplete or out of date.
+
+NO ACCOUNT REQUIRED
+There is no sign-up and no login. Soccer Scanner does not collect personal data, does not track you, and contains no advertising or analytics SDK.
+
+ABOUT THE DATA
+Fixture information comes from third-party providers and may be delayed, incomplete or incorrect. Soccer Scanner is an independent app and is not affiliated with, endorsed by, or an official partner of any competition, club, broadcaster or data provider. Club and competition names are the trademarks of their respective owners.
+
+Soccer Scanner does not stream matches and does not provide access to match footage.

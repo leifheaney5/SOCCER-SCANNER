@@ -1,27 +1,38 @@
-const LIVE_STATUSES = new Set(['LIVE', 'IN_PLAY', 'IN_PROGRESS', 'PAUSED', 'HALFTIME', 'HALF_TIME', 'EXTRA_TIME', 'PENALTIES']);
-const FINISHED_STATUSES = new Set(['FINISHED', 'AWARDED']);
-const EXCEPTION_STATUSES = new Map([
-    ['POSTPONED', 'postponed'],
-    ['CANCELLED', 'cancelled'],
-    ['CANCELED', 'cancelled'],
-    ['SUSPENDED', 'suspended'],
+const assetVersion = new URL(import.meta.url).searchParams.get('v');
+const versionedModule = path => (
+    assetVersion ? `${path}?v=${encodeURIComponent(assetVersion)}` : path
+);
+const [statusModule, timeZoneModule] = await Promise.all([
+    import(versionedModule('./match-status.js')),
+    import(versionedModule('./time-zone.js')),
 ]);
+const {statusFilterKind, rawStatusCode} = statusModule;
+const {calendarDateInZone, resolveTimeZone, todayInZone} = timeZoneModule;
+
 const FILTER_STATUSES = new Set(['all', 'live', 'upcoming', 'finished']);
 const SORT_VALUES = new Set(['kickoff', 'competition', 'live', 'recommended']);
 const TIME_WINDOWS = new Set(['all', 'morning', 'afternoon', 'evening', 'late-night']);
 
-export function todayLocal(now = new Date()) {
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+/** Today in the selected zone — not the host's zone. */
+export function todayLocal(now = new Date(), timezone = undefined) {
+    return todayInZone(resolveTimeZone(timezone, browserFallback()), now);
 }
 
-export function shiftDate(value, amount) {
-    const date = new Date(`${value}T12:00:00`);
-    if (Number.isNaN(date.getTime())) return todayLocal();
-    date.setDate(date.getDate() + amount);
-    return todayLocal(date);
+function browserFallback() {
+    try {
+        return new Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+    } catch {
+        return 'UTC';
+    }
+}
+
+export function shiftDate(value, amount, timezone = undefined) {
+    // Step whole days at noon UTC so a DST transition cannot skip or repeat
+    // a calendar day.
+    const date = new Date(`${value}T12:00:00Z`);
+    if (Number.isNaN(date.getTime())) return todayLocal(new Date(), timezone);
+    date.setUTCDate(date.getUTCDate() + amount);
+    return calendarDateInZone(date, 'UTC');
 }
 
 export function isValidDate(value) {
@@ -43,33 +54,35 @@ export function isValidTimezone(value) {
 }
 
 export function statusValue(match) {
-    const status = match?.status;
-    return String((status && typeof status === 'object' ? status.code : status) || 'scheduled').toUpperCase();
+    return rawStatusCode(match);
 }
 
+/** Delegated to the canonical taxonomy so every module agrees. */
 export function statusKind(match) {
-    const status = statusValue(match);
-    if (LIVE_STATUSES.has(status)) return 'live';
-    if (FINISHED_STATUSES.has(status)) return 'finished';
-    return EXCEPTION_STATUSES.get(status) || 'upcoming';
+    return statusFilterKind(match);
 }
 
 export function createState(search = '', defaultTimezone = 'UTC') {
     const params = new URLSearchParams(search);
     const rawStatus = params.get('status') || 'all';
-    const rawDate = params.get('date') || todayLocal();
+    // The timezone must be resolved before it is used to pick "today", or
+    // the default date silently falls back to the host's zone instead of
+    // the selected one.
     const rawTimezone = params.get('timezone') || defaultTimezone;
+    const resolvedTimezone = isValidTimezone(rawTimezone)
+        ? rawTimezone
+        : (isValidTimezone(defaultTimezone) ? defaultTimezone : 'UTC');
+    const rawDate = params.get('date') || todayLocal(new Date(), resolvedTimezone);
     const state = {
-        date: isValidDate(rawDate) ? rawDate : todayLocal(),
+        date: isValidDate(rawDate) ? rawDate : todayLocal(new Date(), resolvedTimezone),
         dateError: params.has('date') && !isValidDate(rawDate),
-        timezone: isValidTimezone(rawTimezone) ? rawTimezone : (isValidTimezone(defaultTimezone) ? defaultTimezone : 'UTC'),
+        timezone: resolvedTimezone,
         competition: params.get('competition') || '',
         country: params.get('country') || '',
         status: FILTER_STATUSES.has(rawStatus) ? rawStatus : 'all',
         sort: SORT_VALUES.has(params.get('sort')) ? params.get('sort') : 'kickoff',
         timeWindow: TIME_WINDOWS.has(params.get('time')) ? params.get('time') : 'all',
         hideFinished: params.get('hideFinished') === '1',
-        favoritesOnly: params.get('favorites') === '1',
         fixture: (params.get('fixture') || '').slice(0, 120),
         query: params.get('q') || '',
         toSearchParams() {
@@ -82,7 +95,6 @@ export function createState(search = '', defaultTimezone = 'UTC') {
             if (this.sort !== 'kickoff') next.set('sort', this.sort);
             if (this.timeWindow !== 'all') next.set('time', this.timeWindow);
             if (this.hideFinished) next.set('hideFinished', '1');
-            if (this.favoritesOnly) next.set('favorites', '1');
             if (this.fixture) next.set('fixture', this.fixture);
             if (this.query) next.set('q', this.query);
             return next;
@@ -91,7 +103,7 @@ export function createState(search = '', defaultTimezone = 'UTC') {
     return state;
 }
 
-export function filterMatches(matches, state, {isFavorite = () => false} = {}) {
+export function filterMatches(matches, state) {
     const normalizeSearch = value => String(value || '')
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
@@ -126,7 +138,6 @@ export function filterMatches(matches, state, {isFavorite = () => false} = {}) {
             && (!state.country || country === state.country)
             && (state.status === 'all' || statusKind(match) === state.status)
             && (!state.hideFinished || statusKind(match) !== 'finished')
-            && (!state.favoritesOnly || isFavorite(match))
             && inTimeWindow
             && (!query || normalizedSearchable.includes(query));
     });
@@ -158,7 +169,14 @@ export function sortMatches(matches, sort = 'kickoff') {
     });
 }
 
-export function groupMatches(matches) {
+/**
+ * Group by competition while preserving the caller's chosen ordering.
+ *
+ * Grouping previously re-sorted every group by kickoff, which silently
+ * discarded the selected sort. Insertion order now carries the sort through,
+ * and group order follows the sort too.
+ */
+export function groupMatches(matches, sort = 'kickoff') {
     const groups = new Map();
     for (const match of Array.isArray(matches) ? matches : []) {
         const competition = match?.competition || {};
@@ -166,12 +184,15 @@ export function groupMatches(matches) {
         if (!groups.has(key)) groups.set(key, {key, competition, matches: []});
         groups.get(key).matches.push(match);
     }
-    return [...groups.values()].map(group => ({
-        ...group,
-        matches: group.matches.sort((left, right) => (
-            String(left?.utcDate || '').localeCompare(String(right?.utcDate || ''))
-        )),
-    }));
+    const ordered = [...groups.values()];
+    if (sort === 'competition') {
+        ordered.sort((left, right) => String(left.competition?.name || '')
+            .localeCompare(String(right.competition?.name || '')));
+    }
+    // For every other sort the first fixture in each group already reflects
+    // the chosen ordering, so ranking groups by their leader keeps the page
+    // consistent with the control.
+    return ordered;
 }
 
 export function summarizeMatches(matches) {
@@ -184,19 +205,15 @@ export function summarizeMatches(matches) {
     return summary;
 }
 
-export function selectFeatured(matches, {isFavorite = () => false} = {}) {
+export function selectFeatured(matches) {
     const list = Array.isArray(matches) ? matches : [];
     const mostInteresting = kind => list.reduce((selected, match) => {
         if (statusKind(match) !== kind) return selected;
-        const favorite = Number(isFavorite(match));
-        const selectedFavorite = Number(selected && isFavorite(selected));
         const interest = Number(match?.interestEstimate ?? match?.enhanced_info?.importance_score ?? 0);
         const selectedInterest = Number(
             selected?.interestEstimate ?? selected?.enhanced_info?.importance_score ?? 0,
         );
-        return !selected || favorite > selectedFavorite || (
-            favorite === selectedFavorite && interest > selectedInterest
-        ) ? match : selected;
+        return !selected || interest > selectedInterest ? match : selected;
     }, null);
     return mostInteresting('live')
         || mostInteresting('upcoming')

@@ -6,6 +6,15 @@ test.beforeEach(async ({page}) => {
         body: JSON.stringify({state: 'empty_confirmed', date: '2026-08-03', matches: []}),
     }));
     await page.goto('/?date=2026-08-03');
+    // fixtures.js resolves its dynamic-import module graph (top-level await)
+    // after the browser's `load` event fires, so the app's own initial
+    // fetch(/api/v2/fixtures) can still be in flight when this beforeEach
+    // returns. Tests that navigate again (e.g. to install a different route
+    // mock) would otherwise race that lingering request against their own
+    // page's initial load, letting the stale request steal a response meant
+    // for the fresh page. Wait for the initial render to actually finish so
+    // no request from this page is left in flight.
+    await expect(page.locator('#dashboard-status')).toContainText('fixtures shown');
 });
 
 test('refresh cadence follows fixture urgency and avoids polling historical dates', async ({page}) => {

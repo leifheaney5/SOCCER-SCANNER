@@ -26,7 +26,7 @@ function syncScoreIcon(button, revealed) {
     icon.replaceChildren(...shapes);
 }
 
-export function readScorePreference(storage = window.localStorage) {
+export function readScorePreference(storage = window.sessionStorage) {
     try {
         const stored = storage.getItem(SCORE_STORAGE_KEY);
         return stored === null ? DEFAULT_REVEAL_SCORES : stored === 'true';
@@ -35,7 +35,7 @@ export function readScorePreference(storage = window.localStorage) {
     }
 }
 
-export function writeScorePreference(storage = window.localStorage, revealed) {
+export function writeScorePreference(storage = window.sessionStorage, revealed) {
     try {
         storage.setItem(SCORE_STORAGE_KEY, String(Boolean(revealed)));
     } catch {

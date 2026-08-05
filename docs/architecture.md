@@ -47,7 +47,7 @@ Scores default hidden and are not placed in text, attributes, or the accessibili
 - Production HTTPS responses receive HSTS. CSP denies objects and external framing except the explicitly gated SofaScore iframe.
 - API responses use `Cache-Control: no-store`; static assets carry build-derived query tokens.
 - Request IDs are validated or generated and safe error envelopes do not expose provider exception text.
-- There is no account database. Favorites and score preference stay in local storage and can be cleared by the visitor.
+- There is no account database or guest favorite profile. Score visibility is session-scoped; date, timezone, filter, and fixture selection are URL-backed. The accepted account decision is documented in `docs/decisions/accounts-and-preferences.md`.
 
 ## Build and operations
 

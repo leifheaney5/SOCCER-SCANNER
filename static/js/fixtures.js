@@ -2,7 +2,7 @@ const assetVersion = new URL(import.meta.url).searchParams.get('v');
 const versionedModule = path => (
     assetVersion ? `${path}?v=${encodeURIComponent(assetVersion)}` : path
 );
-const [appStoreModule, fixtureStateModule, scorePreferenceModule, fixtureRendererModule, matchContextModule, teamDrawerModule, refreshModule, dialogModule, favoritesModule] = await Promise.all([
+const [appStoreModule, fixtureStateModule, scorePreferenceModule, fixtureRendererModule, matchContextModule, teamDrawerModule, refreshModule, dialogModule] = await Promise.all([
     import(versionedModule('./app-store.js')),
     import(versionedModule('./fixture-state.js')),
     import(versionedModule('./score-preference.js')),
@@ -11,7 +11,6 @@ const [appStoreModule, fixtureStateModule, scorePreferenceModule, fixtureRendere
     import(versionedModule('./team-drawer.js')),
     import(versionedModule('./refresh-controller.js')),
     import(versionedModule('./dialog-manager.js')),
-    import(versionedModule('./favorites.js')),
 ]);
 const {createStore} = appStoreModule;
 const {
@@ -38,12 +37,12 @@ const {
     renderRequestError,
     renderSummary,
     renderUpdateFailure,
+    setRenderTimeZone,
 } = fixtureRendererModule;
 const {createMatchContext} = matchContextModule;
 const {createTeamDrawer} = teamDrawerModule;
 const {createRefreshController} = refreshModule;
 const {createDialogManager} = dialogModule;
-const {createFavoritesRepository, fixtureIsFavorite} = favoritesModule;
 
 const byId = id => document.getElementById(id);
 const detectedTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
@@ -62,8 +61,6 @@ let requestSequence = 0;
 let matchContext = null;
 let teamDrawer = null;
 let refreshController = null;
-const favoriteRepository = createFavoritesRepository(window.localStorage);
-const isFavorite = match => fixtureIsFavorite(favoriteRepository, match);
 
 function setState(patch, metadata = {}) {
     return store.dispatch(patch, metadata);
@@ -89,7 +86,6 @@ function syncControls() {
     byId('time-filter').value = state.timeWindow;
     byId('sort-filter').value = state.sort;
     byId('hide-finished').checked = state.hideFinished;
-    byId('favorites-only').checked = state.favoritesOnly;
     byId('fixture-search').value = state.query;
     byId('clear-search').hidden = !state.query;
     const competition = byId('competition-filter');
@@ -104,8 +100,7 @@ function syncControls() {
         + Number(state.status !== 'all')
         + Number(Boolean(state.query))
         + Number(state.timeWindow !== 'all')
-        + Number(state.hideFinished)
-        + Number(state.favoritesOnly);
+        + Number(state.hideFinished);
     byId('active-filter-count').textContent = String(activeFilters);
     byId('active-filter-count').hidden = activeFilters === 0;
     byId('clear-filters').hidden = activeFilters === 0;
@@ -139,7 +134,9 @@ function populateCompetitions(matches) {
 
 function reflectCurrentResults() {
     if (!payload) return;
-    const filteredMatches = filterMatches(payload.matches, state, {isFavorite});
+    // Every date and time rendered below must use the selected zone.
+    setRenderTimeZone(state.timezone);
+    const filteredMatches = filterMatches(payload.matches, state);
     const matches = sortMatches(filteredMatches, state.sort);
     if (selectedFixtureId && !matches.some(match => (
         String(match.canonicalFixtureId || match.id) === selectedFixtureId
@@ -154,21 +151,19 @@ function reflectCurrentResults() {
     const summary = summarizeMatches(matches);
     renderSummary(byId('daily-summary'), payload.matches, payload);
     renderNotice(byId('data-notice'), payload);
-    renderFeatured(byId('featured-match'), filteredMatches, scoresRevealed, {isFavorite});
+    renderFeatured(byId('featured-match'), filteredMatches, scoresRevealed);
     if (matches.length === 0) {
         renderEmptyState(byId('fixture-stream'), {filtered: payload.matches.length > 0});
     } else {
-        renderFixtureStream(byId('fixture-stream'), groupMatches(matches), {
+        renderFixtureStream(byId('fixture-stream'), groupMatches(matches, state.sort), {
             revealed: scoresRevealed,
             expandedGroups,
             selectedId: selectedFixtureId,
-            isFavorite,
-            favoriteRepository,
         });
     }
     byId('fixture-result-count').textContent = `${summary.total} ${summary.total === 1 ? 'match' : 'matches'}`;
     byId('dashboard-status').textContent = `${summary.total} fixtures shown`;
-    byId('fixture-stream-title').textContent = state.favoritesOnly ? 'Your matches' : 'Match schedule';
+    byId('fixture-stream-title').textContent = 'Match schedule';
     matchContext?.rerender();
     teamDrawer?.rerender();
     if (selectedFixtureId && !matchContext?.selected()) {
@@ -277,7 +272,7 @@ function chooseDate(date) {
 
 function bindEvents() {
     byId('previous-date').addEventListener('click', () => chooseDate(shiftDate(state.date, -1)));
-    byId('today-date').addEventListener('click', () => chooseDate(todayLocal()));
+    byId('today-date').addEventListener('click', () => chooseDate(todayLocal(new Date(), state.timezone)));
     byId('next-date').addEventListener('click', () => chooseDate(shiftDate(state.date, 1)));
     byId('dashboard-date').addEventListener('change', event => chooseDate(event.target.value));
     byId('timezone-filter').addEventListener('change', event => {
@@ -294,7 +289,6 @@ function bindEvents() {
     byId('time-filter').addEventListener('change', event => applyFilter({timeWindow: event.target.value}));
     byId('sort-filter').addEventListener('change', event => applyFilter({sort: event.target.value}));
     byId('hide-finished').addEventListener('change', event => applyFilter({hideFinished: event.target.checked}));
-    byId('favorites-only').addEventListener('change', event => applyFilter({favoritesOnly: event.target.checked}));
     document.querySelector('.status-filters').addEventListener('click', event => {
         const button = event.target.closest('[data-status]');
         if (button) applyFilter({status: button.dataset.status});
@@ -316,7 +310,6 @@ function bindEvents() {
         query: '',
         timeWindow: 'all',
         hideFinished: false,
-        favoritesOnly: false,
     }));
     byId('filter-toggle').addEventListener('click', event => {
         const expanded = event.currentTarget.getAttribute('aria-expanded') === 'true';
@@ -325,7 +318,7 @@ function bindEvents() {
     });
     byId('score-toggle').addEventListener('click', () => {
         scoresRevealed = !scoresRevealed;
-        writeScorePreference(window.localStorage, scoresRevealed);
+        writeScorePreference(window.sessionStorage, scoresRevealed);
         syncScoreToggle(byId('score-toggle'), scoresRevealed);
         reflectCurrentResults();
     });
@@ -335,9 +328,6 @@ function bindEvents() {
         if (action.dataset.action === 'toggle-group') {
             const key = action.dataset.group;
             expandedGroups.has(key) ? expandedGroups.delete(key) : expandedGroups.add(key);
-            reflectCurrentResults();
-        } else if (action.dataset.action === 'toggle-favorite') {
-            favoriteRepository.toggle(action.dataset.favoriteType, action.dataset.favoriteId);
             reflectCurrentResults();
         } else if (action.dataset.action === 'select-fixture') {
             selectedFixtureId = action.dataset.fixtureId;
@@ -352,7 +342,7 @@ function bindEvents() {
             );
             if (match && replacement) matchContext.open(match, replacement);
         } else if (action.dataset.action === 'clear-filters') {
-            applyFilter({competition: '', country: '', status: 'all', query: '', timeWindow: 'all', hideFinished: false, favoritesOnly: false});
+            applyFilter({competition: '', country: '', status: 'all', query: '', timeWindow: 'all', hideFinished: false});
         } else if (action.dataset.action === 'shift-date') {
             chooseDate(shiftDate(state.date, Number(action.dataset.days)));
         }
@@ -374,34 +364,6 @@ function bindEvents() {
         }
     });
     byId('refresh-fixtures').addEventListener('click', () => refreshController?.refresh('manual'));
-    byId('export-favorites').addEventListener('click', () => {
-        const blob = new Blob([favoriteRepository.exportText()], {type: 'application/json'});
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = 'soccer-scanner-favorites.json';
-        link.click();
-        URL.revokeObjectURL(url);
-        byId('dashboard-status').textContent = 'Favorites exported';
-    });
-    byId('import-favorites').addEventListener('change', async event => {
-        const [file] = event.target.files;
-        if (!file) return;
-        try {
-            favoriteRepository.importText(await file.text());
-            reflectCurrentResults();
-            byId('dashboard-status').textContent = 'Favorites imported';
-        } catch {
-            byId('dashboard-status').textContent = 'Favorites import could not be read';
-        } finally {
-            event.target.value = '';
-        }
-    });
-    byId('clear-favorites').addEventListener('click', () => {
-        favoriteRepository.clear();
-        reflectCurrentResults();
-        byId('dashboard-status').textContent = 'Favorites cleared';
-    });
 }
 
 function init() {
@@ -438,11 +400,16 @@ function init() {
         },
         dialogManager,
     });
+    syncUrl('replace');
     syncControls();
     bindEvents();
     refreshController = createRefreshController({
         load: loadFixtures,
-        getContext: () => ({date: state.date, matches: payload?.matches || []}),
+        getContext: () => ({
+            date: state.date,
+            matches: payload?.matches || [],
+            timezone: state.timezone,
+        }),
     });
     loadFixtures().finally(() => refreshController.start());
 }

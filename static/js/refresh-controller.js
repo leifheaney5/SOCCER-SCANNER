@@ -1,32 +1,34 @@
-const LIVE_CODES = new Set([
-    'LIVE', 'IN_PLAY', 'IN_PROGRESS', 'PAUSED', 'HALFTIME', 'HALF_TIME',
-    'EXTRA_TIME', 'PENALTIES',
+const assetVersion = new URL(import.meta.url).searchParams.get('v');
+const versionedModule = path => (
+    assetVersion ? `${path}?v=${encodeURIComponent(assetVersion)}` : path
+);
+const [statusModule, timeZoneModule] = await Promise.all([
+    import(versionedModule('./match-status.js')),
+    import(versionedModule('./time-zone.js')),
 ]);
-const FINISHED_CODES = new Set(['FINISHED', 'AWARDED', 'CANCELLED', 'CANCELED', 'POSTPONED', 'SUSPENDED']);
+const {isActiveStatus, isTerminalStatus} = statusModule;
+const {todayInZone} = timeZoneModule;
 
-function statusCode(match) {
-    const status = match?.status;
-    return String((status && typeof status === 'object' ? status.code : status) || '').toUpperCase();
-}
-
-function localDate(now) {
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-}
-
-export function computeRefreshDelay({matches = [], date, now = new Date()} = {}) {
-    if (date && date < localDate(now)) return null;
-    if (matches.some(match => LIVE_CODES.has(statusCode(match)))) return 30_000;
+/**
+ * Refresh cadence for the current view.
+ *
+ * "Today" is resolved in the selected timezone so a viewer east or west of the
+ * host does not stop refreshing the day they are actually looking at. Terminal
+ * statuses stop polling; suspended matches keep polling because play can
+ * resume.
+ */
+export function computeRefreshDelay({matches = [], date, now = new Date(), timezone = 'UTC'} = {}) {
+    const today = todayInZone(timezone, now);
+    if (date && date < today) return null;
+    if (matches.some(isActiveStatus)) return 30_000;
 
     const upcoming = matches
-        .filter(match => !FINISHED_CODES.has(statusCode(match)))
+        .filter(match => !isTerminalStatus(match))
         .map(match => new Date(match?.utcDate).getTime())
         .filter(value => Number.isFinite(value) && value >= now.getTime());
     if (upcoming.some(value => value - now.getTime() <= 15 * 60_000)) return 60_000;
     if (upcoming.length) return 300_000;
-    return date === localDate(now) ? 900_000 : null;
+    return date === today ? 900_000 : null;
 }
 
 export function createRefreshController({

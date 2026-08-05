@@ -1,0 +1,3 @@
+# Identifiers come from the environment so no Apple account data is committed.
+app_identifier(ENV["APPLE_BUNDLE_ID"])
+team_id(ENV["APPLE_TEAM_ID"])

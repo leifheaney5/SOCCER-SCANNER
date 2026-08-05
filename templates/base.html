@@ -6,6 +6,7 @@
     <meta name="theme-color" content="#000000">
     <meta name="description" content="Fast, spoiler-safe soccer fixture intelligence across leading competitions.">
     <link rel="canonical" href="{{ canonical_url }}">
+    {% block robots_meta %}{% endblock %}
     <meta property="og:type" content="website">
     <meta property="og:title" content="Soccer Scanner — Fixture intelligence">
     <meta property="og:description" content="Fast, spoiler-safe soccer fixture intelligence across leading competitions.">
@@ -36,9 +37,8 @@
             </button>
             <nav id="primary-navigation" class="nav-links" aria-label="Primary navigation">
                 {% set fixture_page = request.path in ['/', '/matches-today'] %}
-                <a href="/" class="nav-link{% if fixture_page and request.args.get('status') != 'live' and request.args.get('favorites') != '1' %} active{% endif %}"{% if fixture_page and request.args.get('status') != 'live' and request.args.get('favorites') != '1' %} aria-current="page"{% endif %}>Fixtures</a>
+                <a href="/" class="nav-link{% if fixture_page and request.args.get('status') != 'live' %} active{% endif %}"{% if fixture_page and request.args.get('status') != 'live' %} aria-current="page"{% endif %}>Fixtures</a>
                 <a href="/?status=live" class="nav-link{% if fixture_page and request.args.get('status') == 'live' %} active{% endif %}"{% if fixture_page and request.args.get('status') == 'live' %} aria-current="page"{% endif %}>Live</a>
-                <a href="/?favorites=1" class="nav-link{% if fixture_page and request.args.get('favorites') == '1' %} active{% endif %}"{% if fixture_page and request.args.get('favorites') == '1' %} aria-current="page"{% endif %}>Favorites</a>
                 <a class="nav-link nav-link-external" href="https://select-xi.pro/" target="_blank" rel="noopener noreferrer">
                     Select XI
                     <span aria-hidden="true">↗</span>
@@ -54,6 +54,7 @@
             <nav aria-label="Product information">
                 <a href="/data-sources">Data sources</a>
                 <a href="/privacy">Privacy</a>
+                <a href="/terms">Terms of Service</a>
             </nav>
         </div>
     </footer>
