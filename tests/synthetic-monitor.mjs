@@ -59,10 +59,16 @@ export async function runMonitor(baseUrl, fetchImpl = fetch) {
                     return {ok: false, detail: `HTTP ${response.status} ${body?.error?.code ?? ''}`.trim()};
                 }
                 const matches = Array.isArray(body?.matches) ? body.matches : [];
-                return {
-                    ok: matches.length > 0,
-                    detail: `HTTP 200 but ${matches.length} fixtures returned`,
-                };
+                // `empty_confirmed` means the providers succeeded and there
+                // really are no fixtures today — off-season and quiet days
+                // are legitimate and must PASS, not be treated as an outage.
+                // Anything else with zero matches (e.g. a provider-failure
+                // state that still returned 200) is a genuine problem.
+                const ok = matches.length > 0 || body?.state === 'empty_confirmed';
+                const detail = matches.length > 0
+                    ? `HTTP 200 with ${matches.length} fixtures returned`
+                    : `HTTP 200 with 0 fixtures returned, state=${body?.state}`;
+                return {ok, detail};
             },
         ),
     ];
