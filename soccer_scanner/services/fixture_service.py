@@ -13,6 +13,13 @@ from soccer_scanner.domain.models import (
 )
 from soccer_scanner.providers.http import RequestBudget
 
+# Provider outcome -> the vocabulary ProviderHealthRegistry accepts.
+_HEALTH_BY_STATUS = {
+    ProviderStatus.SUCCESS: 'ok',
+    ProviderStatus.PARTIAL: 'degraded',
+    ProviderStatus.DISABLED: 'disabled',
+}
+
 
 class _ProviderFailure(RuntimeError):
     def __init__(self, outcome):
@@ -74,6 +81,7 @@ class CanonicalFixtureService:
         stale_ttl_seconds=900,
         provider_budget_seconds=4,
         identity_registry=None,
+        provider_health=None,
         now=None,
     ):
         self.providers = (espn_provider, football_data_provider)
@@ -82,6 +90,7 @@ class CanonicalFixtureService:
         self.stale_ttl_seconds = stale_ttl_seconds
         self.provider_budget_seconds = provider_budget_seconds
         self.identity_registry = identity_registry
+        self.provider_health = provider_health
         self.now = now or (lambda: datetime.now(timezone.utc))
 
     def fixtures_for_date(self, requested_date, timezone_name='UTC'):
@@ -121,12 +130,14 @@ class CanonicalFixtureService:
                 )
                 provider_cache[provider_name] = lookup.status
                 outcome = _dict_outcome(lookup.value)
+                self._record_provider_health(outcome)
                 if outcome.status is not ProviderStatus.DISABLED:
                     current.append(outcome)
                 else:
                     current.append(outcome)
             except _ProviderFailure as error:
                 failed.append(error.outcome)
+                self._record_provider_health(error.outcome)
                 provider_cache[provider_name] = 'miss'
                 stale_lookup = self.cache.get(cache_key, allow_stale=True)
                 if stale_lookup.status == 'stale':
@@ -276,6 +287,16 @@ class CanonicalFixtureService:
             if match is not None:
                 return match
         return None
+
+    def _record_provider_health(self, outcome):
+        if self.provider_health is None:
+            return
+        categories = ','.join(outcome.failureCategories)
+        self.provider_health.record(
+            outcome.provider,
+            _HEALTH_BY_STATUS.get(outcome.status, 'unavailable'),
+            detail=categories or None,
+        )
 
     @staticmethod
     def _provider_name(provider):

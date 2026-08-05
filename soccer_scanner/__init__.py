@@ -212,6 +212,7 @@ def create_app(config=None):
         stale_ttl_seconds=app.config['FIXTURE_STALE_TTL'],
         provider_budget_seconds=app.config['FIXTURE_FETCH_DEADLINE'],
         identity_registry=app.extensions['fixture_identities'],
+        provider_health=app.extensions['provider_health'],
     )
     app.register_blueprint(pages)
     app.register_blueprint(api)
