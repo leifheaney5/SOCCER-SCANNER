@@ -185,4 +185,13 @@
 </dialog>
 {% endblock %}
 
-{% block page_scripts %}<script type="module" src="{{ url_for('static', filename='js/fixtures.js', v=build.assetVersion) }}"></script>{% endblock %}
+{% block page_scripts %}
+{# fixtures.js discovers these through two levels of dynamic import, so the
+   browser would otherwise fetch them serially after the graph resolves.
+   Preloading starts them immediately and flattens the waterfall. #}
+<link rel="modulepreload" href="{{ url_for('static', filename='js/fixture-state.js', v=build.assetVersion) }}">
+<link rel="modulepreload" href="{{ url_for('static', filename='js/fixture-renderer.js', v=build.assetVersion) }}">
+<link rel="modulepreload" href="{{ url_for('static', filename='js/match-status.js', v=build.assetVersion) }}">
+<link rel="modulepreload" href="{{ url_for('static', filename='js/time-zone.js', v=build.assetVersion) }}">
+<script type="module" src="{{ url_for('static', filename='js/fixtures.js', v=build.assetVersion) }}"></script>
+{% endblock %}
