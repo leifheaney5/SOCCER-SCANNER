@@ -65,12 +65,18 @@ export function statusKind(match) {
 export function createState(search = '', defaultTimezone = 'UTC') {
     const params = new URLSearchParams(search);
     const rawStatus = params.get('status') || 'all';
-    const rawDate = params.get('date') || todayLocal();
+    // The timezone must be resolved before it is used to pick "today", or
+    // the default date silently falls back to the host's zone instead of
+    // the selected one.
     const rawTimezone = params.get('timezone') || defaultTimezone;
+    const resolvedTimezone = isValidTimezone(rawTimezone)
+        ? rawTimezone
+        : (isValidTimezone(defaultTimezone) ? defaultTimezone : 'UTC');
+    const rawDate = params.get('date') || todayLocal(new Date(), resolvedTimezone);
     const state = {
-        date: isValidDate(rawDate) ? rawDate : todayLocal(),
+        date: isValidDate(rawDate) ? rawDate : todayLocal(new Date(), resolvedTimezone),
         dateError: params.has('date') && !isValidDate(rawDate),
-        timezone: isValidTimezone(rawTimezone) ? rawTimezone : (isValidTimezone(defaultTimezone) ? defaultTimezone : 'UTC'),
+        timezone: resolvedTimezone,
         competition: params.get('competition') || '',
         country: params.get('country') || '',
         status: FILTER_STATUSES.has(rawStatus) ? rawStatus : 'all',

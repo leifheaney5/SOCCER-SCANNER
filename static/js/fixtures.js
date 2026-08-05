@@ -272,7 +272,7 @@ function chooseDate(date) {
 
 function bindEvents() {
     byId('previous-date').addEventListener('click', () => chooseDate(shiftDate(state.date, -1)));
-    byId('today-date').addEventListener('click', () => chooseDate(todayLocal()));
+    byId('today-date').addEventListener('click', () => chooseDate(todayLocal(new Date(), state.timezone)));
     byId('next-date').addEventListener('click', () => chooseDate(shiftDate(state.date, 1)));
     byId('dashboard-date').addEventListener('change', event => chooseDate(event.target.value));
     byId('timezone-filter').addEventListener('change', event => {

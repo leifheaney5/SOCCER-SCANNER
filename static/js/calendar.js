@@ -7,13 +7,15 @@ const [stateModule, scoreModule, rendererModule] = await Promise.all([
 ]);
 const {isValidDate, isValidTimezone, shiftDate, todayLocal} = stateModule;
 const {readScorePreference, syncScoreToggle, writeScorePreference} = scoreModule;
-const {createScoreNode} = rendererModule;
+const {createScoreNode, setRenderTimeZone} = rendererModule;
 
 const byId = id => document.getElementById(id);
 const params = new URLSearchParams(location.search);
 const detectedTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
-let start = isValidDate(params.get('start')) ? params.get('start') : todayLocal();
+// Timezone must be resolved before it is used to pick "today", or the
+// default start date silently falls back to the host's zone.
 let timezone = isValidTimezone(params.get('timezone')) ? params.get('timezone') : detectedTimezone;
+let start = isValidDate(params.get('start')) ? params.get('start') : todayLocal(new Date(), timezone);
 let view = params.get('view') === 'grid' ? 'grid' : 'agenda';
 let revealed = readScorePreference();
 let controller = null;
@@ -47,6 +49,10 @@ function syncControls() {
     byId('calendar-view-grid').setAttribute('aria-pressed', String(view === 'grid'));
     byId('calendar-results').dataset.view = view;
     syncScoreToggle(byId('score-toggle'), revealed);
+    // Every kickoff rendered by createScoreNode reads this module-level
+    // timezone, so it must track the calendar's own selector rather than
+    // whatever the dashboard page last set (or the UTC default).
+    setRenderTimeZone(timezone);
 }
 
 async function mapLimit(items, limit, operation) {
@@ -100,6 +106,7 @@ async function loadWindow() {
             return {...payload, date, matches: Array.isArray(payload.matches) ? payload.matches : []};
         });
         if (requestId !== sequence) return;
+        setRenderTimeZone(timezone);
         byId('calendar-results').replaceChildren(...payloads.map(renderDay));
         byId('calendar-results').setAttribute('aria-busy', 'false');
         byId('calendar-status').textContent = '7 days loaded';
@@ -121,7 +128,7 @@ function chooseStart(value) {
 
 byId('calendar-previous').addEventListener('click', () => chooseStart(shiftDate(start, -7)));
 byId('calendar-next').addEventListener('click', () => chooseStart(shiftDate(start, 7)));
-byId('calendar-today').addEventListener('click', () => chooseStart(todayLocal()));
+byId('calendar-today').addEventListener('click', () => chooseStart(todayLocal(new Date(), timezone)));
 byId('calendar-start').addEventListener('change', event => chooseStart(event.target.value));
 byId('calendar-timezone').addEventListener('change', event => {
     timezone = event.target.value;
