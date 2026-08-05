@@ -27,6 +27,7 @@ from .routes.pages import pages
 from .services.cache_backend import build_cache_backend
 from .services.fixture_service import CanonicalFixtureService
 from .services.football_data import FootballDataClient
+from .services.feature_flags import FeatureFlagRegistry
 from .services.rate_limit import RATE_LIMIT_POLICIES, build_rate_limiter
 from .services.teams import TeamAnalysisService
 from .services.team_identity import TeamIdentityResolver
@@ -74,6 +75,9 @@ def create_app(config=None):
     app.extensions['rate_limiter'] = build_rate_limiter(
         app.config,
         metrics=app.extensions['metrics'],
+    )
+    app.extensions['feature_flags'] = FeatureFlagRegistry(
+        overrides=app.config.get('FEATURE_FLAG_OVERRIDES'),
     )
     app.extensions['provider_capabilities'] = build_capability_manifest(
         football_data_configured=bool(app.config.get('FOOTBALL_DATA_API_KEY')),

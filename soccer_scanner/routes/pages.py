@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+import json
 import re
 
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -46,6 +47,90 @@ def data_sources():
 @pages.get('/offline')
 def offline():
     return render_template('offline.html')
+
+
+@pages.get('/terms')
+def terms():
+    return render_template('terms.html')
+
+
+# Surfaces that must never be advertised to crawlers or listed in the sitemap.
+_NON_INDEXABLE = ('/api/', '/health/', '/offline')
+
+_SITEMAP_ROUTES = (
+    ('/', 'daily', '1.0'),
+    ('/calendar', 'daily', '0.8'),
+    ('/teams', 'weekly', '0.6'),
+    ('/league-tables', 'weekly', '0.6'),
+    ('/data-sources', 'monthly', '0.3'),
+    ('/privacy', 'yearly', '0.2'),
+    ('/terms', 'yearly', '0.2'),
+)
+
+
+@pages.get('/robots.txt')
+def robots():
+    base = current_app.config['PUBLIC_BASE_URL'].rstrip('/')
+    lines = ['User-agent: *', 'Allow: /']
+    lines += [f'Disallow: {path}' for path in _NON_INDEXABLE]
+    lines += ['', f'Sitemap: {base}/sitemap.xml', '']
+    return Response('\n'.join(lines), mimetype='text/plain')
+
+
+@pages.get('/sitemap.xml')
+def sitemap():
+    base = current_app.config['PUBLIC_BASE_URL'].rstrip('/')
+    today = datetime.now(timezone.utc).date().isoformat()
+    entries = [
+        '  <url>'
+        f'<loc>{base}{path}</loc>'
+        f'<lastmod>{today}</lastmod>'
+        f'<changefreq>{frequency}</changefreq>'
+        f'<priority>{priority}</priority>'
+        '</url>'
+        for path, frequency, priority in _SITEMAP_ROUTES
+    ]
+    document = '\n'.join([
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+        *entries,
+        '</urlset>',
+        '',
+    ])
+    return Response(document, mimetype='application/xml')
+
+
+@pages.get('/.well-known/apple-app-site-association')
+def apple_app_site_association():
+    """Served only when real Apple identifiers are configured.
+
+    Apple requires this file be returned as JSON with no redirect. Publishing
+    placeholder identifiers would break universal links for whoever really
+    owns them, so an unconfigured deployment returns 404 instead.
+    """
+    team_id = current_app.config.get('APPLE_TEAM_ID')
+    bundle_id = current_app.config.get('APPLE_BUNDLE_ID')
+    if not team_id or not bundle_id:
+        return render_template('404.html'), 404
+    payload = {
+        'applinks': {
+            'details': [{
+                'appIDs': [f'{team_id}.{bundle_id}'],
+                'components': [
+                    {'/': '/fixtures/*', 'comment': 'Fixture detail'},
+                    {'/': '/teams/*', 'comment': 'Team detail'},
+                    {'/': '/competitions/*', 'comment': 'Competition detail'},
+                    {'/': '/calendar', 'comment': 'Calendar'},
+                ],
+            }],
+        },
+        'webcredentials': {'apps': [f'{team_id}.{bundle_id}']},
+    }
+    return Response(
+        json.dumps(payload, indent=2),
+        mimetype='application/json',
+        headers={'Cache-Control': 'public, max-age=3600'},
+    )
 
 
 def _fixture_from_link(canonical_fixture_id):

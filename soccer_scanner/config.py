@@ -19,6 +19,8 @@ class Config:
     DATABASE_POOL_TIMEOUT = int(os.getenv('DATABASE_POOL_TIMEOUT', '5'))
     DATABASE_POOL_RECYCLE = int(os.getenv('DATABASE_POOL_RECYCLE', '300'))
     OPS_ADMIN_TOKEN = os.getenv('OPS_ADMIN_TOKEN')
+    APPLE_TEAM_ID = os.getenv('APPLE_TEAM_ID')
+    APPLE_BUNDLE_ID = os.getenv('APPLE_BUNDLE_ID')
     REDIS_CONNECT_TIMEOUT = 1
     REDIS_READ_TIMEOUT = 1
     CACHE_NAMESPACE = 'soccer-scanner:v1'

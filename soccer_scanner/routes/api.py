@@ -165,6 +165,35 @@ def capabilities_v2():
     })
 
 
+@api.get('/v2/app-config')
+def app_config_v2():
+    """Non-sensitive client configuration for web and native clients.
+
+    Only values a client may legitimately branch on are exposed. Connection
+    strings, tokens and provider keys are never included.
+    """
+    build = current_app.extensions['build_info'].as_public_dict()
+    return jsonify({
+        'apiVersion': 'v2',
+        'publicBaseUrl': current_app.config['PUBLIC_BASE_URL'],
+        'environment': build['environment'],
+        'webVersion': build['version'],
+        # Clients older than this must prompt to upgrade rather than guess at
+        # response shapes they cannot parse.
+        'minimumSupportedClient': {'ios': '1.0.0', 'web': '2.0.0'},
+        'features': current_app.extensions['feature_flags'].as_dict(),
+        'defaults': {
+            'timezone': 'UTC',
+            'scoresHiddenByDefault': True,
+        },
+        'links': {
+            'privacy': '/privacy',
+            'terms': '/terms',
+            'dataSources': '/data-sources',
+        },
+    })
+
+
 @api.get('/internal/identity-report')
 def identity_report():
     configured_token = str(current_app.config.get('OPS_ADMIN_TOKEN') or '')
