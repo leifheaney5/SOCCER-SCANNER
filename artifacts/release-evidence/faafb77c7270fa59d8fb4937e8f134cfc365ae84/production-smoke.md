@@ -40,3 +40,26 @@ pip-audit no known vulnerabilities
   is unreliable. Fix: back the registry with Redis, as the rate limiter already is.
 - FOOTBALL_DATA_API_KEY unset: ESPN remains a single point of failure.
 - tests/browser/fixtures-dashboard.spec.js:367 flakes ~1 in 8-18 on WebKit only.
+
+## Continuous monitoring — confirmed live
+
+The scheduled synthetic monitor is firing against production and passing:
+
+    2026-08-05T20:15:14Z  schedule  completed  success
+    2026-08-05T21:48:00Z  schedule  completed  success
+
+This is the definitive evidence for Phase 1's headline exit criterion — a
+production fixture outage now produces a failed workflow run without anyone
+watching. Before this merge, nothing did.
+
+Observed caveat: the workflow declares `*/15 * * * *`, but the two observed runs
+were ~93 minutes apart. GitHub Actions treats `schedule` as best-effort and
+throttles it under load, so the real detection window is wider than 15 minutes.
+Do not document a 15-minute guarantee. If a tighter bound is required, an
+external uptime service is the correct mechanism.
+
+## Final revision
+
+Production settled on `4ad7d2bc511f724c89e97173538df8ce51ad049a` (the merge
+above plus a documentation revert). Verified: `blocking: []`, shared Redis rate
+limiting ready, durable PostgreSQL at schema `20260804_01`, monitor 4/4.
