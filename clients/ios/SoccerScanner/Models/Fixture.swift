@@ -100,8 +100,10 @@ public struct Fixture: Decodable, Identifiable, Hashable, Sendable {
         localDate = try container.decodeIfPresent(String.self, forKey: .localDate)
 
         // The API sends either {"code": "..."} or a bare string.
+        // `try?` flattens the optional from decodeIfPresent, so this binds a
+        // non-optional StatusObject.
         if let object = try? container.decodeIfPresent(StatusObject.self, forKey: .status) {
-            status = MatchStatus.fromProviderCode(object?.code)
+            status = MatchStatus.fromProviderCode(object.code)
         } else if let raw = try? container.decodeIfPresent(String.self, forKey: .status) {
             status = MatchStatus.fromProviderCode(raw)
         } else {
@@ -161,13 +163,16 @@ public struct FixtureDay: Decodable, Sendable {
 /// is a distinct type rather than an `ISO8601DateFormatter` extension: adding a
 /// `date(from:)` method there would shadow the built-in and recurse.
 public enum FixtureDateParser {
-    private static let withFractionalSeconds: ISO8601DateFormatter = {
+    // ISO8601DateFormatter is documented as thread-safe for parsing, and these
+    // are configured once and never mutated afterwards. `nonisolated(unsafe)`
+    // states that explicitly rather than paying to rebuild a formatter per call.
+    nonisolated(unsafe) private static let withFractionalSeconds: ISO8601DateFormatter = {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         return formatter
     }()
 
-    private static let plain: ISO8601DateFormatter = {
+    nonisolated(unsafe) private static let plain: ISO8601DateFormatter = {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime]
         return formatter

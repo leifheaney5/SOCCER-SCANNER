@@ -68,9 +68,17 @@ _SITEMAP_ROUTES = (
 )
 
 
+def _is_production():
+    return current_app.extensions['build_info'].environment.lower() in {'production', 'prod'}
+
+
 @pages.get('/robots.txt')
 def robots():
     base = current_app.config['PUBLIC_BASE_URL'].rstrip('/')
+    # A crawlable staging environment competes with production for the same
+    # content, so every non-production deployment refuses indexing outright.
+    if not _is_production():
+        return Response('User-agent: *\nDisallow: /\n', mimetype='text/plain')
     lines = ['User-agent: *', 'Allow: /']
     lines += [f'Disallow: {path}' for path in _NON_INDEXABLE]
     lines += ['', f'Sitemap: {base}/sitemap.xml', '']

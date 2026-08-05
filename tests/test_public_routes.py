@@ -1,5 +1,7 @@
 import json
+import os
 import unittest
+from unittest.mock import patch
 
 from soccer_scanner import create_app
 
@@ -53,10 +55,15 @@ class TermsRouteTest(unittest.TestCase):
 
 class RobotsAndSitemapTest(unittest.TestCase):
     def setUp(self):
-        self.app = create_app({
-            'TESTING': True,
-            'PUBLIC_BASE_URL': 'https://soccerscanner.pro',
-        })
+        # Only production advertises itself to crawlers.
+        with patch.dict(os.environ, {
+            'APP_ENVIRONMENT': 'production',
+            'GIT_COMMIT_SHA': '0123456789abcdef0123456789abcdef01234567',
+        }, clear=False):
+            self.app = create_app({
+                'TESTING': True,
+                'PUBLIC_BASE_URL': 'https://soccerscanner.pro',
+            })
         self.client = self.app.test_client()
 
     def test_robots_is_plain_text_and_points_at_the_sitemap(self):
@@ -73,6 +80,16 @@ class RobotsAndSitemapTest(unittest.TestCase):
 
         self.assertIn('Disallow: /health/', body)
         self.assertIn('Disallow: /api/', body)
+
+    def test_non_production_environments_refuse_indexing(self):
+        # Staging must not compete with production for the same content.
+        with patch.dict(os.environ, {'APP_ENVIRONMENT': 'staging'}, clear=False):
+            staging = create_app({'TESTING': True})
+        body = staging.test_client().get('/robots.txt').get_data(as_text=True)
+
+        self.assertIn('Disallow: /', body)
+        self.assertNotIn('Allow: /', body)
+        self.assertNotIn('Sitemap:', body)
 
     def test_sitemap_is_valid_xml_with_absolute_canonical_urls(self):
         response = self.client.get('/sitemap.xml')
