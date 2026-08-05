@@ -69,6 +69,12 @@ Set `FOOTBALL_DATA_API_KEY` on both Railway services to activate the fallback.
 `/health/providers` reports `singleProvider: true` until a second provider is
 usable.
 
+Note: `lastSuccessAt` is stamped on every request that serves that provider's
+data, including a cache hit, not only on an actual upstream call. It means
+"this provider's data last served a request", not "the provider was last
+reached upstream". Skew between the two is bounded by `FIXTURE_CACHE_TTL`
+(60s in production).
+
 ## Rollback
 
 Use Railway's deployment history to redeploy the last known-good commit only when its schema expectations remain compatible with the migrated database. Alembic downgrades are not an automatic rollback mechanism. Follow [database migrations](database-migrations.md) and [backup and recovery](backup-and-recovery.md), then run production smoke with the rollback SHA.

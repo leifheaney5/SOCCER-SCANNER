@@ -43,6 +43,29 @@ def stub_provider(name, result):
     return provider
 
 
+class _RaisesForKeySubstring:
+    """Cache stand-in that raises a non-`_ProviderFailure` exception the
+    first time a key containing `raise_for` is filled, then delegates
+    everything else to a real cache. Simulates faults such as
+    cache_backend.py's oversized-value `ValueError` or a Redis `TimeoutError`
+    that are not part of the provider-outcome vocabulary."""
+
+    def __init__(self, real_cache, raise_for):
+        self.real_cache = real_cache
+        self.raise_for = raise_for
+
+    def get_or_load(self, key, loader, **kwargs):
+        if self.raise_for in key:
+            raise ValueError('boom: internal serialization detail leak-token-XYZ123')
+        return self.real_cache.get_or_load(key, loader, **kwargs)
+
+    def get(self, key, **kwargs):
+        return self.real_cache.get(key, **kwargs)
+
+    def set(self, key, value, **kwargs):
+        return self.real_cache.set(key, value, **kwargs)
+
+
 def build_service(espn_result, football_result, registry):
     return CanonicalFixtureService(
         stub_provider('espn', espn_result),
@@ -139,6 +162,71 @@ class ProviderHealthRecordingTest(unittest.TestCase):
         self.assertNotEqual(
             first_observed['football-data'], second_observed['football-data']
         )
+
+    def test_a_partial_outcome_is_recorded_as_degraded(self):
+        registry = ProviderHealthRegistry()
+        service = build_service(
+            outcome('espn', ProviderStatus.PARTIAL, ('timeout',)),
+            outcome('football-data', ProviderStatus.SUCCESS),
+            registry,
+        )
+
+        service.fixtures_for_date(datetime(2026, 8, 5).date(), 'UTC')
+
+        recorded = {
+            item['name']: item for item in registry.snapshot()['providers']
+        }
+        self.assertEqual(recorded['espn']['status'], 'degraded')
+
+    def test_a_rate_limited_outcome_is_recorded_as_unavailable(self):
+        registry = ProviderHealthRegistry()
+        service = build_service(
+            outcome('espn', ProviderStatus.RATE_LIMITED, ('rate_limited',)),
+            outcome('football-data', ProviderStatus.SUCCESS),
+            registry,
+        )
+
+        service.fixtures_for_date(datetime(2026, 8, 5).date(), 'UTC')
+
+        recorded = {
+            item['name']: item for item in registry.snapshot()['providers']
+        }
+        self.assertEqual(recorded['espn']['status'], 'unavailable')
+
+    def test_a_non_provider_failure_from_the_cache_still_lets_the_second_provider_run(self):
+        # cache_backend.py raises plain ValueError/TimeoutError for faults
+        # (oversized value, Redis timeout) that are unrelated to what the
+        # provider itself returned. Before this fix such an exception escaped
+        # the loop entirely: the second provider was never attempted and
+        # neither provider's outcome was recorded.
+        registry = ProviderHealthRegistry()
+        real_cache = MemoryCacheBackend()
+        cache = _RaisesForKeySubstring(real_cache, 'espn')
+        espn = stub_provider('espn', outcome('espn', ProviderStatus.SUCCESS))
+        football_data = stub_provider(
+            'football-data', outcome('football-data', ProviderStatus.SUCCESS)
+        )
+        service = CanonicalFixtureService(
+            espn,
+            football_data,
+            cache,
+            provider_health=registry,
+            now=lambda: datetime(2026, 8, 5, 12, tzinfo=timezone.utc),
+        )
+
+        service.fixtures_for_date(datetime(2026, 8, 5).date(), 'UTC')
+
+        # (a) the second provider is still attempted.
+        self.assertEqual(football_data.fetch_range.call_count, 1)
+        recorded = {
+            item['name']: item for item in registry.snapshot()['providers']
+        }
+        # (b) the first provider is recorded unavailable.
+        self.assertEqual(recorded['espn']['status'], 'unavailable')
+        # (c) detail carries no exception text.
+        self.assertEqual(recorded['espn']['detail'], 'internal_error')
+        self.assertNotIn('boom', recorded['espn']['detail'])
+        self.assertNotIn('XYZ123', recorded['espn']['detail'])
 
     def test_the_registry_is_wired_into_the_application_service(self):
         app = create_app({'TESTING': True})

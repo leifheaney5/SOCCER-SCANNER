@@ -142,6 +142,20 @@ class CanonicalFixtureService:
                 stale_lookup = self.cache.get(cache_key, allow_stale=True)
                 if stale_lookup.status == 'stale':
                     stale.append(_dict_outcome(stale_lookup.value))
+            except Exception:
+                # Anything else (a cache-layer fault such as an oversized or
+                # unserializable value, a Redis timeout, a parse error in
+                # _outcome_dict, ...) must not take the whole request down:
+                # the other provider still deserves a chance, and the health
+                # registry must not be left reporting stale, last-known-good
+                # data while this provider is actually failing every request.
+                # `detail` is a fixed, controlled string — never the exception
+                # message — because it is echoed by the public unauthenticated
+                # /health/providers endpoint.
+                provider_cache[provider_name] = 'miss'
+                if self.provider_health is not None:
+                    self.provider_health.record(provider_name, 'unavailable', detail='internal_error')
+                continue
 
         usable_current = [
             outcome for outcome in current
@@ -289,6 +303,13 @@ class CanonicalFixtureService:
         return None
 
     def _record_provider_health(self, outcome):
+        # Runs on every request, including a cache hit (see `get_or_load`
+        # above), so a status of 'ok' here stamps `lastSuccessAt` even when no
+        # upstream call happened this request. It therefore means "this
+        # provider's data last served a request successfully", not "the
+        # provider was last actually reached upstream". The two can diverge
+        # by at most `cache_ttl_seconds` (60s in production via
+        # FIXTURE_CACHE_TTL), which is an accepted, bounded skew.
         if self.provider_health is None:
             return
         categories = ','.join(outcome.failureCategories)
