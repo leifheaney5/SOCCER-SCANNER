@@ -28,7 +28,7 @@
 
 **Interfaces:**
 - Consumes: nothing.
-- Produces: `ProviderHealthRegistry` with `record(name: str, status: str, detail: str | None = None) -> None`, `snapshot() -> dict`, and `configured_count: int`. Status values are exactly `'ok'`, `'degraded'`, `'unavailable'`, `'disabled'`. `snapshot()` returns `{'status': str, 'providers': list[dict], 'lastSuccessAt': str | None, 'singleProvider': bool}` where each provider dict is `{'name', 'status', 'detail', 'lastObservedAt', 'lastSuccessAt'}` and timestamps are ISO-8601 UTC strings or `None`.
+- Produces: `ProviderHealthRegistry` with `record(name: str, status: str, detail: str | None = None) -> None` and `snapshot() -> dict`. Status values are exactly `'ok'`, `'degraded'`, `'unavailable'`, `'disabled'`. `snapshot()` returns `{'status': str, 'providers': list[dict], 'lastSuccessAt': str | None, 'singleProvider': bool}` where each provider dict is `{'name', 'status', 'detail', 'lastObservedAt', 'lastSuccessAt'}` and timestamps are ISO-8601 UTC strings or `None`.
 
 - [ ] **Step 1: Write the failing test**
 
