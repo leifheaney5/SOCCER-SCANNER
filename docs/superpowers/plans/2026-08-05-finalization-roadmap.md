@@ -42,19 +42,33 @@ Phases are ordered by *risk retired per unit of effort*, not by the original aud
 
 **Detailed plan:** `2026-08-05-phase-1-provider-reliability.md`
 
-**Status (2026-08-05): tasks 1-7 implemented, one residual defect open.** All seven tasks are
-committed and reviewed; CI is green; the branch is deployed to staging and the synthetic
-monitor passes 4/4 there. The final whole-branch review produced 8 Important findings, all
-fixed; the scoped re-review confirmed all 9 addressed but found that the fix wave itself
-introduced a load-bearing regression: the new generic exception arm in
-`fixture_service.py` records provider health but does not append to `failed`, so a
-half-outage (one provider dead, the other legitimately empty) yields `empty_confirmed`
-and the monitor reports fully green. Phase 1's exit criteria are NOT met until that is
-closed and the branch is deployed to production.
+**Status: COMPLETE and deployed 2026-08-05.** Merged to `main` as `faafb77`; production
+serves that exact SHA with `blocking: []`, shared Redis rate limiting and cache, durable
+PostgreSQL at schema `20260804_01`. The synthetic monitor passes 4/4 against production and
+its 15-minute schedule is now active on the default branch, so continuous outage detection
+is live. Evidence: `artifacts/release-evidence/faafb77c7270fa59d8fb4937e8f134cfc365ae84/`.
+
+**Two exit criteria are met with a caveat, and one carried forward:**
+- A production fixture outage now produces a failed workflow run within 15 minutes. Met.
+- `/health/ready` never 503s solely because a provider is down. Met and verified.
+- `/health/providers` shows per-provider status — met, but **the registry is per-gunicorn
+  worker**, so the endpoint alternates between `ok` and `unknown` across workers (verified
+  in production: 8 requests returned 4x each). Outage *detection* is unaffected because the
+  monitor probes the real fixture endpoint, but per-provider *diagnosis* is unreliable.
+  This is the same class of defect as the process-local rate limiter this branch replaced.
+  **Carried into Phase 2 as the first item: back the registry with Redis.**
+- Staging fixture fetching: resolved — the earlier failure did not reproduce.
+
+Still open and unchanged: `FOOTBALL_DATA_API_KEY` is unset in both environments, so ESPN
+remains a single point of failure.
 
 ---
 
 ## Phase 2 — Remaining P0 user-facing gaps
+
+**Carried over from Phase 1:** back `ProviderHealthRegistry` with Redis so `/health/providers`
+is consistent across gunicorn workers. Small, and it closes the last gap in Phase 1's
+observability story.
 
 **Scope**
 - **Header timezone control.** Compact control beside the score toggle: `[America/New_York · EDT] [Reveal scores]` on desktop, `[EDT] [eye]` on mobile. Searchable IANA selector, browser-zone and UTC options, offset and abbreviation shown, keyboard navigation, Escape-to-close, focus restoration, complete accessible name. Shares state with the existing filter control — one timezone value, not two.
