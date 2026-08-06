@@ -28,8 +28,13 @@ export function sanitizeFixturePayload(payload, cachedAt = new Date().toISOStrin
     const matches = Array.isArray(clean.matches)
         ? clean.matches.filter(match => isOfflineEligible(match))
         : [];
+    // Neither field is read by any client code, and neither can be recomputed
+    // here without duplicating the server's timezone bucketing. Carrying their
+    // pre-filter values into a snapshot whose match list has been filtered
+    // would store something simultaneously stale and unread.
+    const {matchStatistics: _statistics, featured_matches: _featured, ...rest} = clean;
     return {
-        ...clean,
+        ...rest,
         matches,
         total_matches: matches.length,
         totalMatches: matches.length,
