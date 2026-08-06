@@ -10,9 +10,12 @@ import {fixturePayload} from './test-data.js';
 function mappedCountriesPayload() {
     const payload = structuredClone(fixturePayload);
     payload.matches = payload.matches.slice(0, 3);
+    // matches[0] and [1] are Premier League fixtures; matches[2] is the
+    // Scottish Premiership fixture (Celtic vs Dundee) — the assigned areas
+    // stay consistent with the competitions actually on each match.
     payload.matches[0].competition.area = {name: 'England'};
     payload.matches[1].competition.area = {name: 'England'};
-    payload.matches[2].competition.area = {name: 'Spain'};
+    payload.matches[2].competition.area = {name: 'Scotland'};
     return payload;
 }
 
@@ -36,7 +39,7 @@ test('the country control is visible, lists resolved countries, and filters fixt
     await expect(control).toBeVisible();
 
     const options = await page.locator('#country-filter option').allTextContents();
-    expect(options).toEqual(['All countries', 'England', 'Spain']);
+    expect(options).toEqual(['All countries', 'England', 'Scotland']);
 
     await expect(page.locator('.fixture-card')).toHaveCount(3);
     await page.locator('#country-filter').selectOption('England');

@@ -452,9 +452,13 @@ def test_a_composed_fixture_for_a_mapped_competition_gains_a_country():
     result = scanner.fixtures_for_date(date(2026, 8, 3), 'UTC')
     composed = result['matches'][0]
 
+    # `merge_fixtures` and `_merge_entity` already deep-copy every fixture
+    # (and each entity dict within it) before `_compose` runs, so `match`
+    # here and `composed` never share a `competition` dict to begin with —
+    # asserting `match['competition']` stayed untouched would prove nothing
+    # about whether `_compose`'s own enrichment step copies or mutates.
+    # This only verifies the enrichment outcome itself.
     assert composed['competition']['area'] == {'name': 'England'}
-    # The registry must not mutate the fixture handed to it.
-    assert 'area' not in match['competition']
 
 
 def test_a_composed_fixture_for_an_unmapped_competition_has_no_area_key():
@@ -487,3 +491,25 @@ def test_a_service_without_a_competition_registry_composes_without_an_area():
     composed = result['matches'][0]
 
     assert 'area' not in composed['competition']
+
+
+def test_competition_enrichment_persists_across_a_warm_provider_cache():
+    # Mirrors test_streaming_enrichment_persists_across_a_warm_provider_cache:
+    # `_compose` (and therefore competition enrichment) runs on every
+    # `fixtures_for_date` call, including a cache hit that never calls the
+    # provider's `fetch_range` again — only the recomposed cached provider
+    # outcome is re-enriched. A regression that scoped enrichment to the cold
+    # `load()` path only would still pass every single-call test above.
+    match = fixture('espn', '1')  # competition.canonicalId == 'premier-league'
+    scanner, espn, football = service(
+        outcome('espn', ProviderStatus.SUCCESS, [match]),
+        outcome('football-data', ProviderStatus.DISABLED, completed=()),
+        competition_registry=competition_registry(),
+    )
+
+    first = scanner.fixtures_for_date(date(2026, 8, 3), 'UTC')
+    second = scanner.fixtures_for_date(date(2026, 8, 3), 'UTC')
+
+    assert len(espn.calls) == 1
+    assert first['matches'][0]['competition']['area'] == {'name': 'England'}
+    assert second['matches'][0]['competition']['area'] == {'name': 'England'}
