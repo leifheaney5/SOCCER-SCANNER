@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "lastVerified": "2026-08-06",
+  "note": "Multi-country competitions (UEFA Champions League, Europa League, Copa Libertadores, World Cup qualifiers) are deliberately absent: they have no single country and must not be forced into one.",
+  "competitions": [
+    {"canonicalId": "premier-league", "aliases": ["premier league", "english premier league", "epl"], "country": "England"},
+    {"canonicalId": "championship", "aliases": ["championship", "efl championship"], "country": "England"},
+    {"canonicalId": "la-liga", "aliases": ["laliga", "la liga", "primera division"], "country": "Spain"},
+    {"canonicalId": "serie-a", "aliases": ["serie a", "italian serie a"], "country": "Italy"},
+    {"canonicalId": "bundesliga", "aliases": ["bundesliga", "german bundesliga"], "country": "Germany"},
+    {"canonicalId": "ligue-1", "aliases": ["ligue 1", "french ligue 1"], "country": "France"},
+    {"canonicalId": "eredivisie", "aliases": ["eredivisie"], "country": "Netherlands"},
+    {"canonicalId": "primeira-liga", "aliases": ["primeira liga", "liga portugal"], "country": "Portugal"},
+    {"canonicalId": "mls", "aliases": ["mls", "major league soccer"], "country": "United States"},
+    {"canonicalId": "liga-mx", "aliases": ["liga mx"], "country": "Mexico"},
+    {"canonicalId": "brasileirao", "aliases": ["brasileirao", "brasileiro serie a", "campeonato brasileiro serie a"], "country": "Brazil"},
+    {"canonicalId": "primera-division-argentina", "aliases": ["liga profesional argentina", "argentine liga profesional"], "country": "Argentina"},
+    {"canonicalId": "scottish-premiership", "aliases": ["scottish premiership", "premiership"], "country": "Scotland"},
+    {"canonicalId": "belgian-pro-league", "aliases": ["belgian pro league", "jupiler pro league"], "country": "Belgium"},
+    {"canonicalId": "super-lig", "aliases": ["super lig", "turkish super lig"], "country": "Turkey"},
+    {"canonicalId": "j1-league", "aliases": ["j1 league", "j league"], "country": "Japan"}
+  ]
+}
