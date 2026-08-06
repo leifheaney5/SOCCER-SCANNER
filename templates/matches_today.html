@@ -7,7 +7,7 @@
 <div class="header-actions">
     <div id="timezone-control" class="timezone-control" data-open="false">
         <button id="timezone-trigger" class="timezone-trigger" type="button"
-                aria-haspopup="listbox" aria-expanded="false"
+                aria-haspopup="dialog" aria-expanded="false"
                 aria-controls="timezone-listbox">
             <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                 <path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18ZM12 7v5l3 2"/>
@@ -21,7 +21,7 @@
                    autocomplete="off" placeholder="Search timezones"
                    aria-controls="timezone-options">
             <ul id="timezone-options" class="timezone-options" role="listbox"
-                aria-label="Timezones"></ul>
+                aria-label="Timezones" tabindex="0"></ul>
         </div>
     </div>
     <button id="score-toggle" class="score-toggle" type="button" aria-pressed="false" aria-label="Reveal scores">

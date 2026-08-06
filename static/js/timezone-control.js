@@ -67,7 +67,12 @@ export function createTimezoneControl({root, getTimeZone, onChange}) {
         let lastGroup = null;
         entries.forEach((entry, index) => {
             if (entry.group !== lastGroup) {
-                fragment.append(node('li', 'timezone-group-label', entry.group));
+                const heading = node('li', 'timezone-group-label', entry.group);
+                // A plain <li> defaults to role="listitem", which is not a
+                // valid child of role="listbox" (only "option" or "group"
+                // are). This heading is not selectable, so it is presentational.
+                heading.setAttribute('role', 'presentation');
+                fragment.append(heading);
                 lastGroup = entry.group;
             }
             const descriptor = formatTimezoneLabel(entry.zone);
@@ -76,13 +81,23 @@ export function createTimezoneControl({root, getTimeZone, onChange}) {
             option.setAttribute('role', 'option');
             option.dataset.zone = entry.zone;
             option.setAttribute('aria-selected', String(entry.zone === selected));
+            // DOM focus stays on the search input, which drives keyboard
+            // navigation via aria-activedescendant; options are never
+            // Tab-stopped. tabindex="-1" still marks them as programmatically
+            // focusable, which is what satisfies "a listbox must contain
+            // focusable content" without changing that interaction model.
+            option.tabIndex = -1;
             option.append(
                 node('span', 'timezone-option-zone', entry.zone.replaceAll('_', ' ')),
                 node('span', 'timezone-option-meta', `${descriptor.abbreviation} · ${descriptor.offsetLabel}`),
             );
             fragment.append(option);
         });
-        if (entries.length === 0) fragment.append(node('li', 'timezone-empty', 'No matching timezones'));
+        if (entries.length === 0) {
+            const empty = node('li', 'timezone-empty', 'No matching timezones');
+            empty.setAttribute('role', 'presentation');
+            fragment.append(empty);
+        }
         list.replaceChildren(fragment);
     }
 
@@ -133,6 +148,17 @@ export function createTimezoneControl({root, getTimeZone, onChange}) {
     function handleOutsidePointer(event) {
         if (root.contains(event.target)) return;
         closePopover();
+        // The browser's own mousedown default action (which runs after this
+        // capture-phase pointerdown listener) decides where focus actually
+        // lands: on the clicked element if it is focusable, or on <body> if
+        // it is not. Deferring lets that settle first, so an outside click
+        // on plain content (body ends up focused) restores focus to the
+        // trigger — consistent with Escape and with choosing an option —
+        // while an outside click on another focusable control keeps that
+        // control's own focus instead of stealing it back.
+        setTimeout(() => {
+            if (document.activeElement === document.body) trigger.focus();
+        }, 0);
     }
 
     function chooseZone(zone) {

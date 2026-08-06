@@ -3,13 +3,10 @@ body {
 }
 
 .header-actions {
+    position: relative;
     display: flex;
     align-items: center;
     gap: 8px;
-}
-
-.timezone-control {
-    position: relative;
 }
 
 .timezone-trigger {
@@ -40,6 +37,13 @@ body {
     color: var(--accent-secondary);
 }
 
+/*
+ * Positioned relative to `.header-actions`, not `.timezone-control`: the
+ * score toggle sits to the trigger's right inside the same header cell, so
+ * `.timezone-control`'s own right edge is not the true available edge of
+ * the viewport. Anchoring to the shared wrapper's `right: 0` keeps the
+ * popover flush with the actual right-hand boundary at every width.
+ */
 .timezone-popover {
     position: absolute;
     z-index: 60;

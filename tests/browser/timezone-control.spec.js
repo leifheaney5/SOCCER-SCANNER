@@ -44,6 +44,17 @@ test('the trigger sits in the header and shows the current zone abbreviation', a
     await expect(trigger.locator('[data-timezone-label]')).toHaveText('UTC');
 });
 
+test('aria-haspopup and aria-controls describe the actual popup, not the listbox nested inside it', async ({page}) => {
+    const trigger = page.locator('#timezone-trigger');
+    // #timezone-listbox — the element aria-controls references and the one
+    // the trigger toggles — has role="dialog"; the role="listbox" is two
+    // levels deeper on #timezone-options, so aria-haspopup must describe
+    // the dialog, not the listbox.
+    await expect(trigger).toHaveAttribute('aria-haspopup', 'dialog');
+    await expect(trigger).toHaveAttribute('aria-controls', 'timezone-listbox');
+    await expect(page.locator('#timezone-listbox')).toHaveAttribute('role', 'dialog');
+});
+
 test('the trigger accessible name includes the IANA zone identifier', async ({page}) => {
     const trigger = page.locator('#timezone-trigger');
     await expect(trigger).toHaveAccessibleName(/UTC/);
@@ -127,6 +138,28 @@ test('changing the zone changes the rendered kickoff time', async ({page}) => {
     await page.locator('#timezone-options [role="option"]', {hasText: 'Asia/Tokyo'}).click();
 
     await expect(kickoff).toHaveText('09:30 AM');
+});
+
+test('the popover stays fully inside the viewport at 320px', async ({page}) => {
+    await page.setViewportSize({width: 320, height: 800});
+    await page.locator('#timezone-trigger').click();
+    await expect(page.locator('#timezone-listbox')).toBeVisible();
+
+    const box = await page.locator('#timezone-listbox').boundingBox();
+    expect(box).not.toBeNull();
+    expect(box.x).toBeGreaterThanOrEqual(0);
+    expect(box.x + box.width).toBeLessThanOrEqual(320);
+});
+
+test('clicking outside the popover closes it and restores focus to the trigger', async ({page}) => {
+    const trigger = page.locator('#timezone-trigger');
+    await trigger.click();
+    await expect(page.locator('#timezone-listbox')).toBeVisible();
+
+    await page.locator('#page-title').click();
+    await expect(page.locator('#timezone-listbox')).toBeHidden();
+    await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    await expect(trigger).toBeFocused();
 });
 
 test('the control is reachable and operable by keyboard alone', async ({page}) => {
