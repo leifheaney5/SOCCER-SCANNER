@@ -81,4 +81,4 @@ The smoke checks root/live/ready/version, exact SHA and asset tokens, the fixtur
 
 ## Privacy and boundaries
 
-Score preference and favorites stay in browser `localStorage`; there are no user accounts. Client favorites are not notification consent. Events, lineups, detailed statistics, broadcast listings, and notifications remain unavailable until legitimate providers and required consent infrastructure exist.
+Score preference and favorites stay in browser `localStorage`; there are no user accounts. Client favorites are not notification consent. Events, lineups, detailed statistics, and notifications remain unavailable until legitimate providers and required consent infrastructure exist. Streaming services are shown only when a provider reports them for a fixture; each service's region is shown when the provider supplies one and labelled "Region unknown" otherwise; links point only at a service's own official homepage, never a guessed URL, and are omitted entirely for any service the app cannot verify. No match streams are hosted or provided by this application.

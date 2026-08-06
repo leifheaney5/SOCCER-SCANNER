@@ -163,7 +163,11 @@ function createDetailsButton(match, featured = false) {
     return button;
 }
 
-function streamingServiceNames(match) {
+// Older cached payloads (from before the streaming registry existed) carry
+// only the raw provider-reported broadcast names, with no verified service
+// or region attached. Those names are shown as plain, unlinked text so the
+// section does not disappear for a visitor with a warm cache.
+function legacyStreamingServiceNames(match) {
     const seen = new Set();
     const names = [];
     for (const item of (Array.isArray(match?.broadcasts) ? match.broadcasts : [])) {
@@ -175,6 +179,51 @@ function streamingServiceNames(match) {
         names.push(name);
     }
     return names;
+}
+
+// Reads the enriched `match.streaming` array produced by the streaming
+// registry (id, displayName, region, regionKnown, officialUrl, source).
+// Returns null when the payload predates enrichment, signalling the caller
+// to fall back to the raw broadcast names instead.
+function enrichedStreamingServices(match) {
+    if (!Array.isArray(match?.streaming)) return null;
+    return match.streaming.filter(
+        item => item && typeof item.displayName === 'string' && item.displayName.trim(),
+    );
+}
+
+// Normalizes both payload shapes into one array so callers (the card and the
+// detail panel) never need to know which shape they received. Legacy
+// entries carry no verified region or link — `region`/`officialUrl` stay
+// null rather than guessing either.
+export function resolveStreamingServices(match) {
+    const enriched = enrichedStreamingServices(match);
+    if (enriched !== null) return enriched;
+    return legacyStreamingServiceNames(match).map(name => ({
+        id: null,
+        displayName: name,
+        region: null,
+        regionKnown: false,
+        officialUrl: null,
+        source: null,
+    }));
+}
+
+function createStreamingNode(match) {
+    const services = resolveStreamingServices(match);
+    if (!services.length) return null;
+    if (Array.isArray(match?.streaming)) {
+        const [first, ...rest] = services;
+        const label = `${first.displayName} · ${first.region}`;
+        const summary = node('span', 'fixture-broadcast', rest.length ? `${label} +${rest.length}` : label);
+        const watchWhere = services.map(service => `${service.displayName} (${service.region})`).join(', ');
+        summary.setAttribute('aria-label', `Watch on ${watchWhere}`);
+        return summary;
+    }
+    const text = `Streaming: ${services.map(service => service.displayName).join(', ')}`;
+    const summary = node('span', 'fixture-broadcast', text);
+    summary.setAttribute('aria-label', text);
+    return summary;
 }
 
 function createFixtureCard(match, revealed, selectedId = null) {
@@ -198,10 +247,8 @@ function createFixtureCard(match, revealed, selectedId = null) {
     if (kind !== 'upcoming') status.append(node('span', 'fixture-kickoff', formatKickoff(match?.utcDate)));
     const freshness = formatFreshness(match?.sourceUpdatedAt || match?.lastUpdated);
     if (freshness) status.append(node('span', 'fixture-freshness', freshness));
-    const services = streamingServiceNames(match);
-    if (services.length) {
-        status.append(node('span', 'fixture-broadcast', `Streaming: ${services.join(', ')}`));
-    }
+    const streamingNode = createStreamingNode(match);
+    if (streamingNode) status.append(streamingNode);
 
     const action = node('div', 'fixture-action');
     action.append(createDetailsButton(match));
