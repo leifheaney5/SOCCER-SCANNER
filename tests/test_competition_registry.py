@@ -5,6 +5,27 @@ import unittest
 from soccer_scanner.services.competitions import CompetitionRegistry
 
 REGISTRY_PATH = Path('soccer_scanner/data/competition-countries.json')
+REAL_COMPETITION_NAMES_PATH = Path('tests/fixtures/providers/real-competition-names.json')
+
+# Expected outcome for every distinct competition name observed in a real
+# production payload (tests/fixtures/providers/real-competition-names.json).
+# This is the regression test for the defect where the registry resolved 0 of
+# 64 real fixtures: ESPN emits `canonicalId: null` for nearly every
+# competition and names them with a nationality-adjective prefix instead.
+REAL_COMPETITION_EXPECTATIONS = {
+    'Argentine Liga Profesional de Fútbol': 'Argentina',
+    'Bolivian Liga Profesional': 'Bolivia',
+    'Club Friendly': None,
+    'Copa do Brasil': None,
+    'English Carabao Cup': 'England',
+    'Leagues Cup': None,
+    'Mexican Liga de Expansión MX': 'Mexico',
+    'Peruvian Liga 1': 'Peru',
+    'UEFA Conference League Qualifying': None,
+    'UEFA Europa League Qualifying': None,
+    'Venezuelan Primera División': 'Venezuela',
+    "Women's Africa Cup of Nations": None,
+}
 
 
 class CompetitionRegistryTest(unittest.TestCase):
@@ -72,6 +93,27 @@ class CompetitionRegistryTest(unittest.TestCase):
         for entry in payload['competitions']:
             with self.subTest(entry=entry['canonicalId']):
                 self.assertTrue(entry['country'].strip())
+
+    def test_resolves_every_distinct_competition_in_a_real_production_payload(self):
+        # This is the test that would have caught the original defect: the
+        # registry resolved 0 of 64 real fixtures because ESPN emits
+        # `canonicalId: null` for nearly every competition and names them
+        # with a nationality-adjective prefix rather than a bare alias.
+        payload = json.loads(REAL_COMPETITION_NAMES_PATH.read_text(encoding='utf-8'))
+
+        seen = {}
+        for match in payload['matches']:
+            competition = match['competition']
+            seen[competition['name']] = competition.get('canonicalId')
+
+        self.assertEqual(set(seen), set(REAL_COMPETITION_EXPECTATIONS))
+
+        for name, canonical_id in seen.items():
+            with self.subTest(name=name):
+                self.assertEqual(
+                    self.registry.country_for(canonical_id, name),
+                    REAL_COMPETITION_EXPECTATIONS[name],
+                )
 
 
 if __name__ == '__main__':
