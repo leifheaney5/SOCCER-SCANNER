@@ -123,12 +123,23 @@ function populateCompetitions(matches) {
         syncUrl('replace');
     }
     const countrySelect = byId('country-filter');
+    const countryControl = countrySelect.closest('.select-control');
     const countries = [...new Set(matches.map(match => match?.competition?.area?.name).filter(Boolean))].sort();
     countrySelect.replaceChildren(
         new Option('All countries', ''),
         ...countries.map(country => new Option(country, country)),
     );
-    if (state.country && countries.includes(state.country)) {
+    // Fewer than two countries means the control cannot actually filter
+    // anything — offering only "All countries" is a non-functional control,
+    // so hide the wrapping label rather than leave it visibly empty.
+    const countryFilterUsable = countries.length >= 2;
+    if (countryControl) countryControl.hidden = !countryFilterUsable;
+    if (!countryFilterUsable) {
+        if (state.country) {
+            setState({country: ''}, {reason: 'reconcile'});
+            syncUrl('replace');
+        }
+    } else if (state.country && countries.includes(state.country)) {
         countrySelect.value = state.country;
     } else if (state.country) {
         setState({country: ''}, {reason: 'reconcile'});
