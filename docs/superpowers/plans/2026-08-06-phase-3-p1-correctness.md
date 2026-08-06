@@ -602,24 +602,45 @@ git commit -m "feat: move standings seasons into verified configuration"
 
 ---
 
-### Task 5: Recompute derived fields in the offline snapshot
+### Task 5: Drop stale derived fields from the offline snapshot
 
 **Files:**
 - Modify: `static/js/offline-cache.js`
 - Test: `tests/offline-cache.test.mjs`
 
+**Corrected premise — read this before anything else.** An earlier draft of this task
+claimed the offline snapshot could display counts that disagree with its contents. That is
+wrong, and it was verified wrong before this task was dispatched:
+
+- `featured_matches` is **not read by any client code**. `renderFeatured`
+  (`fixture-renderer.js:353`) calls `selectFeatured(matches)` and derives the featured
+  fixture from the filtered match list itself.
+- `matchStatistics` (and its nested `byTimeSlot`) is **not read by any client code** — the
+  only reference anywhere is a server-side assertion in `tests/test_fixture_service_v2.py`.
+- `total_matches` / `totalMatches` are only ever *written*, by `sanitizeFixturePayload`
+  itself. The `record.total_matches` read in `teams.js` is a different object from the team
+  analysis API.
+
+So no user-visible inconsistency exists today. What does exist is that
+`sanitizeFixturePayload` copies these fields into the cached snapshot with their pre-filter
+values, where they are simultaneously stale, unread, and taking up quota in a bounded cache.
+
+**The correct fix is therefore to drop them, not to recompute them.** Recomputing
+`byTimeSlot` client-side would mean duplicating the server's timezone bucketing logic
+(`fixture_service.py:429-447`) in JavaScript to keep a field nobody reads accurate — more
+code, a second source of truth, and no benefit.
+
 **Interfaces:**
 - Consumes: `isOfflineEligible` (already imported).
-- Produces: `sanitizeFixturePayload` additionally recomputes `matchStatistics` and `featured_matches` from the filtered list, and drops any provider-derived count that no longer matches.
-
-**The defect:** `sanitizeFixturePayload` filters `matches` by `isOfflineEligible` and updates `total_matches`/`totalMatches`, but the payload also carries `matchStatistics` (`fixture_service.py:248`) and `featured_matches` (`fixture_service.py:274`), which keep their pre-filter values. Offline, the page can show "12 matches" in a summary while listing four, and feature a match that was filtered out.
+- Produces: `sanitizeFixturePayload` omits `matchStatistics` and `featured_matches` from its
+  output, and keeps recomputing `total_matches`/`totalMatches` from the filtered list.
 
 - [ ] **Step 1: Write the failing test**
 
 Add to `tests/offline-cache.test.mjs`:
 
 ```javascript
-test('derived fields are recomputed from the filtered match list', () => {
+test('derived fields that cannot be recomputed offline are dropped, not carried stale', () => {
     const payload = {
         matches: [
             {canonicalFixtureId: 'fx_a', status: {code: 'FINISHED'}},
@@ -627,8 +648,10 @@ test('derived fields are recomputed from the filtered match list', () => {
             {canonicalFixtureId: 'fx_c', status: {code: 'PENALTIES'}},
             {canonicalFixtureId: 'fx_d', status: {code: 'POSTPONED'}},
         ],
-        // Pre-filter values that must not survive.
-        matchStatistics: {total: 4, live: 2, finished: 1},
+        // Pre-filter values. Nothing reads these, and neither can be recomputed
+        // client-side without duplicating server logic, so they must not be
+        // frozen into the snapshot at their stale values.
+        matchStatistics: {total: 4, byTimeSlot: {morning: 1, afternoon: 1, evening: 2, lateNight: 0}},
         featured_matches: [{canonicalFixtureId: 'fx_b', status: {code: 'IN_PLAY'}}],
         total_matches: 4,
     };
@@ -639,60 +662,59 @@ test('derived fields are recomputed from the filtered match list', () => {
     assert.deepEqual(clean.matches.map(m => m.canonicalFixtureId), ['fx_a', 'fx_d']);
     assert.equal(clean.total_matches, 2);
     assert.equal(clean.totalMatches, 2);
-    assert.equal(clean.matchStatistics.total, 2);
-    // A live match must not remain featured in a snapshot that excludes it.
-    assert.deepEqual(clean.featured_matches.map(m => m.canonicalFixtureId), []);
+    assert.equal(clean.matchStatistics, undefined);
+    assert.equal(clean.featured_matches, undefined);
 });
 
-test('a featured match that survives filtering is kept', () => {
-    const payload = {
-        matches: [{canonicalFixtureId: 'fx_a', status: {code: 'FINISHED'}}],
-        featured_matches: [{canonicalFixtureId: 'fx_a', status: {code: 'FINISHED'}}],
-    };
-
-    const clean = sanitizeFixturePayload(payload, '2026-08-06T00:00:00Z');
-
-    assert.deepEqual(clean.featured_matches.map(m => m.canonicalFixtureId), ['fx_a']);
-});
-
-test('statistics are absent rather than wrong when the payload had none', () => {
+test('a payload without those fields is unaffected', () => {
     const clean = sanitizeFixturePayload({
         matches: [{canonicalFixtureId: 'fx_a', status: {code: 'FINISHED'}}],
     }, '2026-08-06T00:00:00Z');
 
+    assert.equal(clean.total_matches, 1);
     assert.equal(clean.matchStatistics, undefined);
+    assert.equal(clean.featured_matches, undefined);
+});
+
+test('fields the client does read are preserved', () => {
+    const clean = sanitizeFixturePayload({
+        date: '2026-08-06',
+        timezone: 'UTC',
+        matches: [{canonicalFixtureId: 'fx_a', status: {code: 'FINISHED'},
+                   competition: {name: 'Premier League', area: {name: 'England'}}}],
+    }, '2026-08-06T00:00:00Z');
+
+    assert.equal(clean.date, '2026-08-06');
+    assert.equal(clean.timezone, 'UTC');
+    assert.equal(clean.matches[0].competition.area.name, 'England');
 });
 ```
-
-If `tests/offline-cache.test.mjs` does not already import `sanitizeFixturePayload`, add the import at the top following the existing test files' style.
 
 - [ ] **Step 2: Run it, expect failure**
 
 Run: `node --test tests/offline-cache.test.mjs`
-Expected: FAIL — `matchStatistics.total` is 4 and `featured_matches` still contains the live fixture.
+Expected: FAIL — `matchStatistics` and `featured_matches` are still present.
 
 - [ ] **Step 3: Implement**
 
-In `static/js/offline-cache.js`, after filtering `matches`, recompute the derived fields. Keep a field absent when the source payload did not carry it — inventing statistics is worse than omitting them:
+In `static/js/offline-cache.js`, destructure the unwanted keys out of the sanitised payload
+rather than deleting them after the fact, and explain why in a comment:
 
 ```javascript
-    const survivingIds = new Set(
-        matches.map(match => String(match?.canonicalFixtureId ?? match?.id ?? '')),
-    );
-    // Any fixture filtered out of the snapshot must also disappear from the
-    // fields derived from it, or the page reports counts and features
-    // matches it is not showing.
-    const featured = Array.isArray(clean.featured_matches)
-        ? clean.featured_matches.filter(match => survivingIds.has(
-            String(match?.canonicalFixtureId ?? match?.id ?? ''),
-        ))
-        : undefined;
-    const statistics = clean.matchStatistics
-        ? {...clean.matchStatistics, total: matches.length}
-        : undefined;
+    // Neither field is read by any client code, and neither can be recomputed
+    // here without duplicating the server's timezone bucketing. Carrying their
+    // pre-filter values into a snapshot whose match list has been filtered
+    // would store something simultaneously stale and unread.
+    const {matchStatistics: _statistics, featured_matches: _featured, ...rest} = clean;
 ```
 
-Then include them in the returned object only when defined, and recompute any other count you find on the payload that is derived from the match list. Read the actual payload shape in `fixture_service.py` before deciding which fields qualify — do not guess.
+Return `rest` spread into the result object in place of `clean`. Keep every other field,
+including `date`, `timezone`, `providers` and the offline markers.
+
+**Before you write this, verify the premise yourself** rather than trusting it: grep
+`static/` and `templates/` for `featured_matches`, `matchStatistics` and `byTimeSlot`. If
+you find a consumer I missed, stop and tell me — dropping a field something reads would be
+a real regression, and it is better to find that now than after merge.
 
 - [ ] **Step 4: Run the tests**
 
@@ -706,7 +728,7 @@ npx playwright test --project=chromium --project=webkit
 
 ```bash
 git add -A
-git commit -m "fix: recompute offline snapshot fields from the filtered matches"
+git commit -m "fix: drop unreadable stale fields from the offline snapshot"
 ```
 
 ---
