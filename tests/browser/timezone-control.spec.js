@@ -162,6 +162,18 @@ test('clicking outside the popover closes it and restores focus to the trigger',
     await expect(trigger).toBeFocused();
 });
 
+test('clicking non-option content inside the list keeps arrow-key navigation on search working', async ({page}) => {
+    await page.locator('#timezone-trigger').click();
+    await expect(page.locator('#timezone-search')).toBeFocused();
+
+    // Click a group label — non-option content inside the scrollable list,
+    // not the search field and not an option.
+    await page.locator('.timezone-group-label').first().click();
+
+    await page.keyboard.press('ArrowDown');
+    await expect(page.locator('#timezone-search')).toHaveAttribute('aria-activedescendant', /timezone-option-/);
+});
+
 test('the control is reachable and operable by keyboard alone', async ({page}) => {
     const trigger = page.locator('#timezone-trigger');
     const expected = await tokyoLabel(page);

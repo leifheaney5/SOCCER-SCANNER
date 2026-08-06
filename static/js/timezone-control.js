@@ -201,6 +201,21 @@ export function createTimezoneControl({root, getTimeZone, onChange}) {
         if (option) chooseZone(option.dataset.zone);
     });
 
+    // The list itself needs tabindex="0" so it is keyboard-reachable as a
+    // scrollable region (axe: scrollable-region-focusable), but that also
+    // makes it a valid mousedown focus target. Without this guard, clicking
+    // non-option content — a group label, or empty padding below the last
+    // option — would move DOM focus off `search` and onto the list,
+    // silently breaking arrow-key and type-to-filter navigation (both bound
+    // to `search`'s keydown) until the user clicked back in or tabbed away.
+    // Preventing the default mousedown focus change keeps focus on `search`
+    // the whole time; actual option clicks are unaffected since they are
+    // still handled by the `click` listener above and by `chooseZone`
+    // moving focus to the trigger on close.
+    list.addEventListener('mousedown', event => {
+        if (!event.target.closest('.timezone-option')) event.preventDefault();
+    });
+
     function sync() {
         const descriptor = formatTimezoneLabel(currentZone());
         triggerLabel.textContent = descriptor.shortLabel;
