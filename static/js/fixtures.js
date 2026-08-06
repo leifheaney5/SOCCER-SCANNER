@@ -374,8 +374,9 @@ function bindEvents() {
         const previous = state;
         const restored = createState(window.location.search, detectedTimezone);
         setState(restored, {reason: 'popstate'});
-        selectedFixtureId = null;
-        matchContext?.reset();
+        // The URL still names a fixture; discarding it here was the defect.
+        selectedFixtureId = state.fixture || null;
+        if (!selectedFixtureId) matchContext?.reset();
         syncControls();
         if (previous.date !== state.date || previous.timezone !== state.timezone) {
             loadFixtures();
