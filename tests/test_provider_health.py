@@ -114,5 +114,104 @@ class ProviderHealthRegistryTest(unittest.TestCase):
             registry.record('espn', 'exploded')
 
 
+class FakeRedisHash:
+    """Minimal hash + expiry stand-in shared by several 'workers'."""
+
+    def __init__(self):
+        self.hashes = {}
+        self.expiries = {}
+
+    def hset(self, key, field, value):
+        self.hashes.setdefault(key, {})[field] = value
+        return 1
+
+    def hgetall(self, key):
+        return dict(self.hashes.get(key, {}))
+
+    def expire(self, key, seconds):
+        self.expiries[key] = seconds
+        return True
+
+
+class RedisProviderHealthRegistryTest(unittest.TestCase):
+    def registry(self, client, **kwargs):
+        from soccer_scanner.services.provider_health import RedisProviderHealthRegistry
+        return RedisProviderHealthRegistry(client, namespace='test', **kwargs)
+
+    def test_state_written_by_one_worker_is_visible_to_another(self):
+        client = FakeRedisHash()
+        worker_one = self.registry(client)
+        worker_two = self.registry(client)
+
+        worker_one.record('espn', 'ok')
+
+        # This is the whole point: a second gunicorn worker must not report
+        # 'unknown' just because it did not personally serve the request.
+        snapshot = worker_two.snapshot()
+        self.assertEqual(snapshot['status'], 'ok')
+        self.assertEqual([item['name'] for item in snapshot['providers']], ['espn'])
+
+    def test_aggregate_rules_match_the_in_memory_registry(self):
+        client = FakeRedisHash()
+        registry = self.registry(client)
+
+        registry.record('espn', 'ok')
+        registry.record('football-data', 'unavailable', detail='timeout')
+
+        snapshot = registry.snapshot()
+        self.assertEqual(snapshot['status'], 'degraded')
+        self.assertFalse(snapshot['singleProvider'])
+        recorded = {item['name']: item for item in snapshot['providers']}
+        self.assertEqual(recorded['football-data']['detail'], 'timeout')
+
+    def test_last_success_survives_a_later_failure_across_workers(self):
+        client = FakeRedisHash()
+        clock = FakeClock()
+        writer = self.registry(client, clock=clock)
+
+        writer.record('espn', 'ok')
+        clock.advance(120)
+        writer.record('espn', 'unavailable', detail='HTTP 503')
+
+        provider = self.registry(client).snapshot()['providers'][0]
+        self.assertEqual(provider['status'], 'unavailable')
+        self.assertIsNotNone(provider['lastSuccessAt'])
+        self.assertNotEqual(provider['lastSuccessAt'], provider['lastObservedAt'])
+
+    def test_an_entry_is_given_a_bounded_lifetime(self):
+        client = FakeRedisHash()
+        self.registry(client, ttl_seconds=900).record('espn', 'ok')
+
+        # Without an expiry a dead provider's last state would persist forever.
+        self.assertTrue(any(value == 900 for value in client.expiries.values()))
+
+    def test_redis_failure_degrades_to_the_in_memory_registry(self):
+        class BrokenRedis:
+            def hset(self, *args, **kwargs):
+                raise RuntimeError('redis down')
+
+            def hgetall(self, *args, **kwargs):
+                raise RuntimeError('redis down')
+
+            def expire(self, *args, **kwargs):
+                raise RuntimeError('redis down')
+
+        registry = self.registry(BrokenRedis())
+
+        registry.record('espn', 'ok')
+
+        # Availability is preserved and the degradation is observable.
+        self.assertEqual(registry.snapshot()['status'], 'ok')
+        self.assertTrue(registry.degraded)
+
+    def test_a_corrupt_entry_is_ignored_rather_than_raising(self):
+        client = FakeRedisHash()
+        client.hset('test:provider-health', 'espn', 'not-json')
+        registry = self.registry(client)
+
+        # A malformed entry must not take down the health endpoint.
+        self.assertEqual(registry.snapshot()['status'], 'unknown')
+
+
 if __name__ == '__main__':
     unittest.main()

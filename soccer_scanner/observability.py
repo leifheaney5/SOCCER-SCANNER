@@ -9,6 +9,7 @@ DEFAULT_METRICS = {
     'api.requests',
     'api.errors',
     'api.rate_limited',
+    'api.provider_health_degraded',
     'provider.requests',
     'provider.failures',
     'provider.rate_limited',
