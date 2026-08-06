@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "lastVerified": "2026-08-06",
+  "verifiedBy": "engineering",
+  "staleAfterDays": 400,
+  "competitions": [
+    {"canonicalId": "premier-league", "name": "Premier League", "season": "2025/26", "provider": "sofascore", "tournamentId": 1, "seasonId": 76986},
+    {"canonicalId": "la-liga", "name": "LaLiga", "season": "2025/26", "provider": "sofascore", "tournamentId": 36, "seasonId": 77559},
+    {"canonicalId": "bundesliga", "name": "Bundesliga", "season": "2025/26", "provider": "sofascore", "tournamentId": 42, "seasonId": 77333},
+    {"canonicalId": "serie-a", "name": "Serie A", "season": "2025/26", "provider": "sofascore", "tournamentId": 33, "seasonId": 76457},
+    {"canonicalId": "ligue-1", "name": "Ligue 1", "season": "2025/26", "provider": "sofascore", "tournamentId": 4, "seasonId": 77356},
+    {"canonicalId": "primeira-liga", "name": "Liga Portugal", "season": "2025/26", "provider": "sofascore", "tournamentId": 52, "seasonId": 77806}
+  ]
+}

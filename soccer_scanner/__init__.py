@@ -31,6 +31,7 @@ from .services.football_data import FootballDataClient
 from .services.feature_flags import FeatureFlagRegistry
 from .services.provider_health import build_provider_health
 from .services.rate_limit import RATE_LIMIT_POLICIES, build_rate_limiter
+from .services.standings import StandingsSeasons
 from .services.streaming import StreamingRegistry
 from .services.teams import TeamAnalysisService
 from .services.team_identity import TeamIdentityResolver
@@ -187,6 +188,9 @@ def create_app(config=None):
     )
     app.extensions['competition_registry'] = CompetitionRegistry.from_file(
         Path(__file__).parent / 'data' / 'competition-countries.json',
+    )
+    app.extensions['standings_seasons'] = StandingsSeasons.from_file(
+        Path(__file__).parent / 'data' / 'standings-seasons.json',
     )
     provider_options = {
         'timeout': timeout,

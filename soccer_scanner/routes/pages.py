@@ -26,7 +26,12 @@ def teams():
 
 @pages.get('/league-tables')
 def league_tables():
-    return render_template('league_tables.html')
+    seasons = current_app.extensions['standings_seasons']
+    return render_template(
+        'league_tables.html',
+        competitions=seasons.competitions,
+        seasons_stale=seasons.is_stale(),
+    )
 
 
 @pages.get('/calendar')
