@@ -77,6 +77,25 @@ observability story.
 
 **Exit criteria:** audit section C rows 2, 5 and 10 move to `implemented`, with Playwright coverage for the timezone control, streaming region rendering, and icon asset availability.
 
+**Status: COMPLETE and deployed 2026-08-06.** Merged to `main` as `0a15c11`; production serves
+that exact SHA with `blocking: []`. All three audit rows are now `implemented` with named
+covering tests. Evidence: `artifacts/release-evidence/0a15c118ea9f9361ad7c0ea949e8339f983a9522/`.
+
+The carried-over Phase 1 defect is fixed and verified in production: eight sequential
+`/health/providers` requests now return a consistent `ok`, where the in-process registry
+previously returned four `ok` and four `unknown` depending on which gunicorn worker answered.
+The synthetic monitor's providers probe reports `ok` rather than `unknown` for the same reason.
+
+Gates at merge: 209 Python (also reproduced in a clean virtualenv), 38 Node, 144 Playwright,
+0 npm/pip vulnerabilities.
+
+Notable: five defects on this phase originated in the plan's own reference code and were
+caught only at review — a Redis TTL that aged nothing out, an inaccurate streaming alias, an
+`aria-haspopup` mismatch, a shared-dict mutation, and an undeclared Pillow dependency that
+would have failed CI. Two findings derived by reading rather than running were confirmed
+empirically before being fixed; one reviewer prediction (a popover overflowing to roughly
+-30..-40px at 320px) measured `-40`.
+
 ---
 
 ## Phase 3 — P1 correctness
