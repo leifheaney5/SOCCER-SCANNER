@@ -693,7 +693,10 @@ In `fixture_service.py`, where each fixture dict is composed for the response, a
                     self.streaming_registry.describe(item)
                     for item in (fixture.get('broadcasts') or [])
                 ]
-                fixture['streaming'] = [item for item in described if item]
+                # Copy rather than mutate: merge_fixtures output is shared
+                # across the usable_current and stale branches, so mutating in
+                # place would corrupt the other consumer.
+                fixture = {**fixture, 'streaming': [i for i in described if i]}
 ```
 
 Find the actual composition site by reading `_compose`; do not guess where fixtures are built.
