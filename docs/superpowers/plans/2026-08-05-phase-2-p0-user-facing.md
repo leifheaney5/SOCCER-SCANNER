@@ -157,8 +157,14 @@ class RedisProviderHealthRegistry:
 
     The in-process registry gives each worker its own view, so /health/providers
     answered `ok` or `unknown` depending on which worker happened to serve the
-    request. One hash keyed by provider name fixes that; entries carry a TTL so
-    a decommissioned provider ages out instead of lingering forever.
+    request. One hash keyed by provider name fixes that.
+
+    Ageing-out is enforced in `_read` against each entry's `lastObservedAt`,
+    NOT by the Redis key TTL. `expire` applies to the whole hash, so an
+    actively-served provider would refresh the TTL for every other provider
+    and a decommissioned one would never age out. The key TTL is kept only to
+    bound total growth. Writes go through a single atomic Lua script, as
+    `rate_limit.py` does, so concurrent workers cannot clobber `lastSuccessAt`.
     """
 
     def __init__(
