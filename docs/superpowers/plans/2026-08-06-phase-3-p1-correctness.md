@@ -424,7 +424,7 @@ Create `soccer_scanner/data/standings-seasons.json`. Copy the six tournament and
   "version": 1,
   "lastVerified": "2026-08-06",
   "verifiedBy": "engineering",
-  "staleAfterDays": 400,
+  "staleAfterDays": 350,
   "competitions": [
     {"canonicalId": "premier-league", "name": "Premier League", "season": "2025/26", "provider": "sofascore", "tournamentId": 1, "seasonId": 76986},
     {"canonicalId": "la-liga", "name": "LaLiga", "season": "2025/26", "provider": "sofascore", "tournamentId": 36, "seasonId": 77559},
@@ -546,10 +546,14 @@ class StandingsSeasons:
     @staticmethod
     def _embed_url(entry):
         title = f"{entry['name']} {entry['season']}"
+        # safe='' is required: quote() defaults to safe='/', which would leave
+        # the slash in "2025/26" unescaped and split the title across two path
+        # segments. The original hardcoded URLs escaped it as %2F.
+        encoded = quote(title, safe='')
         return (
             'https://widgets.sofascore.com/embed/tournament/'
             f"{entry['tournamentId']}/season/{entry['seasonId']}/standings/"
-            f'{quote(title)}?widgetTitle={quote(title)}&showCompetitionLogo=true'
+            f'{encoded}?widgetTitle={encoded}&showCompetitionLogo=true'
         )
 
     def is_stale(self, today=None):
