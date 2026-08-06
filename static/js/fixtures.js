@@ -374,9 +374,16 @@ function bindEvents() {
         const previous = state;
         const restored = createState(window.location.search, detectedTimezone);
         setState(restored, {reason: 'popstate'});
-        // The URL still names a fixture; discarding it here was the defect.
+        // The panel may currently be showing a different fixture than the
+        // one this URL names (or none at all), so it is reset
+        // unconditionally rather than only when the restored id is empty —
+        // every other call site that changes `selectedFixtureId` pairs it
+        // with an explicit open() or reset() rather than leaving the panel
+        // to guess. The fixture the URL now names, if any, is reopened by
+        // reflectCurrentResults' reopen guard below (directly on this path,
+        // or after loadFixtures() re-fetches on a date/timezone change).
         selectedFixtureId = state.fixture || null;
-        if (!selectedFixtureId) matchContext?.reset();
+        matchContext?.reset();
         syncControls();
         if (previous.date !== state.date || previous.timezone !== state.timezone) {
             loadFixtures();

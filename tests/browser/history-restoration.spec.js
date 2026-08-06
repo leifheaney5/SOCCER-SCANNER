@@ -123,15 +123,81 @@ test('filters and sort survive a Back navigation', async ({page}) => {
     await expect(page.locator('#sort-filter')).toHaveValue('competition');
 });
 
-test('focus is not lost to <body> after a history navigation', async ({page}) => {
+test('selecting a second fixture then pressing Back restores the first, not the second', async ({page}) => {
+    await page.locator('.fixture-card[data-fixture-id="fx-arsenal"] .details-button').click();
+    await expect.poll(() => page.evaluate(() => location.search)).toContain('fixture=fx-arsenal');
+    await expect(page.locator('#match-context')).toContainText('Arsenal');
+
+    await page.locator('.fixture-card[data-fixture-id="fx-celtic"] .details-button').click();
+    await expect.poll(() => page.evaluate(() => location.search)).toContain('fixture=fx-celtic');
+    await expect(page.locator('#match-context')).toContainText('Celtic');
+    await expect(page.locator('#match-context')).not.toContainText('Arsenal');
+
+    // Both selections are on the same date and timezone, so this Back
+    // exercises the handler's direct reflectCurrentResults() branch rather
+    // than the loadFixtures() branch that every other test above exercises.
+    // The reopen guard in reflectCurrentResults only fires when nothing is
+    // currently displayed, so the panel must be reconciled here even though
+    // the restored id is non-empty — asserting the panel content (not just
+    // the URL) is what catches a guard that skips reconciliation.
+    await page.goBack();
+    await expect.poll(() => page.evaluate(() => location.search)).toContain('fixture=fx-arsenal');
+    await expect(page.locator('#match-context')).toContainText('Arsenal');
+    await expect(page.locator('#match-context')).not.toContainText('Celtic');
+    await expect(page.locator('.fixture-card[data-fixture-id="fx-arsenal"]')).toHaveAttribute('aria-current', 'true');
+});
+
+test('a failed refetch after jumping dates does not leave a stale fixture panel open', async ({page}) => {
     await page.locator('.fixture-card[data-fixture-id="fx-arsenal"] .details-button').click();
     await expect.poll(() => page.evaluate(() => location.search)).toContain('fixture=fx-arsenal');
 
-    // `#next-date` is a static control that survives every fixture-stream
-    // re-render, so it is a reliable place to prove the handler does not
-    // blur focus onto <body> as a side effect of restoring state. WebKit
-    // does not focus a <button> on click (unlike Chromium), so focus is
-    // set explicitly rather than relied upon as a click side effect.
+    await page.locator('#next-date').click();
+    await expect(page.locator('#dashboard-status')).toContainText('fixtures shown');
+    await page.locator('.fixture-card[data-fixture-id="fx-liverpool"] .details-button').click();
+    await expect(page.locator('#match-context')).toContainText('Liverpool');
+
+    // The history stack is now: (1) 2026-08-03, (2) 2026-08-03&fixture=
+    // fx-arsenal, (3) 2026-08-04, (4) 2026-08-04&fixture=fx-liverpool — here.
+    // `history.go(-2)` jumps straight from (4) to (2) the way a browser's
+    // back-button history menu would, firing exactly one popstate for the
+    // landing entry with no popstate for entry (3) in between. Two
+    // sequential goBack() calls would fire popstate for (3) first, which
+    // already has no fixture and would reset the panel before the date
+    // boundary is even crossed — that would not reproduce a fixture from
+    // one date still being open when the refetch for a different date
+    // fails, which is what this test exists to cover.
+    await page.unroute('**/api/v2/fixtures**');
+    await page.route('**/api/v2/fixtures**', route => {
+        const requestedDate = new URL(route.request().url()).searchParams.get('date');
+        if (requestedDate === '2026-08-03') {
+            return route.fulfill({status: 502, contentType: 'application/json', body: JSON.stringify({error: 'provider unavailable'})});
+        }
+        return route.fulfill({contentType: 'application/json', body: JSON.stringify(dayTwoPayload)});
+    });
+
+    await page.evaluate(() => window.history.go(-2));
+    await expect(page.locator('#dashboard-status')).toContainText('Football data is temporarily unavailable');
+    // The old, unconditional reset guaranteed a clean panel regardless of
+    // fetch outcome; loadFixtures' catch branch never calls
+    // reflectCurrentResults, so nothing reopens the panel on failure —
+    // it must not still be showing the fixture from the date navigated away
+    // from.
+    await expect(page.locator('#match-context')).not.toContainText('Liverpool');
+    await expect(page.locator('#match-context')).toContainText('Select a fixture');
+});
+
+test('a control outside the fixture stream keeps focus after a history navigation', async ({page}) => {
+    await page.locator('.fixture-card[data-fixture-id="fx-arsenal"] .details-button').click();
+    await expect.poll(() => page.evaluate(() => location.search)).toContain('fixture=fx-arsenal');
+
+    // `#next-date` sits outside `#fixture-stream`, which every render fully
+    // replaces, so this proves only that the handler does not blur an
+    // unrelated, undestroyed control onto <body> as a side effect of
+    // restoring state — it does not exercise focus behavior for elements
+    // the render pipeline recreates (e.g. fixture cards), which have no
+    // focus-restoration logic here to test. WebKit does not focus a
+    // <button> on click (unlike Chromium), so focus is set explicitly
+    // rather than relied upon as a click side effect.
     await page.locator('#next-date').click();
     await expect(page.locator('#dashboard-status')).toContainText('fixtures shown');
     await page.locator('#next-date').focus();
@@ -140,6 +206,4 @@ test('focus is not lost to <body> after a history navigation', async ({page}) =>
     await page.goBack();
     await expect(page.locator('#dashboard-status')).toContainText('fixtures shown');
     await expect(page.locator('#next-date')).toBeFocused();
-    const activeTag = await page.evaluate(() => document.activeElement?.tagName);
-    expect(activeTag).not.toBe('BODY');
 });
