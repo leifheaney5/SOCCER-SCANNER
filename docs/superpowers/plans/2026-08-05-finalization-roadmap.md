@@ -112,6 +112,13 @@ empirically before being fixed; one reviewer prediction (a popover overflowing t
 
 ## Phase 4 — Provider and data hardening
 
+**Carried over from Phase 3:** the competition country registry resolves almost nothing
+against real provider data — 0 of 64 production fixtures on 2026-08-06. ESPN emits
+`canonicalId: null` for nearly every competition and country-prefixes its display names
+(`English Carabao Cup`, `Venezuelan Primera Division`, `Bolivian Liga Profesional`). Resolve
+the country from that prefix convention, verified against captured real payloads rather than
+assumed names. The registry machinery and the self-hiding control are correct and stay.
+
 **Scope**
 - **ESPN truncation.** Replace the blind `limit=500` with provider-total detection, continuation where supported, explicit suspected-truncation detection, and a typed `partial` response when complete coverage cannot be verified. Busy-date payload test.
 - **One orchestration deadline.** A single request-scoped budget across the ESPN global request, ESPN metadata calls, Football-Data, retries and body streaming — not a fresh deadline per provider. Independent providers run concurrently.
