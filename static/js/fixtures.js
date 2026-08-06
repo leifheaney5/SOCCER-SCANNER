@@ -375,15 +375,18 @@ function bindEvents() {
         const restored = createState(window.location.search, detectedTimezone);
         setState(restored, {reason: 'popstate'});
         // The panel may currently be showing a different fixture than the
-        // one this URL names (or none at all), so it is reset
-        // unconditionally rather than only when the restored id is empty —
-        // every other call site that changes `selectedFixtureId` pairs it
-        // with an explicit open() or reset() rather than leaving the panel
-        // to guess. The fixture the URL now names, if any, is reopened by
-        // reflectCurrentResults' reopen guard below (directly on this path,
-        // or after loadFixtures() re-fetches on a date/timezone change).
+        // one this URL names (or none at all), so it is reconciled here —
+        // but only when the restored selection actually differs from what's
+        // displayed. `select-fixture` (below) already follows this pattern:
+        // it switches panels with open() alone, no reset() first. Resetting
+        // unconditionally would tear the panel down to its placeholder and
+        // rebuild it even when nothing changed (e.g. Back after an
+        // unrelated filter/sort change that left the same fixture
+        // selected), which is pure churn and drops any focus placed inside
+        // the panel with nothing to restore it.
+        const previousFixtureId = selectedFixtureId;
         selectedFixtureId = state.fixture || null;
-        matchContext?.reset();
+        if (selectedFixtureId !== previousFixtureId) matchContext?.reset();
         syncControls();
         if (previous.date !== state.date || previous.timezone !== state.timezone) {
             loadFixtures();

@@ -147,6 +147,58 @@ test('selecting a second fixture then pressing Back restores the first, not the 
     await expect(page.locator('.fixture-card[data-fixture-id="fx-arsenal"]')).toHaveAttribute('aria-current', 'true');
 });
 
+test('an unrelated filter change then Back does not tear the match panel down to its placeholder', async ({page}) => {
+    await page.locator('.fixture-card[data-fixture-id="fx-arsenal"] .details-button').click();
+    await expect(page.locator('#match-context')).toContainText('Arsenal');
+
+    // Filtering to the fixture's own competition leaves it selected and
+    // visible — the same fixture stays open across this step, so the Back
+    // below restores a selection that is already unchanged.
+    await page.locator('#competition-filter').selectOption('Premier League');
+    await expect(page.locator('#dashboard-status')).toContainText('fixtures shown');
+    await expect(page.locator('#match-context')).toContainText('Arsenal');
+
+    // A focus assertion is not usable here: reflectCurrentResults() already
+    // rebuilds #match-context-content on every filter change regardless of
+    // this fix (matchContext.rerender() runs unconditionally whenever a
+    // fixture is selected, independent of whether the selection itself
+    // changed), so anything focused inside the panel is already lost to
+    // <body> by the filter click above, before Back is even pressed. That
+    // is pre-existing behavior this task does not touch. What this fix
+    // controls is narrower: whether the popstate handler additionally tears
+    // the panel down to its "Select a fixture" placeholder and rebuilds it
+    // a second time, purely because a fixture id was restored, even though
+    // it is the same one already displayed. A MutationObserver on
+    // #match-context-content, installed after the filter-change re-render
+    // above has settled, isolates exactly that: it records each childList
+    // mutation's added content during the Back navigation, so the
+    // placeholder text appearing at all — even fleetingly, with no paint in
+    // between — is directly observable, unlike polling the DOM afterward.
+    await page.evaluate(() => {
+        window.__historyRestorationMutations = [];
+        const target = document.getElementById('match-context-content');
+        const observer = new MutationObserver(records => {
+            for (const record of records) {
+                window.__historyRestorationMutations.push(
+                    [...record.addedNodes].map(node => node.textContent).join('|'),
+                );
+            }
+        });
+        observer.observe(target, {childList: true});
+        window.__historyRestorationObserver = observer;
+    });
+
+    await page.goBack();
+    await expect(page.locator('#dashboard-status')).toContainText('fixtures shown');
+    await expect(page.locator('#match-context')).toContainText('Arsenal');
+
+    const mutations = await page.evaluate(() => {
+        window.__historyRestorationObserver.disconnect();
+        return window.__historyRestorationMutations;
+    });
+    expect(mutations.some(text => text.includes('Select a fixture'))).toBe(false);
+});
+
 test('a failed refetch after jumping dates does not leave a stale fixture panel open', async ({page}) => {
     await page.locator('.fixture-card[data-fixture-id="fx-arsenal"] .details-button').click();
     await expect.poll(() => page.evaluate(() => location.search)).toContain('fixture=fx-arsenal');
