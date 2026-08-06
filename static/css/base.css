@@ -152,8 +152,8 @@ svg {
 
 .app-title {
     display: inline-flex;
-    align-items: baseline;
-    gap: 7px;
+    align-items: center;
+    gap: 8px;
     color: var(--text-primary);
     font-family: var(--font-brand);
     font-size: 15px;
@@ -163,8 +163,26 @@ svg {
     text-decoration: none;
 }
 
+.app-title-mark {
+    width: 26px;
+    height: 26px;
+    flex-shrink: 0;
+}
+
+.app-title-wordmark {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 7px;
+}
+
 .app-title-accent {
     color: var(--accent-primary);
+}
+
+@media (max-width: 480px) {
+    .app-title-wordmark {
+        display: none;
+    }
 }
 
 .nav-links {

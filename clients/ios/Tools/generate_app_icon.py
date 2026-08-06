@@ -8,11 +8,15 @@ an unexplained binary in the tree.
 
 App Store icons must be fully opaque with no alpha channel and no rounded
 corners of their own (iOS applies the mask), so the output is a flat RGB square.
+The same rule holds for the PWA/manifest icons emitted by `--web`, so every
+output below is a flat RGB image.
 
 Usage:
-    python clients/ios/Tools/generate_app_icon.py
+    python clients/ios/Tools/generate_app_icon.py          # iOS AppIcon-1024.png (default)
+    python clients/ios/Tools/generate_app_icon.py --web     # static/icons/* + static/social-card.png
 """
 
+import argparse
 import math
 from pathlib import Path
 
@@ -79,17 +83,89 @@ def render(size=TARGET):
     return image.resize((size, size), Image.LANCZOS)
 
 
-def main():
+def render_maskable(size, inset_fraction=0.8):
+    """A maskable variant for Android's adaptive-icon safe zone.
+
+    Android crops maskable icons to a circle or squircle, so the mark is
+    inset to roughly 80% of the canvas here; anything drawn closer to the
+    edge than that risks the corner brackets being cut off by the crop.
+    """
+
+    canvas = Image.new("RGB", (size, size), BACKGROUND)
+    inner_size = round(size * inset_fraction)
+    inner = render(inner_size)
+    offset = (size - inner_size) // 2
+    canvas.paste(inner, (offset, offset))
+    return canvas
+
+
+def render_social_card(width=1200, height=630):
+    """The Open Graph / Twitter card: the mark centred on the brand black.
+
+    No text is rendered here — several platforms crop or scale card images
+    unpredictably, and the mark alone reads at any crop.
+    """
+
+    canvas = Image.new("RGB", (width, height), BACKGROUND)
+    mark_size = min(width, height) - 210
+    mark = render(mark_size)
+    offset = ((width - mark_size) // 2, (height - mark_size) // 2)
+    canvas.paste(mark, offset)
+    return canvas
+
+
+# size in pixels for every `render(size)` output written by --web
+WEB_ICON_SIZES = {
+    "icon-192.png": 192,
+    "icon-512.png": 512,
+    "apple-touch-icon.png": 180,
+    "favicon-32.png": 32,
+}
+
+MASKABLE_SIZE = 512
+
+
+def _save_opaque(image, destination):
+    assert image.mode == "RGB", f"{destination.name} must not carry an alpha channel"
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    image.save(destination, "PNG")
+    print(f"wrote {destination} ({image.size[0]}x{image.size[1]}, {image.mode})")
+
+
+def write_web_assets(repo_root):
+    icons_dir = repo_root / "static" / "icons"
+
+    for filename, size in WEB_ICON_SIZES.items():
+        _save_opaque(render(size), icons_dir / filename)
+
+    _save_opaque(render_maskable(MASKABLE_SIZE), icons_dir / "icon-maskable-512.png")
+    _save_opaque(render_social_card(), repo_root / "static" / "social-card.png")
+
+
+def write_ios_asset(repo_root):
     destination = (
-        Path(__file__).resolve().parents[1]
+        repo_root / "clients" / "ios"
         / "SoccerScanner" / "Resources" / "Assets.xcassets"
         / "AppIcon.appiconset" / "AppIcon-1024.png"
     )
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    icon = render()
-    assert icon.mode == "RGB", "App Store icons must not carry an alpha channel"
-    icon.save(destination, "PNG")
-    print(f"wrote {destination} ({icon.size[0]}x{icon.size[1]}, {icon.mode})")
+    _save_opaque(render(), destination)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--web",
+        action="store_true",
+        help="write the web/PWA icon suite and social card into static/ instead of the iOS asset catalog",
+    )
+    args = parser.parse_args()
+
+    repo_root = Path(__file__).resolve().parents[3]
+
+    if args.web:
+        write_web_assets(repo_root)
+    else:
+        write_ios_asset(repo_root)
 
 
 if __name__ == "__main__":
