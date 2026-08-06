@@ -2,7 +2,7 @@ from datetime import date, timedelta
 import json
 from pathlib import Path
 import unittest
-from urllib.parse import urlparse
+from urllib.parse import unquote, urlparse
 
 from soccer_scanner import create_app
 from soccer_scanner.services.standings import StandingsSeasons
@@ -27,6 +27,31 @@ class StandingsSeasonsTest(unittest.TestCase):
                 parsed = urlparse(entry['embedUrl'])
                 self.assertEqual(parsed.scheme, 'https')
                 self.assertTrue(parsed.netloc.endswith('sofascore.com'))
+
+    def test_embed_url_title_is_a_single_path_segment(self):
+        # The season contains a literal '/' (e.g. "2025/26"). If it is not
+        # percent-encoded as %2F, it splits the title across an extra URL
+        # path segment instead of staying inside the standings/<title>
+        # segment — a regression that broke every one of the six URLs.
+        premier_league = next(
+            entry for entry in self.seasons.competitions
+            if entry['canonicalId'] == 'premier-league'
+        )
+        self.assertEqual(
+            premier_league['embedUrl'],
+            'https://widgets.sofascore.com/embed/tournament/1/season/76986/'
+            'standings/Premier%20League%202025%2F26'
+            '?widgetTitle=Premier%20League%202025%2F26&showCompetitionLogo=true',
+        )
+        for entry in self.seasons.competitions:
+            with self.subTest(entry=entry['canonicalId']):
+                parsed = urlparse(entry['embedUrl'])
+                segments = parsed.path.split('/')
+                title_segment = segments[segments.index('standings') + 1]
+                self.assertEqual(
+                    unquote(title_segment),
+                    f"{entry['name']} {entry['season']}",
+                )
 
     def test_configuration_is_not_stale_today(self):
         # This is the point of the task: it must FAIL once the recorded
