@@ -27,8 +27,11 @@ def _provider_health():
     registry = current_app.extensions.get('provider_health')
     if registry is None:
         return {'status': 'unknown', 'providers': [], 'lastSuccessAt': None,
-                'singleProvider': False}
-    return registry.snapshot()
+                'singleProvider': False, 'shared': False, 'degraded': False}
+    snapshot = registry.snapshot()
+    snapshot['shared'] = bool(getattr(registry, 'shared', False))
+    snapshot['degraded'] = bool(getattr(registry, 'degraded', False))
+    return snapshot
 
 
 @health.get('/live')

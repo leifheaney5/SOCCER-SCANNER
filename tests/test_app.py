@@ -216,6 +216,47 @@ class SoccerScannerRoutesTest(unittest.TestCase):
         self.assertIn("frame-ancestors 'self'", live.headers['Content-Security-Policy'])
         self.assertNotIn('Access-Control-Allow-Origin', live.headers)
 
+    def test_provider_health_endpoint_reports_shared_and_degraded_status(self):
+        # /health/providers is what an operator reads during an incident to
+        # tell "no provider is shared/degraded" apart from "I can't tell
+        # because the registry backing this worker is broken" -- mirrors the
+        # rateLimit block's existing shared/degraded surfacing.
+        response = self.client.get('/health/providers')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('shared', response.json)
+        self.assertIn('degraded', response.json)
+        # The test app runs the in-process, dev-default registry.
+        self.assertFalse(response.json['shared'])
+        self.assertFalse(response.json['degraded'])
+
+    def test_degraded_provider_health_is_surfaced_but_never_blocks_readiness(self):
+        self.app.extensions['provider_health'] = Mock(
+            shared=True,
+            degraded=True,
+            snapshot=Mock(return_value={
+                'status': 'degraded',
+                'providers': [],
+                'lastSuccessAt': None,
+                'singleProvider': False,
+            }),
+        )
+        try:
+            providers = self.client.get('/health/providers')
+            ready = self.client.get('/health/ready')
+        finally:
+            del self.app.extensions['provider_health']
+
+        self.assertTrue(providers.json['shared'])
+        self.assertTrue(providers.json['degraded'])
+        # A provider-health backend problem must never fail the Railway
+        # deploy healthcheck -- only the fixture-serving path does that.
+        self.assertEqual(ready.status_code, 200)
+        self.assertEqual(ready.json['status'], 'ready')
+        self.assertEqual(ready.json['blocking'], [])
+        self.assertTrue(ready.json['providers']['shared'])
+        self.assertTrue(ready.json['providers']['degraded'])
+
     def test_application_fixture_service_uses_the_shared_identity_registry(self):
         self.assertIs(
             self.app.extensions['fixture_service'].identity_registry,
