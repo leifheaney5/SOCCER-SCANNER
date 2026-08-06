@@ -10,6 +10,7 @@ from soccer_scanner.domain.models import (
 )
 from soccer_scanner.services.cache_backend import MemoryCacheBackend
 from soccer_scanner.services.fixture_service import CanonicalFixtureService
+from soccer_scanner.services.streaming import StreamingRegistry
 from soccer_scanner.persistence.database import Base, DatabaseRuntime, SchemaMetadata
 from soccer_scanner.persistence.fixture_identities import FixtureIdentityRepository
 
@@ -73,7 +74,15 @@ def fixture(provider, identifier):
     }
 
 
-def service(espn_outcome, football_outcome, *, clock=None, cache=None, identity_registry=None):
+def service(
+    espn_outcome,
+    football_outcome,
+    *,
+    clock=None,
+    cache=None,
+    identity_registry=None,
+    streaming_registry=None,
+):
     clock = clock or Clock()
     cache = cache or MemoryCacheBackend(
         default_ttl_seconds=10,
@@ -89,12 +98,26 @@ def service(espn_outcome, football_outcome, *, clock=None, cache=None, identity_
     }
     if identity_registry is not None:
         options['identity_registry'] = identity_registry
+    if streaming_registry is not None:
+        options['streaming_registry'] = streaming_registry
     return CanonicalFixtureService(
         espn,
         football,
         cache,
         **options,
     ), espn, football
+
+
+def streaming_registry():
+    return StreamingRegistry([
+        {
+            'id': 'peacock',
+            'displayName': 'Peacock',
+            'aliases': ['peacock'],
+            'domains': ['peacocktv.com'],
+            'officialUrl': 'https://www.peacocktv.com/',
+        },
+    ])
 
 
 def repository(tmp_path):
@@ -325,3 +348,84 @@ def test_deep_link_recovers_after_cache_loss_and_kickoff_correction(tmp_path):
     assert recovered['canonicalFixtureId'] == first['canonicalFixtureId']
     assert recovered['utcDate'] == '2026-08-03T19:45:00Z'
     runtime.dispose()
+
+
+def test_composed_fixtures_are_enriched_with_streaming_and_keep_raw_broadcasts():
+    match = fixture('espn', '1')
+    match['broadcasts'] = [{'name': 'Peacock', 'type': 'STREAMING', 'region': 'US'}]
+    scanner, _, _ = service(
+        outcome('espn', ProviderStatus.SUCCESS, [match]),
+        outcome('football-data', ProviderStatus.DISABLED, completed=()),
+        streaming_registry=streaming_registry(),
+    )
+
+    result = scanner.fixtures_for_date(date(2026, 8, 3), 'UTC')
+    composed = result['matches'][0]
+
+    # The raw provider-reported broadcasts survive alongside the enrichment,
+    # for backward compatibility.
+    assert composed['broadcasts'] == match['broadcasts']
+    assert composed['streaming'] == [{
+        'id': 'peacock',
+        'displayName': 'Peacock',
+        'officialUrl': 'https://www.peacocktv.com/',
+        'region': 'US',
+        'regionKnown': True,
+        'source': 'espn',
+    }]
+
+
+def test_an_unverified_broadcast_composes_with_no_link():
+    match = fixture('espn', '1')
+    match['broadcasts'] = [
+        {'name': 'Some Regional Stream', 'type': 'STREAMING', 'region': None},
+    ]
+    scanner, _, _ = service(
+        outcome('espn', ProviderStatus.SUCCESS, [match]),
+        outcome('football-data', ProviderStatus.DISABLED, completed=()),
+        streaming_registry=streaming_registry(),
+    )
+
+    result = scanner.fixtures_for_date(date(2026, 8, 3), 'UTC')
+    described = result['matches'][0]['streaming'][0]
+
+    # Linking an unrecognised name could send a visitor anywhere: the
+    # no-link guarantee holds at the service layer, not only in the browser.
+    assert described['officialUrl'] is None
+    assert described['region'] == 'Region unknown'
+
+
+def test_streaming_enrichment_persists_across_a_warm_provider_cache():
+    # The cache-outer-path property: `_compose` (and therefore enrichment)
+    # runs on every `fixtures_for_date` call, including a cache hit that
+    # never calls the provider's `fetch_range` again — only the recomposed
+    # cached provider outcome is re-enriched.
+    match = fixture('espn', '1')
+    match['broadcasts'] = [{'name': 'Peacock', 'type': 'STREAMING', 'region': 'US'}]
+    scanner, espn, football = service(
+        outcome('espn', ProviderStatus.SUCCESS, [match]),
+        outcome('football-data', ProviderStatus.DISABLED, completed=()),
+        streaming_registry=streaming_registry(),
+    )
+
+    first = scanner.fixtures_for_date(date(2026, 8, 3), 'UTC')
+    second = scanner.fixtures_for_date(date(2026, 8, 3), 'UTC')
+
+    assert len(espn.calls) == 1
+    assert first['matches'][0]['streaming']
+    assert second['matches'][0]['streaming']
+
+
+def test_a_service_without_a_streaming_registry_composes_without_a_streaming_key():
+    match = fixture('espn', '1')
+    match['broadcasts'] = [{'name': 'Peacock', 'type': 'STREAMING', 'region': 'US'}]
+    scanner, _, _ = service(
+        outcome('espn', ProviderStatus.SUCCESS, [match]),
+        outcome('football-data', ProviderStatus.DISABLED, completed=()),
+    )
+
+    result = scanner.fixtures_for_date(date(2026, 8, 3), 'UTC')
+    composed = result['matches'][0]
+
+    assert 'streaming' not in composed
+    assert composed['broadcasts'] == match['broadcasts']
