@@ -56,6 +56,25 @@ class StreamingRegistryTest(unittest.TestCase):
     def test_non_streaming_broadcasts_are_not_described(self):
         self.assertIsNone(self.registry.describe({'type': 'TV', 'name': 'Peacock'}))
 
+    def test_removed_alias_falls_through_to_unknown_service(self):
+        # CBS Sports Network was removed from paramount-plus aliases to preserve
+        # the original name and prevent misrepresenting it as Paramount+.
+        described = self.registry.describe({
+            'type': 'STREAMING', 'name': 'CBS Sports Network', 'region': 'US',
+        })
+
+        self.assertIsNone(described['id'])
+        self.assertEqual(described['displayName'], 'CBS Sports Network')
+        self.assertIsNone(described['officialUrl'])
+        self.assertEqual(described['region'], 'US')
+
+    def test_describe_returns_source_key(self):
+        described = self.registry.describe({
+            'type': 'STREAMING', 'name': 'Peacock', 'region': 'US',
+        })
+
+        self.assertEqual(described['source'], 'espn')
+
     def test_every_official_url_is_https_and_matches_a_declared_domain(self):
         for service in json.loads(REGISTRY_PATH.read_text())['services']:
             with self.subTest(service=service['id']):
@@ -73,13 +92,26 @@ class StreamingRegistryTest(unittest.TestCase):
         ids = [service['id'] for service in services]
         self.assertEqual(len(ids), len(set(ids)))
 
-        seen = set()
+        # Track all normalizations: displayNames and aliases are indexed together.
+        seen = {}  # Maps normalized string to service id that claimed it
+
         for service in services:
+            service_id = service['id']
+
+            # displayName is indexed in the alias map
+            display_normalized = service['displayName'].lower()
+            self.assertNotIn(display_normalized, seen,
+                f"displayName '{service['displayName']}' collides with existing mapping")
+            seen[display_normalized] = service_id
+
+            # Each alias is indexed in the alias map
             for alias in service['aliases']:
                 normalized = alias.lower()
-                # An alias claimed twice would resolve unpredictably.
-                self.assertNotIn(normalized, seen, f'duplicate alias: {alias}')
-                seen.add(normalized)
+                # Allow an alias to match this service's own displayName (redundant but not harmful).
+                if normalized != display_normalized:
+                    self.assertNotIn(normalized, seen,
+                        f"alias '{alias}' collides with existing mapping")
+                seen[normalized] = service_id
 
 
 if __name__ == '__main__':
