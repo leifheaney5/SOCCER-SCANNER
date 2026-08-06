@@ -377,7 +377,7 @@ Create `soccer_scanner/data/streaming-services.json`:
     {
       "id": "paramount-plus",
       "displayName": "Paramount+",
-      "aliases": ["paramount+", "paramount plus", "cbs sports network"],
+      "aliases": ["paramount+", "paramount plus"],
       "domains": ["paramountplus.com"],
       "officialUrl": "https://www.paramountplus.com/",
       "requiresAttribution": false
