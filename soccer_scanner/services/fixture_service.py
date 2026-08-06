@@ -86,6 +86,7 @@ class CanonicalFixtureService:
         identity_registry=None,
         provider_health=None,
         streaming_registry=None,
+        competition_registry=None,
         now=None,
     ):
         self.providers = (espn_provider, football_data_provider)
@@ -96,6 +97,7 @@ class CanonicalFixtureService:
         self.identity_registry = identity_registry
         self.provider_health = provider_health
         self.streaming_registry = streaming_registry
+        self.competition_registry = competition_registry
         self.now = now or (lambda: datetime.now(timezone.utc))
 
     def fixtures_for_date(self, requested_date, timezone_name='UTC'):
@@ -401,6 +403,14 @@ class CanonicalFixtureService:
                     for item in (enriched.get('broadcasts') or [])
                 ]
                 enriched['streaming'] = [item for item in described if item]
+            if self.competition_registry is not None:
+                area = self.competition_registry.describe_area(enriched.get('competition') or {})
+                if area is not None:
+                    # Build a new competition dict rather than mutating the one
+                    # from `merged`, which is shared between the
+                    # `usable_current` and `stale` branches in
+                    # `fixtures_for_date`.
+                    enriched['competition'] = {**(enriched.get('competition') or {}), 'area': area}
             matches.append(enriched)
         matches.sort(key=lambda match: (match.get('utcDate') or '', match['canonicalFixtureId']))
         assert_unique_fixture_ids(matches)

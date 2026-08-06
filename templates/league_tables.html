@@ -15,15 +15,21 @@
             <h2 id="standings-heading">European League Standings</h2>
             <p>One table is loaded at a time to keep this page fast.</p>
         </div>
+        {% if seasons_stale %}
+        <div class="standings-notice" role="note">
+            <strong>Configuration not recently re-verified.</strong>
+            The competition and season identifiers below have not been
+            re-checked in a while. This does not mean the standings shown are
+            wrong &mdash; only that we cannot yet confirm they still point at
+            the current season.
+        </div>
+        {% endif %}
         <div class="standings-controls">
             <label for="league-selector">Competition</label>
             <select id="league-selector" class="league-selector">
-                <option value="https://widgets.sofascore.com/embed/tournament/1/season/76986/standings/Premier%20League%2025%2F26?widgetTitle=Premier%20League%2025%2F26&amp;showCompetitionLogo=true">Premier League 2025/26</option>
-                <option value="https://widgets.sofascore.com/embed/tournament/36/season/77559/standings/LaLiga%2025%2F26?widgetTitle=LaLiga%2025%2F26&amp;showCompetitionLogo=true">La Liga 2025/26</option>
-                <option value="https://widgets.sofascore.com/embed/tournament/42/season/77333/standings/Bundesliga%2025%2F26?widgetTitle=Bundesliga%2025%2F26&amp;showCompetitionLogo=true">Bundesliga 2025/26</option>
-                <option value="https://widgets.sofascore.com/embed/tournament/33/season/76457/standings/Serie%20A%2025%2F26?widgetTitle=Serie%20A%2025%2F26&amp;showCompetitionLogo=true">Serie A 2025/26</option>
-                <option value="https://widgets.sofascore.com/embed/tournament/4/season/77356/standings/Ligue%201%2025%2F26?widgetTitle=Ligue%201%2025%2F26&amp;showCompetitionLogo=true">Ligue 1 2025/26</option>
-                <option value="https://widgets.sofascore.com/embed/tournament/52/season/77806/standings/Liga%20Portugal%2025%2F26?widgetTitle=Liga%20Portugal%2025%2F26&amp;showCompetitionLogo=true">Liga Portugal 2025/26</option>
+                {% for entry in competitions %}
+                <option value="{{ entry.embedUrl }}">{{ entry.name }} {{ entry.season }}</option>
+                {% endfor %}
             </select>
         </div>
         <div class="standings-consent">

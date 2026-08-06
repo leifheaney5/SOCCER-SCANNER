@@ -25,11 +25,13 @@ from .routes.api import api
 from .routes.health import health
 from .routes.pages import pages
 from .services.cache_backend import build_cache_backend
+from .services.competitions import CompetitionRegistry
 from .services.fixture_service import CanonicalFixtureService
 from .services.football_data import FootballDataClient
 from .services.feature_flags import FeatureFlagRegistry
 from .services.provider_health import build_provider_health
 from .services.rate_limit import RATE_LIMIT_POLICIES, build_rate_limiter
+from .services.standings import StandingsSeasons
 from .services.streaming import StreamingRegistry
 from .services.teams import TeamAnalysisService
 from .services.team_identity import TeamIdentityResolver
@@ -184,6 +186,12 @@ def create_app(config=None):
     app.extensions['streaming_registry'] = StreamingRegistry.from_file(
         Path(__file__).parent / 'data' / 'streaming-services.json',
     )
+    app.extensions['competition_registry'] = CompetitionRegistry.from_file(
+        Path(__file__).parent / 'data' / 'competition-countries.json',
+    )
+    app.extensions['standings_seasons'] = StandingsSeasons.from_file(
+        Path(__file__).parent / 'data' / 'standings-seasons.json',
+    )
     provider_options = {
         'timeout': timeout,
         'max_retries': app.config['PROVIDER_MAX_RETRIES'],
@@ -221,6 +229,7 @@ def create_app(config=None):
         identity_registry=app.extensions['fixture_identities'],
         provider_health=app.extensions['provider_health'],
         streaming_registry=app.extensions['streaming_registry'],
+        competition_registry=app.extensions['competition_registry'],
     )
     app.register_blueprint(pages)
     app.register_blueprint(api)

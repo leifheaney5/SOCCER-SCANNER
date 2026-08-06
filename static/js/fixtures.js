@@ -123,12 +123,23 @@ function populateCompetitions(matches) {
         syncUrl('replace');
     }
     const countrySelect = byId('country-filter');
+    const countryControl = countrySelect.closest('.select-control');
     const countries = [...new Set(matches.map(match => match?.competition?.area?.name).filter(Boolean))].sort();
     countrySelect.replaceChildren(
         new Option('All countries', ''),
         ...countries.map(country => new Option(country, country)),
     );
-    if (state.country && countries.includes(state.country)) {
+    // Fewer than two countries means the control cannot actually filter
+    // anything — offering only "All countries" is a non-functional control,
+    // so hide the wrapping label rather than leave it visibly empty.
+    const countryFilterUsable = countries.length >= 2;
+    if (countryControl) countryControl.hidden = !countryFilterUsable;
+    if (!countryFilterUsable) {
+        if (state.country) {
+            setState({country: ''}, {reason: 'reconcile'});
+            syncUrl('replace');
+        }
+    } else if (state.country && countries.includes(state.country)) {
         countrySelect.value = state.country;
     } else if (state.country) {
         setState({country: ''}, {reason: 'reconcile'});
@@ -363,8 +374,19 @@ function bindEvents() {
         const previous = state;
         const restored = createState(window.location.search, detectedTimezone);
         setState(restored, {reason: 'popstate'});
-        selectedFixtureId = null;
-        matchContext?.reset();
+        // The panel may currently be showing a different fixture than the
+        // one this URL names (or none at all), so it is reconciled here —
+        // but only when the restored selection actually differs from what's
+        // displayed. `select-fixture` (below) already follows this pattern:
+        // it switches panels with open() alone, no reset() first. Resetting
+        // unconditionally would tear the panel down to its placeholder and
+        // rebuild it even when nothing changed (e.g. Back after an
+        // unrelated filter/sort change that left the same fixture
+        // selected), which is pure churn and drops any focus placed inside
+        // the panel with nothing to restore it.
+        const previousFixtureId = selectedFixtureId;
+        selectedFixtureId = state.fixture || null;
+        if (selectedFixtureId !== previousFixtureId) matchContext?.reset();
         syncControls();
         if (previous.date !== state.date || previous.timezone !== state.timezone) {
             loadFixtures();
