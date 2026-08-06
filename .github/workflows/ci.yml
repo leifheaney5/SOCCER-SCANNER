@@ -19,8 +19,7 @@ jobs:
         with:
           node-version: '22'
           cache: npm
-      - run: pip install -r requirements.txt
-      - run: pip install pytest pip-audit
+      - run: pip install -r requirements-dev.txt
       - run: npm ci
       - run: npx playwright install --with-deps chromium webkit
       - run: python -m compileall -q app.py wsgi.py soccer_scanner

@@ -14,6 +14,24 @@ test('the header exposes the accessible home link with an inline mark', async ({
     await expect(homeLink.locator('svg')).toHaveAttribute('aria-hidden', 'true');
 });
 
+test('the header mark stays proportionate to the wordmark on legacy team and table pages', async ({page}) => {
+    // /teams and /league-tables load their own stylesheets (teams.css, standings.css) that
+    // predate the shared app-header design and once set .app-title to font-size: 2.2em. Both
+    // stylesheets already carry a later, higher-specificity override bringing it back to the
+    // shared header's 15px; this guards that override so a future edit can't silently drop it
+    // and leave the fixed-size 26x26 mark dwarfed by an oversized wordmark.
+    for (const path of ['/teams', '/league-tables']) {
+        await page.goto(path);
+
+        const homeLink = page.getByRole('link', {name: 'Soccer Scanner home'});
+        await expect(homeLink).toBeVisible();
+        await expect(homeLink.locator('.app-title-mark')).toHaveCount(1);
+
+        const fontSize = await page.locator('.app-title').evaluate(el => getComputedStyle(el).fontSize);
+        expect(fontSize, path).toBe('15px');
+    }
+});
+
 test('every declared icon resolves with an image content type', async ({page}) => {
     const iconPaths = [
         '/static/favicon.svg',

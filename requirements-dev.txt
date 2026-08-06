@@ -2,3 +2,4 @@
 -r requirements.txt
 pytest==8.3.4
 pip-audit==2.9.0
+Pillow==10.4.0
