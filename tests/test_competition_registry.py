@@ -38,11 +38,21 @@ class CompetitionRegistryTest(unittest.TestCase):
         self.assertIsNone(self.registry.describe_area({}))
         self.assertIsNone(self.registry.describe_area(None))
 
-    def test_multi_country_competitions_are_deliberately_absent(self):
+    def test_multi_country_competitions_blocklist(self):
+        # Multi-country competitions are deliberately absent from the registry.
+        # See the 'note' field in competition-countries.json for why each is excluded.
         payload = json.loads(REGISTRY_PATH.read_text(encoding='utf-8'))
         mapped = {entry['canonicalId'] for entry in payload['competitions']}
 
+        # Continental competitions with no single country
         for forbidden in ('uefa-champions-league', 'uefa-europa-league', 'copa-libertadores'):
+            self.assertNotIn(forbidden, mapped)
+
+        # Domestic leagues with cross-border teams
+        self.assertNotIn('mls', mapped)  # Includes Canadian franchises (Toronto, Montréal, Vancouver)
+
+        # Other known multi-country competitions
+        for forbidden in ('uefa-conference-league', 'concacaf-champions-league'):
             self.assertNotIn(forbidden, mapped)
 
     def test_ids_and_aliases_are_unique(self):
