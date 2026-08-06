@@ -761,7 +761,7 @@ In `templates/matches_today.html`, inside `{% block header_actions %}`, **before
 ```html
 <div id="timezone-control" class="timezone-control" data-open="false">
     <button id="timezone-trigger" class="timezone-trigger" type="button"
-            aria-haspopup="listbox" aria-expanded="false"
+            aria-haspopup="dialog" aria-expanded="false"
             aria-controls="timezone-listbox">
         <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
             <path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18ZM12 7v5l3 2"/>
