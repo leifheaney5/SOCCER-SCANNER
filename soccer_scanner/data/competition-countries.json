@@ -18,5 +18,14 @@
     {"canonicalId": "belgian-pro-league", "aliases": ["belgian pro league", "jupiler pro league"], "country": "Belgium"},
     {"canonicalId": "super-lig", "aliases": ["super lig", "turkish super lig"], "country": "Turkey"},
     {"canonicalId": "j1-league", "aliases": ["j1 league", "j league"], "country": "Japan"}
+  ],
+  "adjectivesNote": "ESPN prefixes many competitions with a nationality adjective instead of emitting a canonicalId (e.g. 'Argentine Liga Profesional de Futbol', 'English Carabao Cup'). Matched as a word-boundary prefix only ('Argentine ' at the start of the name) after the canonical-ID and alias lookups miss, never as a substring. Only unambiguous adjectives are listed; 'Irish' (Ireland vs Northern Ireland) and similar are deliberately omitted.",
+  "adjectives": [
+    {"prefix": "Argentine", "country": "Argentina"},
+    {"prefix": "Bolivian", "country": "Bolivia"},
+    {"prefix": "English", "country": "England"},
+    {"prefix": "Mexican", "country": "Mexico"},
+    {"prefix": "Peruvian", "country": "Peru"},
+    {"prefix": "Venezuelan", "country": "Venezuela"}
   ]
 }
