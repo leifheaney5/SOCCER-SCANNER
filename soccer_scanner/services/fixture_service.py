@@ -85,6 +85,7 @@ class CanonicalFixtureService:
         provider_budget_seconds=4,
         identity_registry=None,
         provider_health=None,
+        streaming_registry=None,
         now=None,
     ):
         self.providers = (espn_provider, football_data_provider)
@@ -94,6 +95,7 @@ class CanonicalFixtureService:
         self.provider_budget_seconds = provider_budget_seconds
         self.identity_registry = identity_registry
         self.provider_health = provider_health
+        self.streaming_registry = streaming_registry
         self.now = now or (lambda: datetime.now(timezone.utc))
 
     def fixtures_for_date(self, requested_date, timezone_name='UTC'):
@@ -392,7 +394,14 @@ class CanonicalFixtureService:
             local_date = kickoff.astimezone(local_zone).date()
             if local_date != requested_date:
                 continue
-            matches.append({**match, 'localDate': local_date.isoformat()})
+            enriched = {**match, 'localDate': local_date.isoformat()}
+            if self.streaming_registry is not None:
+                described = [
+                    self.streaming_registry.describe(item)
+                    for item in (enriched.get('broadcasts') or [])
+                ]
+                enriched['streaming'] = [item for item in described if item]
+            matches.append(enriched)
         matches.sort(key=lambda match: (match.get('utcDate') or '', match['canonicalFixtureId']))
         assert_unique_fixture_ids(matches)
         return matches

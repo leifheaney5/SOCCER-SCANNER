@@ -28,8 +28,9 @@ from .services.cache_backend import build_cache_backend
 from .services.fixture_service import CanonicalFixtureService
 from .services.football_data import FootballDataClient
 from .services.feature_flags import FeatureFlagRegistry
-from .services.provider_health import ProviderHealthRegistry
+from .services.provider_health import build_provider_health
 from .services.rate_limit import RATE_LIMIT_POLICIES, build_rate_limiter
+from .services.streaming import StreamingRegistry
 from .services.teams import TeamAnalysisService
 from .services.team_identity import TeamIdentityResolver
 
@@ -80,7 +81,10 @@ def create_app(config=None):
     app.extensions['feature_flags'] = FeatureFlagRegistry(
         overrides=app.config.get('FEATURE_FLAG_OVERRIDES'),
     )
-    app.extensions['provider_health'] = ProviderHealthRegistry()
+    app.extensions['provider_health'] = build_provider_health(
+        app.config,
+        metrics=app.extensions['metrics'],
+    )
     app.extensions['provider_capabilities'] = build_capability_manifest(
         football_data_configured=bool(app.config.get('FOOTBALL_DATA_API_KEY')),
     )
@@ -177,6 +181,9 @@ def create_app(config=None):
     app.extensions['team_identities'] = TeamIdentityResolver.from_file(
         Path(__file__).parent / 'data' / 'team-provider-map.json',
     )
+    app.extensions['streaming_registry'] = StreamingRegistry.from_file(
+        Path(__file__).parent / 'data' / 'streaming-services.json',
+    )
     provider_options = {
         'timeout': timeout,
         'max_retries': app.config['PROVIDER_MAX_RETRIES'],
@@ -213,6 +220,7 @@ def create_app(config=None):
         provider_budget_seconds=app.config['FIXTURE_FETCH_DEADLINE'],
         identity_registry=app.extensions['fixture_identities'],
         provider_health=app.extensions['provider_health'],
+        streaming_registry=app.extensions['streaming_registry'],
     )
     app.register_blueprint(pages)
     app.register_blueprint(api)

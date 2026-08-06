@@ -11,12 +11,14 @@
     <meta property="og:title" content="Soccer Scanner — Fixture intelligence">
     <meta property="og:description" content="Fast, spoiler-safe soccer fixture intelligence across leading competitions.">
     <meta property="og:url" content="{{ canonical_url }}">
-    <meta property="og:image" content="{{ public_base_url }}/static/social-card.svg">
+    <meta property="og:image" content="{{ public_base_url }}/static/social-card.png">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Soccer Scanner — Fixture intelligence">
     <meta name="twitter:description" content="Fast, spoiler-safe soccer fixture intelligence across leading competitions.">
     <title>{% block title %}Soccer Scanner{% endblock %}</title>
     <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml">
+    <link rel="icon" href="{{ url_for('static', filename='icons/favicon-32.png') }}" type="image/png" sizes="32x32">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
     <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -29,7 +31,12 @@
     <header class="app-header">
         <div class="nav-container">
             <a class="app-title" href="/" aria-label="Soccer Scanner home">
-                <span>SOCCER</span><span class="app-title-accent">SCANNER</span>
+                <svg class="app-title-mark" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+                    <rect width="64" height="64" rx="12" fill="#000"/>
+                    <path d="M17 16h30v8H25v6h17a7 7 0 0 1 7 7v4a7 7 0 0 1-7 7H15v-8h26v-6H24a7 7 0 0 1-7-7V16Z" fill="#7cff00"/>
+                    <path d="M11 11h10v3h-7v7h-3V11Zm42 0v10h-3v-7h-7v-3h10ZM11 53V43h3v7h7v3H11Zm42 0H43v-3h7v-7h3v10Z" fill="#f2f2f2"/>
+                </svg>
+                <span class="app-title-wordmark"><span>SOCCER</span><span class="app-title-accent">SCANNER</span></span>
             </a>
             <button id="nav-toggle" class="nav-toggle" type="button" aria-expanded="false" aria-controls="primary-navigation">
                 <span class="sr-only">Open navigation</span>

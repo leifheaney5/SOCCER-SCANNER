@@ -8,7 +8,7 @@ const [crestModule, fixtureRendererModule, fixtureStateModule] = await Promise.a
     import(versionedModule('./fixture-state.js')),
 ]);
 const {createCrest} = crestModule;
-const {createScoreNode, formatFreshness} = fixtureRendererModule;
+const {createScoreNode, formatFreshness, resolveStreamingServices} = fixtureRendererModule;
 const {statusKind} = fixtureStateModule;
 
 function node(tag, className = '', text = '') {
@@ -82,6 +82,43 @@ function sourceLabel(value) {
     return labels[String(value || '').toLocaleLowerCase()] || sentenceCase(value);
 }
 
+// Every service is listed here (unlike the card, which shows only the
+// first plus a `+N` count). An anchor is only ever created when
+// `officialUrl` is present — an unverified name is never given a link, and
+// `region` is rendered exactly as supplied (including "Region unknown")
+// rather than guessed.
+function createStreamingSection(match) {
+    const services = resolveStreamingServices(match);
+    if (!services.length) return null;
+    const section = node('div', 'context-streaming');
+    section.setAttribute('aria-label', 'Where to watch');
+    section.append(node('h3', 'context-streaming-heading', 'Where to watch'));
+    const list = node('ul', 'context-streaming-list');
+    for (const service of services) {
+        const item = node('li', 'context-streaming-item');
+        if (service.officialUrl) {
+            const link = node('a', 'context-streaming-link', service.displayName);
+            link.href = service.officialUrl;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            item.append(link);
+        } else {
+            item.append(node('span', 'context-streaming-name', service.displayName));
+        }
+        if (service.region) {
+            item.append(node('span', 'context-streaming-region', service.region));
+        }
+        list.append(item);
+    }
+    section.append(list);
+    section.append(node(
+        'p',
+        'context-streaming-disclaimer',
+        'Availability varies by region and subscription. Listings may be incomplete or out of date.',
+    ));
+    return section;
+}
+
 function createSourceInspector(match) {
     const inspector = node('details', 'source-inspector');
     inspector.append(node('summary', '', 'Source and freshness'));
@@ -144,7 +181,10 @@ function createContextContent(match, revealed, onTeam, headingId) {
         calendar.setAttribute('download', '');
         actions.append(copy, calendar);
     }
-    fragment.append(competition, heading, status, matchup, details, actions, createSourceInspector(match));
+    const streamingSection = createStreamingSection(match);
+    fragment.append(competition, heading, status, matchup, details);
+    if (streamingSection) fragment.append(streamingSection);
+    fragment.append(actions, createSourceInspector(match));
     return fragment;
 }
 

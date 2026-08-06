@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "lastVerified": "2026-08-05",
+  "services": [
+    {
+      "id": "peacock",
+      "displayName": "Peacock",
+      "aliases": ["peacock", "peacock premium", "peacock tv"],
+      "domains": ["peacocktv.com"],
+      "officialUrl": "https://www.peacocktv.com/",
+      "requiresAttribution": false
+    },
+    {
+      "id": "espn-plus",
+      "displayName": "ESPN+",
+      "aliases": ["espn+", "espn plus", "espnplus"],
+      "domains": ["plus.espn.com", "espn.com"],
+      "officialUrl": "https://plus.espn.com/",
+      "requiresAttribution": false
+    },
+    {
+      "id": "paramount-plus",
+      "displayName": "Paramount+",
+      "aliases": ["paramount+", "paramount plus"],
+      "domains": ["paramountplus.com"],
+      "officialUrl": "https://www.paramountplus.com/",
+      "requiresAttribution": false
+    },
+    {
+      "id": "apple-tv",
+      "displayName": "Apple TV",
+      "aliases": ["apple tv", "apple tv+", "apple tv plus"],
+      "domains": ["tv.apple.com"],
+      "officialUrl": "https://tv.apple.com/",
+      "requiresAttribution": false
+    },
+    {
+      "id": "amazon-prime-video",
+      "displayName": "Prime Video",
+      "aliases": ["prime video", "amazon prime video", "amazon"],
+      "domains": ["primevideo.com", "amazon.com"],
+      "officialUrl": "https://www.primevideo.com/",
+      "requiresAttribution": false
+    },
+    {
+      "id": "dazn",
+      "displayName": "DAZN",
+      "aliases": ["dazn"],
+      "domains": ["dazn.com"],
+      "officialUrl": "https://www.dazn.com/",
+      "requiresAttribution": false
+    },
+    {
+      "id": "fubo",
+      "displayName": "Fubo",
+      "aliases": ["fubo", "fubotv", "fubo tv"],
+      "domains": ["fubo.tv"],
+      "officialUrl": "https://www.fubo.tv/",
+      "requiresAttribution": false
+    },
+    {
+      "id": "max",
+      "displayName": "Max",
+      "aliases": ["max", "hbo max"],
+      "domains": ["max.com"],
+      "officialUrl": "https://www.max.com/",
+      "requiresAttribution": false
+    }
+  ]
+}

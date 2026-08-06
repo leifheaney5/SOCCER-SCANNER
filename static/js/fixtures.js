@@ -2,7 +2,7 @@ const assetVersion = new URL(import.meta.url).searchParams.get('v');
 const versionedModule = path => (
     assetVersion ? `${path}?v=${encodeURIComponent(assetVersion)}` : path
 );
-const [appStoreModule, fixtureStateModule, scorePreferenceModule, fixtureRendererModule, matchContextModule, teamDrawerModule, refreshModule, dialogModule] = await Promise.all([
+const [appStoreModule, fixtureStateModule, scorePreferenceModule, fixtureRendererModule, matchContextModule, teamDrawerModule, refreshModule, dialogModule, timezoneControlModule] = await Promise.all([
     import(versionedModule('./app-store.js')),
     import(versionedModule('./fixture-state.js')),
     import(versionedModule('./score-preference.js')),
@@ -11,6 +11,7 @@ const [appStoreModule, fixtureStateModule, scorePreferenceModule, fixtureRendere
     import(versionedModule('./team-drawer.js')),
     import(versionedModule('./refresh-controller.js')),
     import(versionedModule('./dialog-manager.js')),
+    import(versionedModule('./timezone-control.js')),
 ]);
 const {createStore} = appStoreModule;
 const {
@@ -43,6 +44,7 @@ const {createMatchContext} = matchContextModule;
 const {createTeamDrawer} = teamDrawerModule;
 const {createRefreshController} = refreshModule;
 const {createDialogManager} = dialogModule;
+const {createTimezoneControl} = timezoneControlModule;
 
 const byId = id => document.getElementById(id);
 const detectedTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
@@ -61,6 +63,7 @@ let requestSequence = 0;
 let matchContext = null;
 let teamDrawer = null;
 let refreshController = null;
+let timezoneControl = null;
 
 function setState(patch, metadata = {}) {
     return store.dispatch(patch, metadata);
@@ -105,6 +108,7 @@ function syncControls() {
     byId('active-filter-count').hidden = activeFilters === 0;
     byId('clear-filters').hidden = activeFilters === 0;
     syncScoreToggle(byId('score-toggle'), scoresRevealed);
+    timezoneControl?.sync();
 }
 
 function populateCompetitions(matches) {
@@ -270,20 +274,25 @@ function chooseDate(date) {
     loadFixtures();
 }
 
+// Shared by the `#timezone-filter` select and the header timezone control so
+// the two views of `state.timezone` cannot drift: whichever one changes the
+// zone, this is the only place that applies it.
+function applyTimezone(timezone) {
+    cancelPendingSearch();
+    setState({timezone, fixture: ''}, {reason: 'timezone'});
+    selectedFixtureId = state.fixture || null;
+    matchContext?.reset();
+    syncControls();
+    syncUrl('push');
+    loadFixtures();
+}
+
 function bindEvents() {
     byId('previous-date').addEventListener('click', () => chooseDate(shiftDate(state.date, -1)));
     byId('today-date').addEventListener('click', () => chooseDate(todayLocal(new Date(), state.timezone)));
     byId('next-date').addEventListener('click', () => chooseDate(shiftDate(state.date, 1)));
     byId('dashboard-date').addEventListener('change', event => chooseDate(event.target.value));
-    byId('timezone-filter').addEventListener('change', event => {
-        cancelPendingSearch();
-        setState({timezone: event.target.value, fixture: ''}, {reason: 'timezone'});
-        selectedFixtureId = state.fixture || null;
-        matchContext?.reset();
-        syncControls();
-        syncUrl('push');
-        loadFixtures();
-    });
+    byId('timezone-filter').addEventListener('change', event => applyTimezone(event.target.value));
     byId('competition-filter').addEventListener('change', event => applyFilter({competition: event.target.value}));
     byId('country-filter').addEventListener('change', event => applyFilter({country: event.target.value}));
     byId('time-filter').addEventListener('change', event => applyFilter({timeWindow: event.target.value}));
@@ -399,6 +408,11 @@ function init() {
             }
         },
         dialogManager,
+    });
+    timezoneControl = createTimezoneControl({
+        root: byId('timezone-control'),
+        getTimeZone: () => state.timezone,
+        onChange: applyTimezone,
     });
     syncUrl('replace');
     syncControls();
