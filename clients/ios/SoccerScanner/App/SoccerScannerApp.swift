@@ -43,7 +43,8 @@ final class AppContainer {
         self.environment = environment
         self.client = client ?? Self.resolveClient(environment: environment, defaults: defaults)
         self.router = AppRouter()
-        if let urlString = defaults.string(forKey: "UITestDeepLink"),
+        if let urlString = defaults.string(forKey: "UITestDeepLink")
+            ?? Self.argumentValue("UITestDeepLink"),
            let url = URL(string: urlString) {
             router.handle(url)
         }
@@ -55,28 +56,42 @@ final class AppContainer {
         environment: AppEnvironment,
         defaults: UserDefaults
     ) -> FixtureFetching {
-        guard defaults.bool(forKey: "UITestStubData") else {
+        guard Self.flag("UITestStubData", defaults: defaults) else {
             return APIClient(environment: environment)
         }
-        if defaults.bool(forKey: "UITestFailure") {
+        if Self.flag("UITestFailure", defaults: defaults) {
             return PreviewFixtureClient(behaviour: .failure(.providerUnavailable(message: "stub")))
         }
-        if defaults.bool(forKey: "UITestTeamFailure") {
+        if Self.flag("UITestTeamFailure", defaults: defaults) {
             return PreviewFixtureClient(behaviour: .teamFailure)
         }
-        if defaults.bool(forKey: "UITestPartial") {
+        if Self.flag("UITestPartial", defaults: defaults) {
             return PreviewFixtureClient(behaviour: .partial)
         }
-        if defaults.bool(forKey: "UITestStale") {
+        if Self.flag("UITestStale", defaults: defaults) {
             return PreviewFixtureClient(behaviour: .stale)
         }
-        if defaults.bool(forKey: "UITestEmpty") {
+        if Self.flag("UITestEmpty", defaults: defaults) {
             return PreviewFixtureClient(behaviour: .empty)
         }
-        if defaults.bool(forKey: "UITestAccessibilityFixtures") {
+        if Self.flag("UITestAccessibilityFixtures", defaults: defaults) {
             return PreviewFixtureClient(behaviour: .accessibility)
         }
         return PreviewFixtureClient(behaviour: .loaded)
+    }
+
+    private static func flag(_ name: String, defaults: UserDefaults) -> Bool {
+        defaults.bool(forKey: name)
+            || ProcessInfo.processInfo.arguments.contains("-(name)")
+    }
+
+    private static func argumentValue(_ name: String) -> String? {
+        let arguments = ProcessInfo.processInfo.arguments
+        guard let index = arguments.firstIndex(of: "-(name)"),
+              arguments.index(after: index) < arguments.endIndex else {
+            return nil
+        }
+        return arguments[arguments.index(after: index)]
     }
 
     func makeFixtureListModel() -> FixtureListViewModel {
