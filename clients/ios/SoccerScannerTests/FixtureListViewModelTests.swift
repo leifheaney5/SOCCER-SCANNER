@@ -967,7 +967,7 @@ private func advancedModel(
       {"canonicalFixtureId":"fx_no_kickoff","status":{"code":"SCHEDULED"},
        "homeTeam":{"name":"Unknown"},"awayTeam":{"name":"Fixture"}}
     ]
-    """))))
+    """)))
     await load.value
     return (viewModel, client)
 }
