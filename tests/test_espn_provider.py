@@ -6,7 +6,12 @@ from pathlib import Path
 from unittest.mock import Mock
 
 from soccer_scanner.domain.models import ProviderStatus
-from soccer_scanner.providers.espn import EspnProvider, normalize_event
+from soccer_scanner.providers.espn import (
+    GLOBAL_SCOREBOARD_LIMIT,
+    GLOBAL_SCOREBOARD_RETRY_LIMIT,
+    EspnProvider,
+    normalize_event,
+)
 from soccer_scanner.providers.http import HttpObservation
 from soccer_scanner.services.cache_backend import MemoryCacheBackend
 from soccer_scanner.services.team_identity import TeamIdentityResolver
@@ -51,6 +56,17 @@ def event(*, status=None, competitors=None, competition=None):
         'competitions': [competition_payload],
         'season': {'year': 2026, 'displayName': '2026'},
     }
+
+
+def _events(count, *, start_id=401234, league_uid='s:600~l:3903'):
+    items = []
+    for index in range(count):
+        item = event()
+        item_id = str(start_id + index)
+        item['id'] = item_id
+        item['uid'] = f'{league_uid}~e:{item_id}'
+        items.append(item)
+    return items
 
 
 def test_normalizes_every_status_without_treating_unknown_as_scheduled():
@@ -314,3 +330,116 @@ def test_provider_concurrency_is_bounded_and_workers_finish_before_return():
 
     assert 1 < client.maximum <= 4
     assert not any(thread.name.startswith('soccer-espn') for thread in threading.enumerate())
+
+
+def test_day_under_the_limit_is_not_flagged_and_needs_no_retry():
+    client = Mock()
+    client.get_json.return_value = (
+        {'events': _events(5)},
+        HttpObservation(requestCount=1, timeoutCount=0, rateLimitCount=0, durationMs=4),
+    )
+    provider = EspnProvider(
+        client,
+        league_metadata={'3903': {'name': 'Brasileirão', 'slug': 'bra.1'}},
+    )
+
+    outcome = provider.fetch_range(date(2026, 8, 6), date(2026, 8, 6))
+
+    assert outcome.status is ProviderStatus.SUCCESS
+    assert 'suspected_truncation' not in outcome.failureCategories
+    assert len(outcome.fixtures) == 5
+    assert client.get_json.call_count == 1
+
+
+def test_multi_day_under_limit_totals_do_not_trigger_truncation_check():
+    per_day_count = GLOBAL_SCOREBOARD_LIMIT // 2 + 1
+    first_day = _events(per_day_count, start_id=401234, league_uid='s:600~l:3903')
+    second_day = _events(per_day_count, start_id=500000, league_uid='s:600~l:3903')
+    client = Mock()
+    client.get_json.side_effect = [
+        ({'events': first_day}, HttpObservation(requestCount=1, timeoutCount=0, rateLimitCount=0, durationMs=4)),
+        ({'events': second_day}, HttpObservation(requestCount=1, timeoutCount=0, rateLimitCount=0, durationMs=4)),
+    ]
+    provider = EspnProvider(
+        client,
+        league_metadata={'3903': {'name': 'Brasileirão', 'slug': 'bra.1'}},
+    )
+
+    outcome = provider.fetch_range(date(2026, 8, 6), date(2026, 8, 7))
+
+    assert outcome.status is ProviderStatus.SUCCESS
+    assert 'suspected_truncation' not in outcome.failureCategories
+    assert len(outcome.fixtures) == per_day_count * 2
+    assert client.get_json.call_count == 2
+    assert [
+        call.kwargs['params']['limit'] for call in client.get_json.call_args_list
+    ] == [GLOBAL_SCOREBOARD_LIMIT, GLOBAL_SCOREBOARD_LIMIT]
+
+
+def test_suspected_truncation_confirmed_by_retry_is_not_flagged_and_keeps_larger_set():
+    limited = _events(GLOBAL_SCOREBOARD_LIMIT)
+    confirmed = _events(GLOBAL_SCOREBOARD_LIMIT + 50)
+    client = Mock()
+    client.get_json.side_effect = [
+        ({'events': limited}, HttpObservation(requestCount=1, timeoutCount=0, rateLimitCount=0, durationMs=4)),
+        ({'events': confirmed}, HttpObservation(requestCount=1, timeoutCount=0, rateLimitCount=0, durationMs=4)),
+    ]
+    provider = EspnProvider(
+        client,
+        league_metadata={'3903': {'name': 'Brasileirão', 'slug': 'bra.1'}},
+    )
+
+    outcome = provider.fetch_range(date(2026, 8, 6), date(2026, 8, 6))
+
+    assert outcome.status is ProviderStatus.SUCCESS
+    assert 'suspected_truncation' not in outcome.failureCategories
+    assert len(outcome.fixtures) == GLOBAL_SCOREBOARD_LIMIT + 50
+    assert client.get_json.call_count == 2
+    assert [
+        call.kwargs['params']['limit'] for call in client.get_json.call_args_list
+    ] == [GLOBAL_SCOREBOARD_LIMIT, GLOBAL_SCOREBOARD_RETRY_LIMIT]
+
+
+def test_suspected_truncation_still_capped_on_retry_is_flagged_and_keeps_larger_set():
+    limited = _events(GLOBAL_SCOREBOARD_LIMIT)
+    still_capped = _events(GLOBAL_SCOREBOARD_RETRY_LIMIT, start_id=900000)
+    client = Mock()
+    client.get_json.side_effect = [
+        ({'events': limited}, HttpObservation(requestCount=1, timeoutCount=0, rateLimitCount=0, durationMs=4)),
+        ({'events': still_capped}, HttpObservation(requestCount=1, timeoutCount=0, rateLimitCount=0, durationMs=4)),
+    ]
+    provider = EspnProvider(
+        client,
+        league_metadata={'3903': {'name': 'Brasileirão', 'slug': 'bra.1'}},
+    )
+
+    outcome = provider.fetch_range(date(2026, 8, 6), date(2026, 8, 6))
+
+    assert outcome.status is ProviderStatus.PARTIAL
+    assert 'suspected_truncation' in outcome.failureCategories
+    assert len(outcome.fixtures) == GLOBAL_SCOREBOARD_RETRY_LIMIT
+    assert client.get_json.call_count == 2
+
+
+def test_suspected_truncation_skips_retry_and_flags_when_budget_is_exhausted():
+    class ExhaustedBudget:
+        def remaining(self):
+            return 0.0
+
+    limited = _events(GLOBAL_SCOREBOARD_LIMIT)
+    client = Mock()
+    client.get_json.return_value = (
+        {'events': limited},
+        HttpObservation(requestCount=1, timeoutCount=0, rateLimitCount=0, durationMs=4),
+    )
+    provider = EspnProvider(
+        client,
+        league_metadata={'3903': {'name': 'Brasileirão', 'slug': 'bra.1'}},
+    )
+
+    outcome = provider.fetch_range(date(2026, 8, 6), date(2026, 8, 6), budget=ExhaustedBudget())
+
+    assert outcome.status is ProviderStatus.PARTIAL
+    assert 'suspected_truncation' in outcome.failureCategories
+    assert len(outcome.fixtures) == GLOBAL_SCOREBOARD_LIMIT
+    assert client.get_json.call_count == 1
