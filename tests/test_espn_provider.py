@@ -351,6 +351,31 @@ def test_day_under_the_limit_is_not_flagged_and_needs_no_retry():
     assert client.get_json.call_count == 1
 
 
+def test_multi_day_under_limit_totals_do_not_trigger_truncation_check():
+    per_day_count = GLOBAL_SCOREBOARD_LIMIT // 2 + 1
+    first_day = _events(per_day_count, start_id=401234, league_uid='s:600~l:3903')
+    second_day = _events(per_day_count, start_id=500000, league_uid='s:600~l:3903')
+    client = Mock()
+    client.get_json.side_effect = [
+        ({'events': first_day}, HttpObservation(requestCount=1, timeoutCount=0, rateLimitCount=0, durationMs=4)),
+        ({'events': second_day}, HttpObservation(requestCount=1, timeoutCount=0, rateLimitCount=0, durationMs=4)),
+    ]
+    provider = EspnProvider(
+        client,
+        league_metadata={'3903': {'name': 'Brasileirão', 'slug': 'bra.1'}},
+    )
+
+    outcome = provider.fetch_range(date(2026, 8, 6), date(2026, 8, 7))
+
+    assert outcome.status is ProviderStatus.SUCCESS
+    assert 'suspected_truncation' not in outcome.failureCategories
+    assert len(outcome.fixtures) == per_day_count * 2
+    assert client.get_json.call_count == 2
+    assert [
+        call.kwargs['params']['limit'] for call in client.get_json.call_args_list
+    ] == [GLOBAL_SCOREBOARD_LIMIT, GLOBAL_SCOREBOARD_LIMIT]
+
+
 def test_suspected_truncation_confirmed_by_retry_is_not_flagged_and_keeps_larger_set():
     limited = _events(GLOBAL_SCOREBOARD_LIMIT)
     confirmed = _events(GLOBAL_SCOREBOARD_LIMIT + 50)

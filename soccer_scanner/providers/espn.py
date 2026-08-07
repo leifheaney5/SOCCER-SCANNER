@@ -333,6 +333,10 @@ class EspnProvider:
                 else:
                     successful_global_responses += 1
                     day_events = payload['events']
+                    # Deliberately per-day: truncation is a property of one
+                    # day's response against that day's limit, not of the
+                    # accumulated multi-day `events` list. Do not change this
+                    # to compare against `len(events)`.
                     if len(day_events) >= GLOBAL_SCOREBOARD_LIMIT:
                         day_events, truncation_failures = self._confirm_or_flag_truncation(
                             current_date,
