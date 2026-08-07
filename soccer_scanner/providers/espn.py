@@ -56,6 +56,15 @@ _STATUS_MAP = {
 
 _LEAGUE_UID_PATTERN = re.compile(r'(?:^|~)l:([^~]+)')
 
+# ESPN's global scoreboard payload carries no count/total/pageCount/pagination
+# field, so there is no authoritative way to know whether a day's events were
+# truncated by 'limit'. Detection here is therefore heuristic: a response that
+# returns exactly (or more than) the requested limit is *suspected* to be
+# truncated, and is confirmed (or not) by re-requesting once at a
+# substantially higher limit; see EspnProvider._confirm_or_flag_truncation.
+GLOBAL_SCOREBOARD_LIMIT = 500
+GLOBAL_SCOREBOARD_RETRY_LIMIT = 2 * GLOBAL_SCOREBOARD_LIMIT
+
 
 def extract_league_id(event):
     """Return the provider-qualified league ID carried by a global event UID."""
@@ -314,7 +323,7 @@ class EspnProvider:
                     'sports/soccer/all/scoreboard',
                     params={
                         'dates': f'{current_date:%Y%m%d}',
-                        'limit': 500,
+                        'limit': GLOBAL_SCOREBOARD_LIMIT,
                     },
                     budget=budget,
                 )
@@ -323,7 +332,16 @@ class EspnProvider:
                     failures.append('malformed_payload')
                 else:
                     successful_global_responses += 1
-                    events.extend(payload['events'])
+                    day_events = payload['events']
+                    if len(day_events) >= GLOBAL_SCOREBOARD_LIMIT:
+                        day_events, truncation_failures = self._confirm_or_flag_truncation(
+                            current_date,
+                            day_events,
+                            global_observations,
+                            budget=budget,
+                        )
+                        failures.extend(truncation_failures)
+                    events.extend(day_events)
             except ProviderRequestError as error:
                 if error.observation is not None:
                     global_observations.append(error.observation)
@@ -409,6 +427,36 @@ class EspnProvider:
             durationMs=max(0, round((self.clock() - started) * 1000)),
             failureCategories=tuple(sorted(set(failures))),
         )
+
+    def _confirm_or_flag_truncation(self, current_date, day_events, observations, *, budget):
+        """Re-request one day once at a higher limit when the event count
+        suggests the global scoreboard was truncated. Returns the event list
+        to keep for the day and any failure categories to record for it."""
+        if budget is not None and budget.remaining() <= 0:
+            return day_events, ['suspected_truncation']
+
+        try:
+            retry_payload, retry_observation = self.client.get_json(
+                'sports/soccer/all/scoreboard',
+                params={
+                    'dates': f'{current_date:%Y%m%d}',
+                    'limit': GLOBAL_SCOREBOARD_RETRY_LIMIT,
+                },
+                budget=budget,
+            )
+        except ProviderRequestError as error:
+            if error.observation is not None:
+                observations.append(error.observation)
+            return day_events, ['suspected_truncation']
+
+        observations.append(retry_observation)
+        if not isinstance(retry_payload, dict) or not isinstance(retry_payload.get('events', []), list):
+            return day_events, ['suspected_truncation']
+
+        retry_events = retry_payload['events']
+        if len(retry_events) < GLOBAL_SCOREBOARD_RETRY_LIMIT:
+            return retry_events, []
+        return retry_events, ['suspected_truncation']
 
     def _resolve_metadata(self, representatives, *, budget):
         metadata = {}
