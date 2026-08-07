@@ -39,6 +39,11 @@ env/
 *.swo
 *~
 
+# Generated Apple project/build metadata
+clients/ios/*.xcodeproj/
+clients/ios/*.xcworkspace/
+**/*.xcuserstate
+
 # OS
 .DS_Store
 .DS_Store?

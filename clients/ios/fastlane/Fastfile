@@ -1,3 +1,5 @@
+require "shellwords"
+
 # Soccer Scanner iOS release automation.
 #
 # Authentication uses an App Store Connect API key (Issuer ID + Key ID + .p8),
@@ -10,14 +12,48 @@
 #   APP_STORE_CONNECT_PRIVATE_KEY   (contents of the .p8)
 #   APPLE_TEAM_ID
 #   APPLE_BUNDLE_ID
-#   MATCH_PASSWORD / MATCH_GIT_URL  (only if using fastlane match for signing)
+#   BUILD_NUMBER                    (a new numeric App Store build number)
 
 default_platform(:ios)
 
 XCODEPROJ = "SoccerScanner.xcodeproj"
 SCHEME = "SoccerScanner"
 
+def required_release_env(name)
+  value = ENV[name].to_s.strip
+  UI.user_error!("Release blocked: #{name} is required.") if value.empty?
+  value
+end
+
+def release_signing_xcargs
+  team_id = required_release_env("APPLE_TEAM_ID")
+  bundle_id = required_release_env("APPLE_BUNDLE_ID")
+  build_number = required_release_env("BUILD_NUMBER")
+
+  unless team_id.match?(/\A[A-Z0-9]{10}\z/)
+    UI.user_error!("Release blocked: APPLE_TEAM_ID must be a 10-character Apple Team ID.")
+  end
+  unless bundle_id.match?(/\A[A-Za-z0-9][A-Za-z0-9.-]*\z/)
+    UI.user_error!("Release blocked: APPLE_BUNDLE_ID is not a valid bundle identifier.")
+  end
+  unless build_number.match?(/\A\d+\z/)
+    UI.user_error!("Release blocked: BUILD_NUMBER must be numeric and monotonic.")
+  end
+
+  [
+    "-allowProvisioningUpdates",
+    "CODE_SIGN_STYLE=Automatic",
+    "DEVELOPMENT_TEAM=#{Shellwords.escape(team_id)}",
+    "PRODUCT_BUNDLE_IDENTIFIER=#{Shellwords.escape(bundle_id)}",
+    "CURRENT_PROJECT_VERSION=#{Shellwords.escape(build_number)}"
+  ].join(" ")
+end
+
 def api_key
+  %w[APP_STORE_CONNECT_KEY_ID APP_STORE_CONNECT_ISSUER_ID APP_STORE_CONNECT_PRIVATE_KEY].each do |name|
+    UI.user_error!("Release blocked: #{name} is required for App Store Connect upload.") if ENV[name].to_s.strip.empty?
+  end
+
   app_store_connect_api_key(
     key_id: ENV.fetch("APP_STORE_CONNECT_KEY_ID"),
     issuer_id: ENV.fetch("APP_STORE_CONNECT_ISSUER_ID"),
@@ -26,10 +62,45 @@ def api_key
   )
 end
 
+def asset_preflight!
+  # Keep every build lane aligned with the repository-controlled asset,
+  # metadata, and workflow checks enforced by simulator CI.
+  sh("python3 ../../tests/test_ios_release_assets.py")
+end
+
+def release_preflight!
+  terms_path = File.expand_path("../../../templates/terms.html", __dir__)
+  unless File.file?(terms_path)
+    UI.user_error!("Release blocked: the website Terms source could not be found.")
+  end
+
+  terms = File.read(terms_path)
+  if terms.include?("[TO BE COMPLETED BY LEGAL OWNER]")
+    UI.user_error!("Release blocked: the website Terms still contain legal-owner placeholders.")
+  end
+
+  support_path = File.expand_path("metadata/en-US/support_url.txt", __dir__)
+  unless File.file?(support_path)
+    UI.user_error!("Release blocked: add the verified App Store support URL to metadata/en-US/support_url.txt.")
+  end
+
+  support_url = File.read(support_path).strip
+  unless support_url.match?(%r{\Ahttps://\S+\z})
+    UI.user_error!("Release blocked: support_url.txt must contain one verified HTTPS URL.")
+  end
+
+  asset_preflight!
+end
+
 platform :ios do
   desc "Generate the Xcode project from project.yml"
   lane :generate do
-    sh("xcodegen generate --spec ../project.yml --project ..")
+    sh("xcodegen generate --spec project.yml")
+  end
+
+  desc "Validate release assets and legal/support gates without building"
+  lane :preflight do
+    release_preflight!
   end
 
   desc "Run unit and UI tests on a simulator"
@@ -41,13 +112,16 @@ platform :ios do
       # Device is resolved by CI; fastlane falls back to the newest installed.
       clean: true,
       result_bundle: true,
-      output_directory: "../build/test-results"
+      output_directory: "../build/test-results",
+      xcargs: 'CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY=""'
     )
   end
 
   desc "Build a signed App Store archive"
   lane :build do
     generate
+    asset_preflight!
+    signing_xcargs = release_signing_xcargs
     # Build number must be monotonic; the CI run number guarantees that.
     increment_build_number(
       xcodeproj: XCODEPROJ,
@@ -59,7 +133,14 @@ platform :ios do
       configuration: "Release",
       export_method: "app-store",
       # Supplied only at release time so no Apple identifiers live in the repo.
-      xcargs: "DEVELOPMENT_TEAM=#{ENV.fetch('APPLE_TEAM_ID')} PRODUCT_BUNDLE_IDENTIFIER=#{ENV.fetch('APPLE_BUNDLE_ID')}",
+      # Automatic signing lets the authenticated release runner create/use the
+      # registered App Store profile; simulator CI remains signing-free.
+      xcargs: signing_xcargs,
+      export_options: {
+        signingStyle: "automatic",
+        uploadBitcode: false,
+        uploadSymbols: true
+      },
       output_directory: "../build",
       output_name: "SoccerScanner.ipa"
     )
@@ -67,26 +148,33 @@ platform :ios do
 
   desc "Upload a build to TestFlight (no public release)"
   lane :beta do
+    key = api_key
     build
+    beta_notes_path = File.expand_path("metadata/en-US/beta_notes.txt", __dir__)
     upload_to_testflight(
-      api_key: api_key,
+      api_key: key,
       skip_waiting_for_build_processing: true,
-      distribute_external: false
+      distribute_external: false,
+      changelog: File.read(beta_notes_path)
     )
   end
 
   desc "Upload binary and metadata to App Store Connect WITHOUT submitting for review"
   lane :release_upload do
+    release_preflight!
+    key = api_key
     build
     upload_to_app_store(
-      api_key: api_key,
+      api_key: key,
       # Deliberately does not submit. A human reviews the listing in App Store
       # Connect and presses Submit. Flip to true only when the listing,
       # screenshots and privacy answers have been reviewed at least once.
       submit_for_review: false,
       automatic_release: false,
       force: true,
-      skip_screenshots: false,
+      # Final screenshots are captured and reviewed in App Store Connect;
+      # this repository does not pretend that browser images are store art.
+      skip_screenshots: true,
       skip_metadata: false,
       precheck_include_in_app_purchases: false
     )
@@ -94,12 +182,16 @@ platform :ios do
 
   desc "Full submission for review. Requires an explicitly reviewed listing."
   lane :release_submit do
+    release_preflight!
+    key = api_key
     build
     upload_to_app_store(
-      api_key: api_key,
+      api_key: key,
       submit_for_review: true,
       automatic_release: false,
       force: true,
+      # Screenshots remain a human-reviewed App Store Connect asset.
+      skip_screenshots: true,
       submission_information: {
         add_id_info_uses_idfa: false,
         export_compliance_uses_encryption: false

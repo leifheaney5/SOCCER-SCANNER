@@ -1,126 +1,110 @@
 # Soccer Scanner — iOS client
 
-A native SwiftUI client for the Soccer Scanner v2 API. Not a `WKWebView` wrapper.
+A native SwiftUI client for the Soccer Scanner v2 API. It is not a web-view wrapper.
 
-## Status
+## Current scope
 
-| Item | State |
-| --- | --- |
-| SwiftUI app, typed API client, DI, design system | written |
-| Fixture vertical slice (list → detail, spoiler-safe, timezone-aware, universal links) | written |
-| Unit tests (33 cases) and UI tests (5 cases) | written |
-| Privacy manifest, entitlements, app icon | written and validated |
-| fastlane lanes + `macos-latest` CI | written |
-| **Compiled / test-run** | **BLOCKED — no macOS toolchain in the authoring environment** |
-| **Submitted to the App Store** | **not submitted** |
+The fixture list is the current native surface. It loads a selected calendar day in an explicit IANA timezone, provides previous/today/next and date-picker navigation, and filters loaded fixtures locally by status and search text. A row opens native fixture detail; scores begin hidden for each launch and can be revealed or hidden from either the list toolbar or the detail screen. When a fixture contains a verified canonical team ID, its detail screen can open on-demand provider-verified team identity and aggregate season statistics without rendering match-level scores.
 
-Xcode, `xcodebuild` and the App Store upload tooling are macOS-only. This project has
-therefore **never been compiled locally**. The `iOS` GitHub Actions workflow on
-`macos-latest` is the verification path; treat its first green run as the point at which
-"builds and tests pass" may be claimed. Until then, assume compile errors are possible.
+Fixture links are parsed by the app root from both `onOpenURL` and Universal Link user activities. Only a validated fixture route is consumed natively; unsupported or malformed routes leave the fixture list usable. The route lookup uses the typed fixture endpoint and reports a missing fixture without inventing a destination.
+
+Settings is available from the fixture-list toolbar. It shows the app version/build from `Bundle`, selected timezone, spoiler and data-source explanations, plus website, privacy, terms, and data-source links. The environment label appears only outside production. Its Support section truthfully states that support contact is not configured for this build; no native support link is present because this repository contains no verified support destination or owner.
 
 ## Layout
 
 ```
 clients/ios/
-  project.yml                    XcodeGen spec — the .xcodeproj is generated, not committed
-  Gemfile                        fastlane toolchain
-  Tools/generate_app_icon.py     reproducible 1024px App Store icon
-  fastlane/                      Fastfile, Appfile, App Store metadata
+  project.yml                    XcodeGen specification
   SoccerScanner/
-    App/                         entry point + composition root
-    Config/                      development / staging / production environments
-    Models/                      Fixture, MatchStatus, AppConfig
-    Networking/                  typed APIClient and APIError
-    Features/                    Fixtures list, Fixture detail
-    DesignSystem/                Theme, StatusBadge
-    Storage/                     Keychain abstraction
-    Support/                     timezone formatting, deep links, preview data
-    Resources/Assets.xcassets    AppIcon, AccentColor
-    PrivacyInfo.xcprivacy        declares: collects nothing, no tracking
-  SoccerScannerTests/
-  SoccerScannerUITests/
+    App/                         app root, composition, route state
+    Config/                      development, staging, production environments
+    Features/Fixtures/           fixture list and detail
+    Features/Settings/           native settings/about form
+    Models/                      fixture and API configuration contracts
+    Networking/                  typed API client and error taxonomy
+    Support/                     deep links, timezone formatting, preview data
+  SoccerScannerTests/            XCTest coverage
+  SoccerScannerUITests/          deterministic stub-data UI coverage
+  Tools/select_simulator.py      numeric-newest simulator selection used by CI
 ```
 
-## Cross-platform invariants
+## Verification boundaries
 
-Three behaviours must not diverge from the web client, and are tested on both sides:
+Windows cannot run Xcode, `xcodebuild`, iOS Simulator tests, or compile this target. The `.github/workflows/ios.yml` `iOS` workflow generates the Xcode project, validates the source and generated release settings, selects an available simulator, then runs the full unit/UI test scheme with signing disabled. It uploads both the `.xcresult` bundle and raw `xcodebuild` output when the run finishes.
 
-1. **Status taxonomy** — `MatchStatus` mirrors `static/js/match-status.js`. Half time,
-   extra time and penalties are distinct from generic live; abandoned is terminal;
-   suspended stays active.
-2. **Timezone** — the selected zone controls both displayed time and calendar-day
-   membership. `TimeZone.current` is never used implicitly.
-3. **Score privacy** — scores start hidden on every launch and are never persisted, and a
-   status without a meaningful score never renders one.
+Historical evidence recorded on 2026-08-05 shows an earlier `iOS` workflow run passed 36 unit tests and 5 UI tests. It does not verify the current uncommitted native P0 changes. A fresh macOS workflow run for the commit containing those changes is required before calling this client compiled or its UI tests passing.
 
-## Local development (requires macOS)
+The native client points production configuration at `https://soccerscanner.pro`.
+The audited committed HEAD was read-only smoke-verified there on 2026-08-07, but
+that does not prove the current uncommitted native changes are deployed or that
+Universal Links are activated; a future release SHA needs its own production and
+device verification.
+
+## Local development (macOS only)
 
 ```bash
 brew install xcodegen
 cd clients/ios
-xcodegen generate
-open SoccerScanner.xcodeproj
+xcodegen generate --spec project.yml
+xcodebuild test -project SoccerScanner.xcodeproj -scheme SoccerScanner -destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY=""
 ```
 
-Point the app at a local backend with `SOCCER_SCANNER_ENVIRONMENT=development`.
+The development environment uses `http://localhost:5000`; production is the default when `SOCCER_SCANNER_ENVIRONMENT` is unset or unrecognised.
 
-## Release automation
+## Apple and release prerequisites
 
-Authentication uses an **App Store Connect API key**, not an Apple ID password — API keys
-are non-interactive and unaffected by two-factor prompts.
+Apple Developer Program enrolment, App Store Connect app-record ownership, signing identities, API-key creation, store metadata, privacy answers, and submission remain human-controlled actions. The release lanes read their App Store Connect and signing values from environment variables at release time; this repository does not contain those values.
 
-| Lane | Effect |
-| --- | --- |
-| `fastlane test` | simulator unit + UI tests |
-| `fastlane build` | signed App Store archive |
-| `fastlane beta` | upload to TestFlight, internal only |
-| `fastlane release_upload` | upload binary + metadata, **does not submit** |
-| `fastlane release_submit` | upload **and** submit for review |
+The repository separates signing-free simulator verification from signed archive
+creation. `fastlane test` and the GitHub Actions test job disable code signing.
+The manual archive lanes require `APPLE_TEAM_ID` (10-character Team ID),
+`APPLE_BUNDLE_ID` (the registered bundle ID), and a numeric `BUILD_NUMBER`.
+They pass `CODE_SIGN_STYLE=Automatic` and `-allowProvisioningUpdates` to
+Xcode, with the App Store export configured for automatic signing. The
+authenticated runner must therefore have the registered bundle ID, Associated
+Domains capability, and permission to create or use its distribution profile.
+Missing App Store Connect key variables fail before an archive is built.
 
-Run them from CI: **Actions → iOS → Run workflow →** choose a lane. The release job is
-gated on the `app-store` environment and never runs automatically on push.
+Run `bundle exec fastlane preflight` on macOS after legal and support values are
+approved to validate the source release gates without building. Run
+`bundle exec fastlane beta` only from the manually dispatched workflow after
+the signing and App Store Connect secrets are configured.
 
-## What a human must do — this cannot be automated away
+The `beta` lane reads the canonical `fastlane/metadata/en-US/beta_notes.txt`
+file and passes it to TestFlight as the build changelog. The lane remains a
+manual, authenticated release action and is not run by the repository's
+simulator-test workflow.
 
-These steps require an authenticated human in Apple's portals. Nothing in this repository
-can perform them.
+The `release_upload` and `release_submit` lanes run a preflight before building:
+they stop while the website Terms contain legal-owner placeholders or while a
+verified HTTPS `fastlane/metadata/en-US/support_url.txt` is absent. The internal
+beta lane is intentionally not blocked by those final legal/support gates, but
+it still validates repository assets, signing inputs, and App Store Connect
+credentials before building. Final screenshots remain portal-managed and are
+not fabricated from browser or simulator captures by Fastlane.
 
-1. **Enrol in the Apple Developer Program** (`leif@leifheaney.com`), $99/year. Requires
-   payment and legal-identity verification.
-2. **Register the bundle ID** — suggested `pro.soccerscanner.app` — with the
-   *Associated Domains* capability enabled.
-3. **Create the app record** in App Store Connect (name, primary language, SKU).
-4. **Generate an App Store Connect API key** (Users and Access → Integrations → App Store
-   Connect API) with *App Manager* role. Download the `.p8` **once** — it cannot be
-   re-downloaded.
-5. **Add repository secrets**: `APP_STORE_CONNECT_ISSUER_ID`, `APP_STORE_CONNECT_KEY_ID`,
-   `APP_STORE_CONNECT_PRIVATE_KEY` (the `.p8` contents), `APPLE_TEAM_ID`,
-   `APPLE_BUNDLE_ID`.
-6. **Set `APPLE_TEAM_ID` and `APPLE_BUNDLE_ID` on the Railway `web` service** so
-   `/.well-known/apple-app-site-association` starts serving. Universal links do not work
-   until this is done — the route currently returns 404 by design rather than publishing
-   invented identifiers.
-7. **Provide screenshots** for 6.7" and 6.5" devices in `fastlane/screenshots/`. The store
-   listing cannot be submitted without them.
-8. **Answer the privacy questionnaire** in App Store Connect to match
-   `PrivacyInfo.xcprivacy`: no data collected, no tracking.
-9. **Accept the Paid/Free Applications agreement**, or the build cannot be distributed.
-10. **Review the listing and press Submit** (or run the `release_submit` lane once the
-    listing has been reviewed at least once by a human).
+The associated-domains entitlement names `applinks:soccerscanner.pro`. The server
+intentionally returns no Apple App Site Association file until the required Apple
+configuration is supplied. When enabled, it advertises only `/fixtures/*`, the
+native route currently implemented by the client; team, competition, and calendar
+web routes remain web-only until native destinations exist.
 
-### Order of operations
+Use [the release checklist](../../docs/release-checklist.md) for the exact
+repository-controlled checks and the remaining Apple, legal, support,
+secondary-provider, production, and TestFlight blockers. It is intentionally
+not a substitute for an authenticated macOS CI run or portal review.
 
-Do 1–5 first, then trigger **Actions → iOS → Run workflow → `beta`**. Confirm the build
-appears in TestFlight and installs. Only then do 6–10 and run `release_upload`.
+## Known native gaps
 
-## Known gaps
-
-- Only the fixture vertical slice exists. Calendar, team intelligence and search are not
-  implemented natively.
-- No push notifications: the notifications ADR has not been written, so APNs is
-  deliberately absent.
-- No accounts, matching the guest-mode decision in
-  `docs/decisions/accounts-and-preferences.md`.
-- Localisation is English-only; strings use `String(localized:)` so a String Catalog can be
-  added without code changes.
+- Calendar and global search do not yet have native screens. The server's
+  `calendar_range_api` and `search` feature flags are currently disabled and no
+  versioned native endpoint contract exists; the fixture list's local search is
+  the supported search surface for this release. Team intelligence is
+  intentionally reachable from fixture detail rather than being a primary tab;
+  dedicated team routes remain web-only.
+- Physical-device accessibility validation, including VoiceOver and safe-area behaviour, requires macOS/device testing.
+- The native client does not persist fixture snapshots yet: disconnected launches
+  show the typed unavailable state rather than presenting unverified cached data.
+  Timezone and score visibility are session-scoped; no account, notification, or
+  persistent score-preference implementation exists.
+- Terms remain a legal-review draft on the website; the app links to that existing page without presenting legal claims.

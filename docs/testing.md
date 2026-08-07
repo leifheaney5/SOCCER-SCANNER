@@ -20,6 +20,31 @@ Browser coverage includes URL/history state, score non-leakage in DOM and access
 
 The concurrency/load suite is deterministic and does not call external providers. Existing cache tests cover multi-worker Redis coordination, TTL expiration, and Redis fallback; browser team-drawer tests prove per-team request caching; HTTP tests exercise slow-provider budget and retry behavior.
 
+## Native iOS gate
+
+The native client has a separate macOS-only gate in
+`.github/workflows/ios.yml`. The workflow generates the Xcode project with
+XcodeGen, validates generated build settings, the privacy manifest, entitlements,
+icons, metadata, legal/support release preflight, and simulator selection, then
+runs the unit/UI scheme without signing. It uploads both the `.xcresult` bundle
+and raw `xcodebuild` output, including when tests fail. Release lanes are manual
+and are never part of the simulator-test job.
+
+Repository-controlled checks that do not require Xcode can be run on Windows:
+
+```powershell
+$env:PYTEST_DISABLE_PLUGIN_AUTOLOAD='1'
+python -m pytest tests/test_ios_release_assets.py tests/test_ios_simulator_selection.py -q
+python tests/test_ios_release_assets.py
+```
+
+These checks validate source release assets, the shared score-spoiler binding,
+native state-fixture and broadcast wiring, CI path filters, Fastlane preflight,
+metadata, and the dependency-free simulator selector. Windows cannot prove
+Swift compilation, XCTest/XCUITest execution, simulator behavior, VoiceOver,
+physical-device safe areas, or TestFlight installation; only a fresh successful
+macOS workflow for the intended release commit proves those gates.
+
 ## Production smoke
 
 ```powershell

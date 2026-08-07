@@ -26,6 +26,17 @@ public enum FixtureTime {
         calendarDate(for: now, in: timeZone)
     }
 
+    /// A stable midday instant for binding a calendar day to a native date
+    /// control. Noon avoids both timezone-boundary drift and daylight-saving
+    /// transitions when the selected zone changes.
+    public static func datePickerDate(for isoDay: String, in timeZone: TimeZone) -> Date {
+        let components = isoDay.split(separator: "-").compactMap { Int($0) }
+        guard components.count == 3 else { return Date() }
+        return calendar(in: timeZone).date(from: DateComponents(
+            year: components[0], month: components[1], day: components[2], hour: 12
+        )) ?? Date()
+    }
+
     /// Kick-off clock time in the selected zone.
     public static func kickoff(_ instant: Date?, in timeZone: TimeZone) -> String {
         guard let instant else { return String(localized: "Time TBC") }
@@ -66,6 +77,17 @@ public enum FixtureTime {
             return isoDay
         }
         return parser.string(from: shifted)
+    }
+
+    public static func isValidCalendarDay(_ isoDay: String) -> Bool {
+        let parser = DateFormatter()
+        parser.locale = Locale(identifier: "en_US_POSIX")
+        parser.timeZone = TimeZone(identifier: "UTC")
+        parser.calendar = Calendar(identifier: .gregorian)
+        parser.dateFormat = "yyyy-MM-dd"
+        parser.isLenient = false
+        guard let date = parser.date(from: isoDay) else { return false }
+        return parser.string(from: date) == isoDay
     }
 
     /// Abbreviation and offset for the header control, e.g. "EDT · UTC-04:00".

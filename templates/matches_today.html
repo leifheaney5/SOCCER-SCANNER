@@ -62,11 +62,7 @@
             <p id="date-error" class="field-error" role="alert" hidden>Enter a real calendar date in YYYY-MM-DD format.</p>
         </div>
 
-        <button id="filter-toggle" class="filter-toggle" type="button" aria-expanded="false" aria-controls="secondary-filters">
-            Filters <span id="active-filter-count" class="filter-count" hidden>0</span>
-        </button>
-
-        <div id="secondary-filters" class="secondary-filters">
+        <div id="primary-filters" class="primary-filters" aria-label="Primary fixture filters">
             <label class="search-control">
                 <span class="sr-only">Search teams or competitions</span>
                 <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
@@ -76,23 +72,32 @@
                 </button>
             </label>
 
+            <div class="status-filters" role="group" aria-label="Match status">
+                <button id="status-all" type="button" data-status="all" aria-pressed="true">All</button>
+                <button id="status-live" type="button" data-status="live" aria-pressed="false">Live</button>
+                <button id="status-upcoming" type="button" data-status="upcoming" aria-pressed="false">Upcoming</button>
+                <button id="status-finished" type="button" data-status="finished" aria-pressed="false">Finished</button>
+            </div>
+        </div>
+
+        <button id="filter-toggle" class="filter-toggle" type="button" aria-expanded="false" aria-controls="filter-dialog">
+            Filters <span id="active-filter-count" class="filter-count" role="status" aria-live="polite" aria-atomic="true" hidden>0</span>
+        </button>
+
+        <dialog id="filter-dialog" class="filter-dialog" aria-labelledby="filter-dialog-title">
+            <div class="filter-dialog-frame">
+                <div class="dialog-header">
+                    <h2 id="filter-dialog-title">Filter fixtures</h2>
+                    <button id="close-filter-dialog" class="icon-button" type="button" aria-label="Close fixture filters">
+                        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m7 7 10 10M17 7 7 17"/></svg>
+                    </button>
+                </div>
+                <div id="filter-dialog-content">
+                    <div id="secondary-filters" class="secondary-filters">
             <label class="select-control">
                 <span class="sr-only">Competition</span>
                 <select id="competition-filter" aria-label="Competition">
                     <option value="">All competitions</option>
-                </select>
-            </label>
-
-            <label class="select-control">
-                <span class="sr-only">Fixture timezone</span>
-                <select id="timezone-filter" aria-label="Fixture timezone">
-                    <option value="UTC">UTC</option>
-                    <option value="America/New_York">New York</option>
-                    <option value="America/Los_Angeles">Los Angeles</option>
-                    <option value="Europe/London">London</option>
-                    <option value="Europe/Berlin">Berlin</option>
-                    <option value="Asia/Tokyo">Tokyo</option>
-                    <option value="Australia/Sydney">Sydney</option>
                 </select>
             </label>
 
@@ -129,15 +134,28 @@
                 <span>Hide finished</span>
             </label>
 
-            <div class="status-filters" role="group" aria-label="Match status">
-                <button id="status-all" type="button" data-status="all" aria-pressed="true">All</button>
-                <button id="status-live" type="button" data-status="live" aria-pressed="false">Live</button>
-                <button id="status-upcoming" type="button" data-status="upcoming" aria-pressed="false">Upcoming</button>
-                <button id="status-finished" type="button" data-status="finished" aria-pressed="false">Finished</button>
-            </div>
+            <label class="select-control">
+                <span class="sr-only">Fixture timezone</span>
+                <select id="timezone-filter" aria-label="Fixture timezone">
+                    <option value="UTC">UTC</option>
+                    <option value="America/New_York">New York</option>
+                    <option value="America/Los_Angeles">Los Angeles</option>
+                    <option value="Europe/London">London</option>
+                    <option value="Europe/Berlin">Berlin</option>
+                    <option value="Asia/Tokyo">Tokyo</option>
+                    <option value="Australia/Sydney">Sydney</option>
+                </select>
+            </label>
 
-            <button id="clear-filters" class="clear-filters" type="button" hidden>Clear filters</button>
-        </div>
+            <button id="clear-filters" class="clear-filters" type="button" hidden>Reset advanced filters</button>
+                    </div>
+                </div>
+                <div class="filter-dialog-actions">
+                    <button id="cancel-filter-dialog" class="control-button" type="button">Close</button>
+                    <button id="apply-filter-dialog" class="control-button filter-dialog-apply" type="button">Apply filters</button>
+                </div>
+            </div>
+        </dialog>
     </section>
 
     <p id="dashboard-status" class="sr-only" role="status" aria-live="polite">Loading fixtures</p>

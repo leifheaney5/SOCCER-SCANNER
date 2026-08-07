@@ -5,8 +5,8 @@ import Foundation
 /// Incoming paths are validated against the same shapes the server accepts.
 /// An unrecognised or hostile path resolves to `nil` so the system falls back
 /// to the website instead of opening an arbitrary in-app screen.
-public enum DeepLink: Equatable, Sendable {
-    case fixture(id: String, timeZoneIdentifier: String?)
+public enum DeepLink: Hashable, Sendable {
+    case fixture(id: String, timeZoneIdentifier: String?, calendarDay: String?)
     case team(canonicalId: String)
     case competition(canonicalId: String)
     case calendar
@@ -32,6 +32,8 @@ public enum DeepLink: Equatable, Sendable {
 
         let segments = components.path.split(separator: "/").map(String.init)
         let timeZone = components.queryItems?.first { $0.name == "timezone" }?.value
+        let calendarDay = components.queryItems?.first { $0.name == "date" }?.value
+        if let calendarDay, !FixtureTime.isValidCalendarDay(calendarDay) { return nil }
 
         switch segments.first {
         case "fixtures" where segments.count == 2:
@@ -39,7 +41,11 @@ public enum DeepLink: Equatable, Sendable {
             guard matches(fixturePattern, identifier) else { return nil }
             // Only propagate a zone the platform actually recognises.
             let validated = timeZone.flatMap { TimeZone(identifier: $0) }?.identifier
-            return .fixture(id: identifier, timeZoneIdentifier: validated)
+            return .fixture(
+                id: identifier,
+                timeZoneIdentifier: validated,
+                calendarDay: calendarDay
+            )
         case "teams" where segments.count == 2:
             guard matches(slugPattern, segments[1]) else { return nil }
             return .team(canonicalId: segments[1])

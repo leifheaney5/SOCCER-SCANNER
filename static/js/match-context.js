@@ -258,7 +258,10 @@ export function createMatchContext({
 
     closeButton.addEventListener('click', close);
     dialog.addEventListener('click', event => {
-        if (event.target === dialog) close();
+        // The fixture stream is rebuilt by onClose before focus is restored.
+        // Let that callback focus the fresh trigger instead of asking the
+        // generic manager to focus the detached pre-render button first.
+        if (event.target === dialog) close({restoreFocus: false});
     });
     dialog.addEventListener('close', () => {
         if (preserveSelectionOnClose) {

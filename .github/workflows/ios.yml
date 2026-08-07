@@ -1,5 +1,8 @@
 name: iOS
 
+permissions:
+  contents: read
+
 # Builds, tests and (on demand) ships the native client.
 #
 # This runs on macOS runners because Xcode, xcodebuild and the App Store upload
@@ -10,10 +13,14 @@ on:
   push:
     paths:
       - 'clients/ios/**'
+      - 'templates/terms.html'
+      - 'tests/test_ios_release_assets.py'
       - '.github/workflows/ios.yml'
   pull_request:
     paths:
       - 'clients/ios/**'
+      - 'templates/terms.html'
+      - 'tests/test_ios_release_assets.py'
       - '.github/workflows/ios.yml'
   workflow_dispatch:
     inputs:
@@ -31,6 +38,7 @@ concurrency:
 jobs:
   build-and-test:
     runs-on: macos-latest
+    timeout-minutes: 30
     defaults:
       run:
         working-directory: clients/ios
@@ -50,31 +58,32 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID || '' }}
           APPLE_BUNDLE_PREFIX: pro.soccerscanner
 
+      - name: Validate generated build settings
+        run: |
+          mkdir -p build
+          xcodebuild -project SoccerScanner.xcodeproj -scheme SoccerScanner -showBuildSettings \
+            > build/build-settings.txt
+          grep -Fq 'PRODUCT_BUNDLE_IDENTIFIER = pro.soccerscanner.app' build/build-settings.txt
+          grep -Fq 'IPHONEOS_DEPLOYMENT_TARGET = 17.0' build/build-settings.txt
+          grep -Fq 'ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon' build/build-settings.txt
+
       - name: Validate the privacy manifest
         run: plutil -lint SoccerScanner/PrivacyInfo.xcprivacy SoccerScanner/SoccerScanner.entitlements
 
+      - name: Validate source release assets
+        run: python3 ../../tests/test_ios_release_assets.py
+
       - name: Select an available simulator
         id: simulator
-        # Pinning a device name breaks whenever the runner image ships a new
-        # iPhone generation, so resolve a UDID from what is actually installed.
+        # Pinning a device name or runtime breaks whenever the runner image
+        # changes, so resolve a numeric-newest iPhone from what is installed.
         run: |
           UDID=$(xcrun simctl list devices available --json | python3 -c "
-          import json, sys
-          runtimes = json.load(sys.stdin)['devices']
-          candidates = []
-          for runtime, devices in runtimes.items():
-              if 'iOS' not in runtime:
-                  continue
-              version = runtime.rsplit('.', 1)[-1].replace('-', '.')
-              for device in devices:
-                  if device.get('isAvailable') and device['name'].startswith('iPhone'):
-                      candidates.append((version, device['name'], device['udid']))
-          if not candidates:
-              raise SystemExit('no available iPhone simulator')
-          # Newest runtime, then shortest name to prefer the base model.
-          version, name, udid = sorted(candidates, key=lambda c: (c[0], -len(c[1])))[-1]
+          import json, runpy, sys
+          module = runpy.run_path('Tools/select_simulator.py')
+          udid, name, runtime = module['select_simulator'](json.load(sys.stdin))
           print(udid)
-          sys.stderr.write(f'selected {name} on iOS {version}\n')
+          sys.stderr.write(f'selected {name} on {runtime}\n')
           ")
           echo "udid=$UDID" >> "$GITHUB_OUTPUT"
 
@@ -83,6 +92,7 @@ jobs:
         # forks do not need signing secrets.
         run: |
           set -o pipefail
+          mkdir -p build
           xcodebuild test \
             -project SoccerScanner.xcodeproj \
             -scheme SoccerScanner \
@@ -90,14 +100,16 @@ jobs:
             -resultBundlePath build/TestResults.xcresult \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGN_IDENTITY="" \
-            | xcpretty && exit ${PIPESTATUS[0]}
+            2>&1 | tee build/xcodebuild.log
+          status=${PIPESTATUS[0]}
+          exit "$status"
 
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: ios-test-results
-          path: clients/ios/build/TestResults.xcresult
+          path: clients/ios/build/
           retention-days: 7
           if-no-files-found: ignore
 
@@ -106,6 +118,7 @@ jobs:
     needs: build-and-test
     if: github.event_name == 'workflow_dispatch' && inputs.lane != 'none'
     runs-on: macos-latest
+    timeout-minutes: 45
     environment: app-store
     defaults:
       run:

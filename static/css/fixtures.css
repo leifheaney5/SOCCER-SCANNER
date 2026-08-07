@@ -208,6 +208,8 @@ body {
     min-width: 0;
     margin-bottom: 20px;
     padding: 10px;
+    padding-inline-start: max(10px, env(safe-area-inset-left, 0px));
+    padding-inline-end: max(10px, env(safe-area-inset-right, 0px));
     display: flex;
     align-items: center;
     gap: 10px;
@@ -218,6 +220,7 @@ body {
 }
 
 .date-controls,
+.primary-filters,
 .secondary-filters,
 .status-filters {
     display: flex;
@@ -228,6 +231,12 @@ body {
     flex: 0 0 auto;
     gap: 4px;
     position: relative;
+}
+
+.primary-filters {
+    min-width: 0;
+    flex: 0 0 auto;
+    gap: 8px;
 }
 
 .field-error {
@@ -1101,6 +1110,31 @@ dialog {
     box-shadow: 0 24px 80px rgba(0, 0, 0, 0.65);
 }
 
+.filter-dialog {
+    width: min(680px, calc(100vw - 32px));
+}
+
+.filter-dialog-frame {
+    max-height: inherit;
+    display: flex;
+    flex-direction: column;
+}
+
+.filter-dialog-actions {
+    padding: 12px 18px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    border-top: 1px solid var(--border-color);
+    background: #101010;
+}
+
+.filter-dialog-apply {
+    border-color: rgba(var(--accent-rgb), 0.55);
+    background: rgba(var(--accent-rgb), 0.08);
+    color: var(--accent-secondary);
+}
+
 dialog::backdrop {
     background: rgba(0, 0, 0, 0.78);
     backdrop-filter: blur(2px);
@@ -1381,6 +1415,10 @@ dialog::backdrop {
         justify-content: flex-start;
     }
 
+    .primary-filters {
+        flex: 1 1 auto;
+    }
+
     .search-control {
         width: min(100%, 320px);
     }
@@ -1403,16 +1441,38 @@ dialog::backdrop {
     }
 
     .filter-toolbar {
-        top: calc(var(--header-height) + 4px);
+        top: calc(var(--header-height) + env(safe-area-inset-top, 0px) + 4px);
         padding: 8px;
+        padding-inline-start: max(8px, env(safe-area-inset-left, 0px));
+        padding-inline-end: max(8px, env(safe-area-inset-right, 0px));
         display: grid;
         grid-template-columns: minmax(0, 1fr) auto;
     }
 
     .date-controls {
         min-width: 0;
+        width: 100%;
+        grid-column: 1;
+        grid-row: 1;
         display: grid;
         grid-template-columns: 44px auto minmax(0, 1fr) 44px;
+    }
+
+    .primary-filters {
+        width: 100%;
+        grid-column: 1 / -1;
+        grid-row: 2;
+        display: contents;
+    }
+
+    .primary-filters .search-control {
+        grid-column: 1 / -1;
+        grid-row: 2;
+    }
+
+    .primary-filters .status-filters {
+        grid-column: 1 / -1;
+        grid-row: 3;
     }
 
     .date-controls .icon-button,
@@ -1430,20 +1490,11 @@ dialog::backdrop {
     .filter-toggle {
         min-width: 74px;
         min-height: 44px;
+        grid-column: 2;
+        grid-row: 1;
         display: inline-flex;
         align-items: center;
         justify-content: center;
-    }
-
-    .secondary-filters {
-        grid-column: 1 / -1;
-        display: none;
-    }
-
-    .secondary-filters.is-open {
-        padding-top: 8px;
-        display: grid;
-        grid-template-columns: minmax(0, 1fr);
     }
 
     .search-control,
@@ -1458,14 +1509,50 @@ dialog::backdrop {
     .search-control input,
     .select-control select,
     .search-control button {
-        min-height: 42px;
+        min-height: 44px;
     }
 
     .status-filters button {
         min-width: 0;
-        min-height: 38px;
+        min-height: 44px;
         flex: 1 1 0;
         padding-inline: 6px;
+    }
+
+    .filter-dialog #filter-dialog-content {
+        min-height: 0;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+    }
+
+    .filter-dialog .secondary-filters {
+        padding: 12px 18px;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        justify-content: initial;
+    }
+
+    .filter-dialog .clear-filters {
+        position: sticky;
+        bottom: 0;
+        z-index: 1;
+        padding-block: 10px;
+        background: var(--bg-primary);
+    }
+
+    dialog.filter-dialog {
+        width: 100%;
+        max-width: none;
+        max-height: calc(100dvh - 24px);
+        margin: auto 0 0;
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+        padding-inline-start: env(safe-area-inset-left, 0px);
+        padding-inline-end: env(safe-area-inset-right, 0px);
+        border-radius: 16px 16px 0 0;
+    }
+
+    .filter-dialog-actions {
+        padding-bottom: max(12px, env(safe-area-inset-bottom, 0px));
     }
 
     .featured-teams {
@@ -1586,17 +1673,25 @@ dialog::backdrop {
 }
 
 @media (max-width: 430px) {
-    .filter-toolbar {
-        grid-template-columns: minmax(0, 1fr);
-    }
-
-    .date-controls,
-    .filter-toggle {
+    .date-controls {
         grid-column: 1 / -1;
+        grid-row: 1;
+    }
+
+    .primary-filters .search-control {
+        grid-column: 1;
+        grid-row: 2;
+    }
+
+    .primary-filters .status-filters {
+        grid-column: 1 / -1;
+        grid-row: 3;
     }
 
     .filter-toggle {
-        width: 100%;
+        position: static;
+        grid-column: 2;
+        grid-row: 2;
     }
 }
 

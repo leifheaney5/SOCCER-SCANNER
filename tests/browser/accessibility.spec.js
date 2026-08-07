@@ -42,6 +42,58 @@ test('mobile navigation and nested fixture dialogs remain accessible', async ({p
     await expectNoSeriousViolations(page);
 });
 
+test('mobile fixture filter dialog has accessible semantics and focus restoration', async ({page}) => {
+    await page.setViewportSize({width: 390, height: 844});
+    await mockFixtures(page);
+    await page.goto('/?date=2026-08-03');
+
+    const toggle = page.locator('#filter-toggle');
+    await toggle.focus();
+    await toggle.click();
+    await expect(page.locator('#filter-dialog')).toHaveRole('dialog', {name: 'Fixture filters'});
+    await expect(page.locator('#filter-dialog')).toContainText('Filter fixtures');
+    await expect(page.locator('#fixture-search')).toBeVisible();
+    await expect(page.locator('#status-all')).toBeVisible();
+    await expect(page.locator('#filter-dialog #fixture-search')).toHaveCount(0);
+    await expect(page.locator('#filter-dialog .status-filters')).toHaveCount(0);
+    await expect(page.locator('#filter-dialog #competition-filter')).toBeVisible();
+    await expectNoSeriousViolations(page);
+
+    await page.locator('#close-filter-dialog').focus();
+    await page.keyboard.press('Shift+Tab');
+    await expect.poll(() => page.evaluate(() => (
+        document.activeElement?.closest('#filter-dialog')?.id || ''
+    ))).toBe('filter-dialog');
+
+    await page.keyboard.press('Escape');
+    await expect(page.locator('#filter-dialog')).toBeHidden();
+    await expect.poll(() => page.evaluate(() => document.activeElement?.id)).toBe('filter-toggle');
+});
+
+for (const {zoom, width} of [
+    {zoom: 200, width: 640},
+    {zoom: 400, width: 320},
+]) {
+    test(`fixture dashboard reflows without horizontal scrolling at ${zoom}% zoom`, async ({page}) => {
+        await page.setViewportSize({width, height: 900});
+        await mockFixtures(page);
+        await page.goto('/?date=2026-08-03');
+        await expect(page.locator('#fixture-result-count')).toContainText('13 matches');
+
+        const measurements = await page.evaluate(() => ({
+            documentWidth: document.documentElement.scrollWidth,
+            viewportWidth: document.documentElement.clientWidth,
+            bodyWidth: document.body.scrollWidth,
+            cardOverflow: [...document.querySelectorAll('.fixture-card')].some(card => (
+                card.scrollWidth > card.clientWidth
+            )),
+        }));
+        expect(measurements.documentWidth).toBeLessThanOrEqual(measurements.viewportWidth);
+        expect(measurements.bodyWidth).toBeLessThanOrEqual(measurements.viewportWidth);
+        expect(measurements.cardOverflow).toBe(false);
+    });
+}
+
 test('empty and provider-error surfaces have no serious accessibility violations', async ({page}) => {
     await mockFixtures(page, emptyFixturePayload);
     await page.goto('/?date=2026-08-03');

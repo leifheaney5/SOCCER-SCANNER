@@ -1,4 +1,5 @@
 import SwiftUI
+import Observation
 
 @main
 struct SoccerScannerApp: App {
@@ -6,7 +7,12 @@ struct SoccerScannerApp: App {
 
     var body: some Scene {
         WindowGroup {
-            FixtureListView(model: container.makeFixtureListModel())
+            FixtureListView(
+                model: container.makeFixtureListModel(),
+                router: container.router,
+                client: container.client,
+                environment: container.environment
+            )
                 .onOpenURL { url in
                     container.handle(url)
                 }
@@ -27,7 +33,7 @@ struct SoccerScannerApp: App {
 final class AppContainer {
     let environment: AppEnvironment
     let client: FixtureFetching
-    private(set) var pendingLink: DeepLink?
+    let router: AppRouter
 
     init(
         environment: AppEnvironment = .current(),
@@ -36,6 +42,11 @@ final class AppContainer {
     ) {
         self.environment = environment
         self.client = client ?? Self.resolveClient(environment: environment, defaults: defaults)
+        self.router = AppRouter()
+        if let urlString = defaults.string(forKey: "UITestDeepLink"),
+           let url = URL(string: urlString) {
+            router.handle(url)
+        }
     }
 
     /// UI tests run against deterministic stub data so they never depend on the
@@ -50,6 +61,21 @@ final class AppContainer {
         if defaults.bool(forKey: "UITestFailure") {
             return PreviewFixtureClient(behaviour: .failure(.providerUnavailable(message: "stub")))
         }
+        if defaults.bool(forKey: "UITestTeamFailure") {
+            return PreviewFixtureClient(behaviour: .teamFailure)
+        }
+        if defaults.bool(forKey: "UITestPartial") {
+            return PreviewFixtureClient(behaviour: .partial)
+        }
+        if defaults.bool(forKey: "UITestStale") {
+            return PreviewFixtureClient(behaviour: .stale)
+        }
+        if defaults.bool(forKey: "UITestEmpty") {
+            return PreviewFixtureClient(behaviour: .empty)
+        }
+        if defaults.bool(forKey: "UITestAccessibilityFixtures") {
+            return PreviewFixtureClient(behaviour: .accessibility)
+        }
         return PreviewFixtureClient(behaviour: .loaded)
     }
 
@@ -59,6 +85,6 @@ final class AppContainer {
 
     /// Unparseable links are ignored so the system can fall back to the web.
     func handle(_ url: URL) {
-        pendingLink = DeepLink.parse(url)
+        router.handle(url)
     }
 }

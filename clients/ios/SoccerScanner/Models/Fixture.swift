@@ -32,7 +32,12 @@ public struct Competition: Decodable, Hashable, Sendable {
     public let canonicalId: String?
     public let area: Area?
 
-    public var displayName: String { name ?? "Competition" }
+    public var displayName: String? {
+        guard let name, !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return nil
+        }
+        return name
+    }
     public var countryName: String? { area?.name }
 }
 
@@ -51,6 +56,10 @@ public struct Broadcast: Decodable, Hashable, Sendable {
     public let region: String?
 
     public var isStreaming: Bool { type?.uppercased() == "STREAMING" }
+
+    public var categoryLabel: String {
+        isStreaming ? String(localized: "Streaming") : String(localized: "Broadcast")
+    }
 
     /// Region is shown honestly: an absent region is labelled, never guessed.
     public var regionLabel: String {
@@ -77,6 +86,10 @@ public struct Fixture: Decodable, Identifiable, Hashable, Sendable {
     public var id: String { canonicalFixtureId ?? providerId ?? "\(homeTeam.name)-\(awayTeam.name)" }
 
     public var streamingServices: [Broadcast] { broadcasts.filter(\.isStreaming) }
+
+    public var hasFullTimeScore: Bool {
+        score?.fullTime?.home != nil && score?.fullTime?.away != nil
+    }
 
     private enum CodingKeys: String, CodingKey {
         case canonicalFixtureId, id, utcDate, localDate, status
@@ -123,6 +136,11 @@ public struct Fixture: Decodable, Identifiable, Hashable, Sendable {
 public struct ProviderReport: Decodable, Hashable, Sendable {
     public let name: String?
     public let status: String?
+
+    public init(name: String?, status: String?) {
+        self.name = name
+        self.status = status
+    }
 }
 
 public struct Freshness: Decodable, Hashable, Sendable {
@@ -141,19 +159,31 @@ public struct FixtureDay: Decodable, Sendable {
         case date, timezone, matches, state, providers, freshness
     }
 
+    private struct ProviderOutcome: Decodable {
+        let status: String?
+    }
+
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         date = try container.decodeIfPresent(String.self, forKey: .date) ?? ""
         timezone = try container.decodeIfPresent(String.self, forKey: .timezone) ?? "UTC"
         matches = try container.decodeIfPresent([Fixture].self, forKey: .matches) ?? []
         state = try container.decodeIfPresent(String.self, forKey: .state)
-        providers = try container.decodeIfPresent([ProviderReport].self, forKey: .providers) ?? []
+        let providerOutcomes = try container.decodeIfPresent(
+            [String: ProviderOutcome].self,
+            forKey: .providers
+        ) ?? [:]
+        providers = providerOutcomes
+            .map { ProviderReport(name: $0.key, status: $0.value.status) }
+            .sorted { ($0.name ?? "") < ($1.name ?? "") }
         freshness = try container.decodeIfPresent(Freshness.self, forKey: .freshness)
     }
 
     /// A day that loaded but is known to be incomplete must say so rather than
     /// presenting a short list as the full schedule.
-    public var isPartial: Bool { state == "partial" || providers.contains { $0.status != "ok" } }
+    public var isPartial: Bool {
+        state == "partial"
+    }
     public var isStale: Bool { state == "stale" }
 }
 

@@ -31,9 +31,11 @@ class Provider:
     def __init__(self, outcome):
         self.outcome = outcome
         self.calls = []
+        self.budgets = []
 
     def fetch_range(self, start_date, end_date, *, budget=None):
         self.calls.append((start_date, end_date))
+        self.budgets.append(budget)
         return self.outcome
 
 
@@ -110,6 +112,17 @@ def service(
         cache,
         **options,
     ), espn, football
+
+
+def test_provider_fetches_share_one_request_scoped_budget():
+    fixture_service, espn, football = service(
+        outcome('espn', ProviderStatus.SUCCESS),
+        outcome('football-data', ProviderStatus.DISABLED, completed=()),
+    )
+
+    fixture_service.fixtures_for_date(date(2026, 8, 3))
+
+    assert espn.budgets[0] is football.budgets[0]
 
 
 def streaming_registry():

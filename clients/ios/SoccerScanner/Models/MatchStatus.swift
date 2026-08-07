@@ -5,7 +5,7 @@ import Foundation
 /// This mirrors `static/js/match-status.js` exactly. Status semantics are a
 /// cross-platform contract: if the native client and the web client disagree
 /// about whether a fixture is live, they disagree about the same match.
-public enum MatchStatus: String, CaseIterable, Sendable {
+public enum MatchStatus: String, CaseIterable, Equatable, Hashable, Sendable {
     case scheduled
     case delayed
     case inProgress

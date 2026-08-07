@@ -140,11 +140,11 @@ class AppleAppSiteAssociationTest(unittest.TestCase):
         self.assertEqual(response.mimetype, 'application/json')
         details = payload['applinks']['details'][0]
         self.assertEqual(details['appIDs'], ['ABCDE12345.pro.soccerscanner.app'])
-        paths = details['components']
-        self.assertTrue(any(component.get('/') == '/fixtures/*' for component in paths))
-        self.assertTrue(any(component.get('/') == '/teams/*' for component in paths))
-        self.assertTrue(any(component.get('/') == '/competitions/*' for component in paths))
-        self.assertTrue(any(component.get('/') == '/calendar' for component in paths))
+        components = details['components']
+        self.assertEqual(components[0]['/'], '/fixtures/*.ics')
+        self.assertTrue(components[0]['exclude'])
+        self.assertEqual(components[1]['/'], '/fixtures/*')
+        self.assertFalse(components[1].get('exclude', False))
 
 
 class AppConfigTest(unittest.TestCase):

@@ -135,6 +135,7 @@ svg {
     top: 0;
     z-index: 100;
     min-height: var(--header-height);
+    padding-top: env(safe-area-inset-top, 0px);
     border-bottom: 1px solid var(--border-color);
     background: rgba(0, 0, 0, 0.96);
 }
@@ -271,10 +272,12 @@ svg {
 
 #main-content {
     min-width: 0;
+    padding-inline: env(safe-area-inset-left, 0px) env(safe-area-inset-right, 0px);
 }
 
 .app-footer {
     margin-top: 48px;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
     border-top: 1px solid var(--border-color);
     color: var(--text-muted);
     font-size: 13px;
@@ -327,9 +330,10 @@ svg {
 .pwa-update-notice {
     position: fixed;
     z-index: 90;
-    right: 16px;
-    bottom: 16px;
-    max-width: min(360px, calc(100vw - 32px));
+    right: max(16px, env(safe-area-inset-right, 0px));
+    bottom: max(16px, env(safe-area-inset-bottom, 0px));
+    max-width: min(360px, calc(100vw - 32px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)));
+    box-sizing: border-box;
     padding: 10px 14px;
     border: 1px solid var(--border-color);
     border-radius: 8px;
