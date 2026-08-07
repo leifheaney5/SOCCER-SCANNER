@@ -69,7 +69,7 @@ final class FixtureListViewModelTests: XCTestCase {
         await client.releaseNext(.success(try fixtureDay(
             state: "partial",
             providers: "{\"espn\":{\"status\":\"partial\"},\"football-data\":{\"status\":\"disabled\"}}",
-            matches: """[{"canonicalFixtureId":"fx_partial","homeTeam":{"name":"A"},"awayTeam":{"name":"B"}}]"""
+            matches: #"[{"canonicalFixtureId":"fx_partial","homeTeam":{"name":"A"},"awayTeam":{"name":"B"}}]"#
         )))
         await load.value
 
@@ -91,7 +91,7 @@ final class FixtureListViewModelTests: XCTestCase {
         await client.waitForRequestCount(1)
         await client.releaseNext(.success(try fixtureDay(
             providers: "{\"espn\":{\"status\":\"success\"},\"football-data\":{\"status\":\"disabled\"}}",
-            matches: """[{"canonicalFixtureId":"fx_loaded","homeTeam":{"name":"A"},"awayTeam":{"name":"B"}}]"""
+            matches: #"[{"canonicalFixtureId":"fx_loaded","homeTeam":{"name":"A"},"awayTeam":{"name":"B"}}]"#
         )))
         await load.value
 
@@ -113,7 +113,7 @@ final class FixtureListViewModelTests: XCTestCase {
         await client.releaseNext(.success(try fixtureDay(
             state: "stale",
             providers: "{\"espn\":{\"status\":\"success\"},\"football-data\":{\"status\":\"disabled\"}}",
-            matches: """[{"canonicalFixtureId":"fx_stale","homeTeam":{"name":"A"},"awayTeam":{"name":"B"}}]"""
+            matches: #"[{"canonicalFixtureId":"fx_stale","homeTeam":{"name":"A"},"awayTeam":{"name":"B"}}]"#
         )))
         await load.value
 
@@ -152,7 +152,7 @@ final class FixtureListViewModelTests: XCTestCase {
         await client.waitForRequestCount(1)
         XCTAssertTrue(viewModel.isRefreshing)
         await client.releaseNext(.success(try fixtureDay(
-            matches: """[{"canonicalFixtureId":"fx_retained","status":{"code":"SCHEDULED"},"homeTeam":{"name":"Retained"},"awayTeam":{"name":"Fixture"}}]"""
+            matches: #"[{"canonicalFixtureId":"fx_retained","status":{"code":"SCHEDULED"},"homeTeam":{"name":"Retained"},"awayTeam":{"name":"Fixture"}}]"#
         )))
         await initialLoad.value
 
@@ -540,12 +540,12 @@ final class FixtureListViewModelTests: XCTestCase {
 
         await client.releaseNext(.success(try fixtureDay(
             date: "2026-08-04",
-            matches: """[{"canonicalFixtureId":"fx_old","status":{"code":"SCHEDULED"},"homeTeam":{"name":"Old"},"awayTeam":{"name":"Day"}}]"""
+            matches: #"[{"canonicalFixtureId":"fx_old","status":{"code":"SCHEDULED"},"homeTeam":{"name":"Old"},"awayTeam":{"name":"Day"}}]"#
         )))
         await Task.yield()
         await client.releaseNext(.success(try fixtureDay(
             date: "2026-08-05",
-            matches: """[{"canonicalFixtureId":"fx_new","status":{"code":"SCHEDULED"},"homeTeam":{"name":"New"},"awayTeam":{"name":"Day"}}]"""
+            matches: #"[{"canonicalFixtureId":"fx_new","status":{"code":"SCHEDULED"},"homeTeam":{"name":"New"},"awayTeam":{"name":"Day"}}]"#
         )))
         await oldLoad.value
         await newLoad.value
@@ -649,7 +649,7 @@ final class FixtureListViewModelTests: XCTestCase {
         let initialLoad = Task { await viewModel.load() }
         await client.waitForRequestCount(1)
         await client.releaseNext(.success(try fixtureDay(
-            matches: """[{"canonicalFixtureId":"fx_initial","status":{"code":"SCHEDULED"},"homeTeam":{"name":"Initial"},"awayTeam":{"name":"Day"}}]"""
+            matches: #"[{"canonicalFixtureId":"fx_initial","status":{"code":"SCHEDULED"},"homeTeam":{"name":"Initial"},"awayTeam":{"name":"Day"}}]"#
         )))
         await initialLoad.value
 
@@ -677,7 +677,7 @@ final class FixtureListViewModelTests: XCTestCase {
         router.handle(URL(string: "https://soccerscanner.pro/fixtures/\(secondID)")!)
         await client.releaseNext(.success(try fixtureDay(
             date: "2026-08-06",
-            matches: """[{"canonicalFixtureId":"fx_route_day","status":{"code":"SCHEDULED"},"homeTeam":{"name":"Route"},"awayTeam":{"name":"Day"}}]"""
+            matches: #"[{"canonicalFixtureId":"fx_route_day","status":{"code":"SCHEDULED"},"homeTeam":{"name":"Route"},"awayTeam":{"name":"Day"}}]"#
         )))
 
         let outcome = await firstLookup.value
@@ -707,7 +707,7 @@ final class FixtureListViewModelTests: XCTestCase {
         let initialLoad = Task { await viewModel.load() }
         await client.waitForRequestCount(1)
         await client.releaseNext(.success(try fixtureDay(
-            matches: """[{"canonicalFixtureId":"fx_loaded","status":{"code":"SCHEDULED"},"homeTeam":{"name":"Loaded"},"awayTeam":{"name":"Fixture"}}]"""
+            matches: #"[{"canonicalFixtureId":"fx_loaded","status":{"code":"SCHEDULED"},"homeTeam":{"name":"Loaded"},"awayTeam":{"name":"Fixture"}}]"#
         )))
         await initialLoad.value
         let lookup = Task {
@@ -742,7 +742,7 @@ final class FixtureListViewModelTests: XCTestCase {
         let initialLoad = Task { await viewModel.load() }
         await client.waitForRequestCount(1)
         await client.releaseNext(.success(try fixtureDay(
-            matches: """[{"canonicalFixtureId":"fx_loaded","status":{"code":"SCHEDULED"},"homeTeam":{"name":"Loaded"},"awayTeam":{"name":"Fixture"}}]"""
+            matches: #"[{"canonicalFixtureId":"fx_loaded","status":{"code":"SCHEDULED"},"homeTeam":{"name":"Loaded"},"awayTeam":{"name":"Fixture"}}]"#
         )))
         await initialLoad.value
 
@@ -777,7 +777,7 @@ final class FixtureListViewModelTests: XCTestCase {
         let initialLoad = Task { await viewModel.load() }
         await client.waitForRequestCount(1)
         await client.releaseNext(.success(try fixtureDay(
-            matches: """[{"canonicalFixtureId":"fx_loaded","status":{"code":"SCHEDULED"},"homeTeam":{"name":"Loaded"},"awayTeam":{"name":"Fixture"}}]"""
+            matches: #"[{"canonicalFixtureId":"fx_loaded","status":{"code":"SCHEDULED"},"homeTeam":{"name":"Loaded"},"awayTeam":{"name":"Fixture"}}]"#
         )))
         await initialLoad.value
 
@@ -815,7 +815,7 @@ final class FixtureListViewModelTests: XCTestCase {
         await client.waitForRequestCount(1)
         await client.releaseNext(.success(try fixtureDay(
             date: "2026-08-04",
-            matches: """[{"canonicalFixtureId":"fx_initial","status":{"code":"SCHEDULED"},"homeTeam":{"name":"Initial"},"awayTeam":{"name":"Day"}}]"""
+            matches: #"[{"canonicalFixtureId":"fx_initial","status":{"code":"SCHEDULED"},"homeTeam":{"name":"Initial"},"awayTeam":{"name":"Day"}}]"#
         )))
         await initialLoad.value
 
@@ -826,7 +826,7 @@ final class FixtureListViewModelTests: XCTestCase {
         await client.waitForRequestCount(2)
         await client.releaseNext(.success(try fixtureDay(
             date: "2026-08-05",
-            matches: """[{"canonicalFixtureId":"fx_newer","status":{"code":"SCHEDULED"},"homeTeam":{"name":"Newer"},"awayTeam":{"name":"Day"}}]"""
+            matches: #"[{"canonicalFixtureId":"fx_newer","status":{"code":"SCHEDULED"},"homeTeam":{"name":"Newer"},"awayTeam":{"name":"Day"}}]"#
         )))
         await newerLoad.value
         await client.releaseLookupNext(.failure(.providerUnavailable(message: "unavailable")))
