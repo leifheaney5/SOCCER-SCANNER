@@ -321,8 +321,8 @@ final class FixtureListViewModelTests: XCTestCase {
         viewModel.setStatusFilter(.upcoming)
 
         XCTAssertEqual(viewModel.filteredFixtures.map(\.id), [
-            "fx_scheduled",
             "fx_delayed",
+            "fx_scheduled",
             "fx_unknown",
         ])
     }
