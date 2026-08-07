@@ -82,10 +82,14 @@ final class AppContainer {
 
     private static func flag(_ name: String, defaults: UserDefaults) -> Bool {
         defaults.bool(forKey: name)
+            || ProcessInfo.processInfo.environment["SOCCER_SCANNER_UI_TEST_(name)"] == "1"
             || ProcessInfo.processInfo.arguments.contains("-(name)")
     }
 
     private static func argumentValue(_ name: String) -> String? {
+        if let environmentValue = ProcessInfo.processInfo.environment["SOCCER_SCANNER_UI_TEST_(name)"] {
+            return environmentValue
+        }
         let arguments = ProcessInfo.processInfo.arguments
         guard let index = arguments.firstIndex(of: "-(name)"),
               arguments.index(after: index) < arguments.endIndex else {

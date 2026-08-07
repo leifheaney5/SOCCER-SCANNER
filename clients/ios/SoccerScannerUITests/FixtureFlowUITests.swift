@@ -17,6 +17,22 @@ final class FixtureFlowUITests: XCTestCase {
             "-AppleLanguages", "(en)",
             "-AppleLocale", "en_US",
         ] + arguments
+        app.launchEnvironment["SOCCER_SCANNER_UI_TEST_UITestStubData"] = "1"
+        for flag in [
+            "UITestFailure",
+            "UITestTeamFailure",
+            "UITestPartial",
+            "UITestStale",
+            "UITestEmpty",
+            "UITestAccessibilityFixtures",
+        ] where arguments.contains("-(flag)") {
+            app.launchEnvironment["SOCCER_SCANNER_UI_TEST_(flag)"] = "1"
+        }
+        if let deepLinkIndex = arguments.firstIndex(of: "-UITestDeepLink"),
+           arguments.index(after: deepLinkIndex) < arguments.endIndex {
+            app.launchEnvironment["SOCCER_SCANNER_UI_TEST_UITestDeepLink"] =
+                arguments[arguments.index(after: deepLinkIndex)]
+        }
         app.launchEnvironment["SOCCER_SCANNER_ENVIRONMENT"] = environment
         app.launch()
         return app
