@@ -445,7 +445,7 @@ public final class FixtureListViewModel {
         }
         isRefreshing = true
 
-        let task = Task { [weak self] in
+        let task: Task<FixtureLoadOutcome, Never> = Task { [weak self] in
             defer {
                 if let self, self.loadGeneration == generation {
                     self.isRefreshing = false
@@ -519,7 +519,7 @@ public final class FixtureListViewModel {
         let requestedTimeZoneIdentifier = requestedTimeZone.identifier
         let client = client
         isRefreshing = true
-        let task = Task { [weak self] in
+        let task: Task<FixtureLoadOutcome, Never> = Task { [weak self] in
             defer {
                 if let self, self.loadGeneration == generation {
                     self.isRefreshing = false
