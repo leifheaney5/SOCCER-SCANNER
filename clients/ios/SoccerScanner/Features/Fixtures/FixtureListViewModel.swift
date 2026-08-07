@@ -19,7 +19,7 @@ public enum FixtureListState: Equatable {
 /// The route resolver preserves not-found separately from typed transport or
 /// decoding failures, so navigation never turns an operational error into a
 /// false missing-fixture claim.
-public enum RouteFixtureOutcome {
+public enum RouteFixtureOutcome: Sendable {
     case found(Fixture)
     case missing
     case failed(APIError)

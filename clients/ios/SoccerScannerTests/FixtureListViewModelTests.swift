@@ -697,7 +697,7 @@ final class FixtureListViewModelTests: XCTestCase {
         XCTAssertEqual(data.fixtures.map(\.id), ["fx_initial"])
     }
 
-    func testRouteLookupFailureRemainsTypedInsteadOfMissing() async {
+    func testRouteLookupFailureRemainsTypedInsteadOfMissing() async throws {
         let client = DelayedFixtureClient()
         let viewModel = FixtureListViewModel(
             client: client,
@@ -934,6 +934,7 @@ private actor DelayedFixtureClient: FixtureFetching {
     }
 }
 
+@MainActor
 private func advancedModel(
     timeZone: TimeZone = TimeZone(identifier: "UTC")!
 ) async throws -> (viewModel: FixtureListViewModel, client: DelayedFixtureClient) {
