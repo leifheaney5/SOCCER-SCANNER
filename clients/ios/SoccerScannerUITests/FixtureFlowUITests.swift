@@ -9,7 +9,8 @@ import XCTest
 final class FixtureFlowUITests: XCTestCase {
     private func launchApp(
         arguments: [String] = [],
-        environment: String = "development"
+        environment: String = "development",
+        orientation: UIDeviceOrientation = .portrait
     ) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = [
@@ -37,6 +38,7 @@ final class FixtureFlowUITests: XCTestCase {
         }
         app.launchEnvironment = ["SOCCER_SCANNER_UI_TEST_MODE": mode]
         app.terminate()
+        XCUIDevice.shared.orientation = orientation
         app.launch()
         return app
     }
@@ -127,7 +129,7 @@ final class FixtureFlowUITests: XCTestCase {
         let deadline = Date().addingTimeInterval(timeout)
         while Date() < deadline {
             if target.exists { return target }
-            app.swipeUp()
+            scrollContent(app, for: identifier)
         }
         return target
     }
@@ -141,15 +143,7 @@ final class FixtureFlowUITests: XCTestCase {
         let deadline = Date().addingTimeInterval(timeout)
         while Date() < deadline {
             if target.isHittable { return target }
-            let list = app.tables.firstMatch
-            let scrollView = app.scrollViews.firstMatch
-            if list.exists {
-                list.swipeUp()
-            } else if scrollView.exists {
-                scrollView.swipeUp()
-            } else {
-                app.swipeUp()
-            }
+            scrollContent(app, for: identifier)
         }
         return target
     }
@@ -203,15 +197,34 @@ final class FixtureFlowUITests: XCTestCase {
             if target.isHittable {
                 return
             }
-            app.swipeUp()
+            scrollContent(app)
         }
         XCTAssertTrue(target.isHittable, "target did not become visible after scrolling")
+    }
+
+    private func scrollContent(_ app: XCUIApplication, for identifier: String? = nil) {
+        let collection = app.collectionViews["fixtures-list"]
+        let list = app.tables.firstMatch
+        let scrollView = app.scrollViews.firstMatch
+        let isSettingsElement = identifier?.hasPrefix("settings-") == true
+        if isSettingsElement, list.exists {
+            list.swipeUp()
+        } else if identifier?.hasPrefix("fixture-") == true, collection.exists {
+            collection.swipeUp()
+        } else if list.exists {
+            list.swipeUp()
+        } else if collection.exists {
+            collection.swipeUp()
+        } else if scrollView.exists {
+            scrollView.swipeUp()
+        } else {
+            app.swipeUp()
+        }
     }
 
     func testFixtureListLoadsAndExposesNativeDayAndTimezoneControls() {
         let app = launchApp()
         waitForList(app)
-        print("SOCCER_SCANNER_UI_TREE_BEGIN\n\(app.debugDescription)\nSOCCER_SCANNER_UI_TREE_END")
 
         XCTAssertTrue(element(app, "previous-day").isHittable)
         XCTAssertTrue(element(app, "today-day").isHittable)
@@ -281,11 +294,11 @@ final class FixtureFlowUITests: XCTestCase {
         XCTAssertTrue(waitForElement(app, "fixture-row-fx_aaaaaaaaaaaaaaaaaaaaaaaa").exists)
         XCTAssertTrue(waitForElement(app, "fixture-row-fx_bbbbbbbbbbbbbbbbbbbbbbbb").exists)
         XCTAssertTrue(waitForElement(app, "fixture-row-fx_cccccccccccccccccccccccc").exists)
-        app.swipeDown()
+        app.collectionViews["fixtures-list"].swipeDown()
 
         labelledElement(app, equalTo: "Live").tap()
-        XCTAssertTrue(element(app, "fixture-row-fx_aaaaaaaaaaaaaaaaaaaaaaaa").waitForExistence(timeout: 10))
-        XCTAssertTrue(element(app, "fixture-row-fx_bbbbbbbbbbbbbbbbbbbbbbbb").exists)
+        XCTAssertTrue(waitForElement(app, "fixture-row-fx_aaaaaaaaaaaaaaaaaaaaaaaa").exists)
+        XCTAssertTrue(waitForElement(app, "fixture-row-fx_bbbbbbbbbbbbbbbbbbbbbbbb").exists)
         XCTAssertFalse(element(app, "fixture-row-fx_cccccccccccccccccccccccc").exists)
 
         labelledElement(app, equalTo: "Upcoming").tap()
@@ -679,7 +692,7 @@ final class FixtureFlowUITests: XCTestCase {
         let app = launchApp(arguments: [
             "-UITestAccessibilityFixtures", "YES",
             "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL",
-        ])
+        ], orientation: .landscapeLeft)
         waitForList(app)
 
         XCTAssertTrue(element(app, "status-filter").isHittable)
