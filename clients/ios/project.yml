@@ -68,6 +68,9 @@ targets:
     platform: iOS
     sources:
       - path: SoccerScannerUITests
+    settings:
+      base:
+        TEST_TARGET_NAME: SoccerScanner
     dependencies:
       - target: SoccerScanner
 
