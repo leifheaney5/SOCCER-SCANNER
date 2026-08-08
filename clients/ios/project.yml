@@ -60,6 +60,9 @@ targets:
     platform: iOS
     sources:
       - path: SoccerScannerTests
+    settings:
+      base:
+        TEST_HOST: ''
     dependencies:
       - target: SoccerScanner
 
