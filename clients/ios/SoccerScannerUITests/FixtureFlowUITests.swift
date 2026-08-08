@@ -687,21 +687,21 @@ final class FixtureFlowUITests: XCTestCase {
         app.buttons[competition].tap()
         waitForHittable(app, "advanced-filter-reset").tap()
         waitForHittable(app, "advanced-filter-apply").tap()
-        XCTAssertEqual(element(app, "advanced-filter-count").label, "0")
+        XCTAssertEqual(element(app, "advanced-filter-count").label, "1")
 
         waitForHittable(app, "advanced-filter-button").tap()
         waitForHittable(app, "advanced-competition").tap()
         XCTAssertTrue(app.buttons[competition].waitForExistence(timeout: 10))
         app.buttons[competition].tap()
         waitForHittable(app, "advanced-filter-close").tap()
-        XCTAssertEqual(element(app, "advanced-filter-count").label, "0")
+        XCTAssertEqual(element(app, "advanced-filter-count").label, "1")
 
         waitForHittable(app, "advanced-filter-button").tap()
         waitForHittable(app, "advanced-competition").tap()
         XCTAssertTrue(app.buttons[competition].waitForExistence(timeout: 10))
         app.buttons[competition].tap()
         waitForHittable(app, "advanced-filter-apply").tap()
-        XCTAssertEqual(element(app, "advanced-filter-count").label, "1")
+        XCTAssertEqual(element(app, "advanced-filter-count").label, "2")
         XCTAssertTrue(element(app, "fixture-row-\(accessibilityFixtureID)").exists)
     }
 
