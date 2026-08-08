@@ -52,7 +52,6 @@ public struct SettingsView: View {
             }
         }
         .navigationTitle(String(localized: "Settings"))
-        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("settings-view")
     }
 

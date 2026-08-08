@@ -426,11 +426,16 @@ public struct FixtureListView: View {
                                 timeZone: model.selectedTimeZone,
                                 scoreText: model.scoreText(for: fixture)
                             )
-            }
-            .buttonStyle(.plain)
-            // The identifier belongs on the control, not its label:
-            // the Button is the element that is queried and tapped.
-            .accessibilityIdentifier("fixture-row-\(fixture.id)")
+                        }
+                        .buttonStyle(.plain)
+                        // The identifier belongs on the control, not its label:
+                        // the Button is the element that is queried and tapped.
+                        .accessibilityLabel(
+                            "\(fixture.homeTeam.name) versus \(fixture.awayTeam.name), "
+                                + "\(fixture.status.label), "
+                                + "\(FixtureTime.kickoff(fixture.utcDate, in: model.selectedTimeZone))"
+                        )
+                        .accessibilityIdentifier("fixture-row-\(fixture.id)")
                     }
                 }
             }
