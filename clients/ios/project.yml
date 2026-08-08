@@ -81,6 +81,10 @@ schemes:
         SoccerScanner: all
     test:
       gatherCoverageData: true
+      commandLineArguments:
+        -UITestStubData: true
+      environmentVariables:
+        SOCCER_SCANNER_UI_TEST_MODE: ui-test
       targets:
         - SoccerScannerTests
         - SoccerScannerUITests
