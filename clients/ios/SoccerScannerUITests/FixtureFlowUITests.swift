@@ -211,6 +211,7 @@ final class FixtureFlowUITests: XCTestCase {
     func testFixtureListLoadsAndExposesNativeDayAndTimezoneControls() {
         let app = launchApp()
         waitForList(app)
+        print("SOCCER_SCANNER_UI_TREE_BEGIN\n\(app.debugDescription)\nSOCCER_SCANNER_UI_TREE_END")
 
         XCTAssertTrue(element(app, "previous-day").isHittable)
         XCTAssertTrue(element(app, "today-day").isHittable)
