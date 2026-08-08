@@ -96,6 +96,11 @@ jobs:
           status=0
           for scheme in SoccerScanner SoccerScannerUnitTests; do
             result_bundle="build/${scheme}-TestResults.xcresult"
+            if [ "$scheme" = "SoccerScanner" ]; then
+              tee_command="tee build/xcodebuild.log"
+            else
+              tee_command="tee -a build/xcodebuild.log"
+            fi
             xcodebuild test \
               -project SoccerScanner.xcodeproj \
               -scheme "$scheme" \
@@ -103,7 +108,7 @@ jobs:
               -resultBundlePath "$result_bundle" \
               CODE_SIGNING_ALLOWED=NO \
               CODE_SIGN_IDENTITY="" \
-              2>&1 | tee -a build/xcodebuild.log
+              2>&1 | $tee_command
             current_status=${PIPESTATUS[0]}
             if [ "$current_status" -ne 0 ]; then
               status="$current_status"
