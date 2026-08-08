@@ -47,7 +47,38 @@ final class FixtureFlowUITests: XCTestCase {
     /// `ContentUnavailableView` becomes, and it changes between releases.
     /// Matching on identifier alone keeps these tests about behaviour.
     private func element(_ app: XCUIApplication, _ identifier: String) -> XCUIElement {
-        app.descendants(matching: .any).matching(identifier: identifier).firstMatch
+        let identified = app.descendants(matching: .any).matching(identifier: identifier).firstMatch
+        guard !identified.exists else { return identified }
+
+        if identifier.hasPrefix("fixture-row-") {
+            let fixtureLabels: [String: String] = [
+                "fixture-row-fx_aaaaaaaaaaaaaaaaaaaaaaaa": "Arsenal",
+                "fixture-row-fx_bbbbbbbbbbbbbbbbbbbbbbbb": "Real Madrid",
+                "fixture-row-fx_cccccccccccccccccccccccc": "Ajax",
+                "fixture-row-fx_0123456789abcdef01234567": "Association Sportive",
+            ]
+            if let label = fixtureLabels[identifier] {
+                return app.buttons.matching(
+                    NSPredicate(format: "label CONTAINS %@", label)
+                ).firstMatch
+            }
+        }
+
+        switch identifier {
+        case "advanced-filter-reset": return app.buttons["Reset"]
+        case "advanced-filter-close": return app.buttons["Close"]
+        case "advanced-filter-apply": return app.buttons["Apply"]
+        case "advanced-competition": return app.buttons["Competition"]
+        case "settings-privacy-link": return app.links["Privacy"]
+        case "settings-terms-link": return app.links["Terms of Service"]
+        case "settings-support-unavailable":
+            return app.staticTexts["Support contact is not configured for this build."]
+        default:
+            if identifier.hasPrefix("timezone-") {
+                return app.buttons[String(identifier.dropFirst("timezone-".count))]
+            }
+            return identified
+        }
     }
 
     private func waitForList(_ app: XCUIApplication) {
