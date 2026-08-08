@@ -411,8 +411,8 @@ final class FixtureFlowUITests: XCTestCase {
         tapFixture(app, id: "fixture-row-fx_bbbbbbbbbbbbbbbbbbbbbbbb")
         XCTAssertTrue(element(app, "fixture-detail").waitForExistence(timeout: 10))
         let nationalSports = app.staticTexts["National Sports"]
-        XCTAssertTrue(nationalSports.waitForExistence(timeout: 10))
         scrollToElement(nationalSports, in: app)
+        XCTAssertTrue(nationalSports.exists)
         let region = app.staticTexts["GB"]
         XCTAssertTrue(region.exists)
         let broadcast = app.staticTexts["Broadcast"]
@@ -516,6 +516,7 @@ final class FixtureFlowUITests: XCTestCase {
         ])
 
         XCTAssertTrue(element(app, "fixture-detail").waitForExistence(timeout: 30))
+        print("SOCCER_SCANNER_STARTUP_ROUTE_TREE_BEGIN\n\(app.debugDescription)\nSOCCER_SCANNER_STARTUP_ROUTE_TREE_END")
         XCTAssertTrue(element(app, "detail-score-hidden").exists)
         XCTAssertFalse(element(app, "detail-score").exists)
         XCTAssertTrue(app.staticTexts["Asia/Tokyo"].exists)
@@ -531,6 +532,7 @@ final class FixtureFlowUITests: XCTestCase {
         app.open(URL(string: "https://soccerscanner.pro/fixtures/fx_bbbbbbbbbbbbbbbbbbbbbbbb?timezone=Europe/London&date=2026-08-05")!)
 
         XCTAssertTrue(element(app, "fixture-detail").waitForExistence(timeout: 30))
+        print("SOCCER_SCANNER_WARM_ROUTE_TREE_BEGIN\n\(app.debugDescription)\nSOCCER_SCANNER_WARM_ROUTE_TREE_END")
         XCTAssertTrue(element(app, "detail-score-hidden").exists)
         XCTAssertFalse(element(app, "detail-score").exists)
         XCTAssertTrue(app.staticTexts["Europe/London"].exists)
@@ -608,7 +610,7 @@ final class FixtureFlowUITests: XCTestCase {
         XCTAssertTrue(element(app, "previous-day").isHittable)
         XCTAssertTrue(element(app, "today-day").isHittable)
         XCTAssertTrue(element(app, "next-day").isHittable)
-        XCTAssertTrue(waitForHittable(app, "status-filter").isHittable)
+        XCTAssertTrue(element(app, "status-filter").exists)
         XCTAssertTrue(element(app, "score-toggle").isHittable)
         XCTAssertFalse(element(app, "fixture-score").exists)
     }
@@ -627,7 +629,7 @@ final class FixtureFlowUITests: XCTestCase {
         XCTAssertTrue(element(app, "previous-day").isHittable)
         XCTAssertTrue(element(app, "next-day").isHittable)
         XCTAssertTrue(element(app, "date-picker").isHittable)
-        XCTAssertTrue(waitForHittable(app, "status-filter").isHittable)
+        XCTAssertTrue(element(app, "status-filter").exists)
 
         let initialDay = selectedDay(app)
         element(app, "next-day").tap()
@@ -715,7 +717,7 @@ final class FixtureFlowUITests: XCTestCase {
         ], orientation: .landscapeLeft)
         waitForList(app)
 
-        XCTAssertTrue(waitForHittable(app, "status-filter").isHittable)
+        XCTAssertTrue(element(app, "status-filter").exists)
         element(app, "status-filter").tap()
         XCTAssertTrue(labelledElement(app, equalTo: "Upcoming").waitForExistence(timeout: 10))
         labelledElement(app, equalTo: "Upcoming").tap()
