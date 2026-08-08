@@ -36,6 +36,7 @@ final class FixtureFlowUITests: XCTestCase {
             mode = "ui-test"
         }
         app.launchEnvironment = ["SOCCER_SCANNER_UI_TEST_MODE": mode]
+        app.terminate()
         app.launch()
         return app
     }
