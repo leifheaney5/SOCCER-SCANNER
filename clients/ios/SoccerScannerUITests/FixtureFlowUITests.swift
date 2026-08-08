@@ -11,7 +11,7 @@ final class FixtureFlowUITests: XCTestCase {
         arguments: [String] = [],
         environment: String = "development"
     ) -> XCUIApplication {
-        let app = XCUIApplication(bundleIdentifier: "pro.soccerscanner.app")
+        let app = XCUIApplication()
         app.launchArguments = [
             "-UITestStubData", "YES",
             "-AppleLanguages", "(en)",
