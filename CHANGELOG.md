@@ -21,6 +21,8 @@
 
 ### Changed
 
+- Increased the bounded ESPN provider response guard to 5 MB so current global
+  scoreboard payloads are accepted without removing response-size protection.
 - Provider fan-out now shares one request budget, and stale ESPN metadata preserves
   usable fixtures while reporting a partial outcome.
 - The privacy page now documents native iOS score-preference, request-ID, and

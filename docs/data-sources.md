@@ -2,7 +2,7 @@
 
 ## ESPN
 
-ESPN's global soccer scoreboard is the default fixture source. For each UTC date needed to compose a visitor's local day, the adapter makes one bounded request and accepts up to 500 provider events. This avoids the former fixed 20-league shortlist, so every competition included in ESPN's global response is eligible for display. A two-day local-date window uses two single-day requests rather than a combined range, preserving the 1 MB response-size guard.
+ESPN's global soccer scoreboard is the default fixture source. For each UTC date needed to compose a visitor's local day, the adapter makes one bounded request and accepts up to 500 provider events. This avoids the former fixed 20-league shortlist, so every competition included in ESPN's global response is eligible for display. A two-day local-date window uses two single-day requests rather than a combined range, preserving the bounded 5 MB response-size guard.
 
 The global scoreboard carries a provider league ID in each event UID but does not include the human-readable competition record. The adapter resolves one representative event summary per newly seen league, caches that provider-derived metadata for 24 hours (with a seven-day stale fallback), and reuses it across fixture fills. Resolution is bounded to eight concurrent calls. If a refresh fails, an unexpired stale entry preserves the fixture and marks the provider response partial; if no verified or stale metadata exists, the adapter omits only the unverified competition rather than inventing a label.
 
