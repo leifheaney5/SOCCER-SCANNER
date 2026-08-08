@@ -516,10 +516,9 @@ final class FixtureFlowUITests: XCTestCase {
         ])
 
         XCTAssertTrue(element(app, "fixture-detail").waitForExistence(timeout: 30))
-        print("SOCCER_SCANNER_STARTUP_ROUTE_TREE_BEGIN\n\(app.debugDescription)\nSOCCER_SCANNER_STARTUP_ROUTE_TREE_END")
         XCTAssertTrue(element(app, "detail-score-hidden").exists)
         XCTAssertFalse(element(app, "detail-score").exists)
-        XCTAssertTrue(app.staticTexts["Asia/Tokyo"].exists)
+        XCTAssertTrue(labelledElement(app, containing: "Asia/Tokyo").waitForExistence(timeout: 10))
 
         app.navigationBars.buttons.firstMatch.tap()
         waitForValue(element(app, "selected-day"), toEqual: "2026-08-05")
@@ -532,10 +531,9 @@ final class FixtureFlowUITests: XCTestCase {
         app.open(URL(string: "https://soccerscanner.pro/fixtures/fx_bbbbbbbbbbbbbbbbbbbbbbbb?timezone=Europe/London&date=2026-08-05")!)
 
         XCTAssertTrue(element(app, "fixture-detail").waitForExistence(timeout: 30))
-        print("SOCCER_SCANNER_WARM_ROUTE_TREE_BEGIN\n\(app.debugDescription)\nSOCCER_SCANNER_WARM_ROUTE_TREE_END")
         XCTAssertTrue(element(app, "detail-score-hidden").exists)
         XCTAssertFalse(element(app, "detail-score").exists)
-        XCTAssertTrue(app.staticTexts["Europe/London"].exists)
+        XCTAssertTrue(labelledElement(app, containing: "Europe/London").waitForExistence(timeout: 10))
     }
 
     func testMissingFixtureLinkAtLaunchShowsAnUnavailableDestination() {
@@ -646,7 +644,7 @@ final class FixtureFlowUITests: XCTestCase {
         waitForValue(element(app, "selected-day"), toEqual: datePickerTargetDay)
         XCTAssertEqual(datePicker.value as? String, datePickerTargetDay)
 
-        element(app, "status-filter").tap()
+        waitForHittable(app, "status-filter").tap()
         XCTAssertTrue(labelledElement(app, equalTo: "Upcoming").waitForExistence(timeout: 10))
         labelledElement(app, equalTo: "Upcoming").tap()
 
@@ -718,7 +716,7 @@ final class FixtureFlowUITests: XCTestCase {
         waitForList(app)
 
         XCTAssertTrue(element(app, "status-filter").exists)
-        element(app, "status-filter").tap()
+        waitForHittable(app, "status-filter").tap()
         XCTAssertTrue(labelledElement(app, equalTo: "Upcoming").waitForExistence(timeout: 10))
         labelledElement(app, equalTo: "Upcoming").tap()
 
