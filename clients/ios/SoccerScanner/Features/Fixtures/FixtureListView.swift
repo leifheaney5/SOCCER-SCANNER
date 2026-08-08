@@ -426,11 +426,12 @@ public struct FixtureListView: View {
                                 timeZone: model.selectedTimeZone,
                                 scoreText: model.scoreText(for: fixture)
                             )
-                        }
-                        .buttonStyle(.plain)
-                        // The identifier belongs on the control, not its label:
-                        // the Button is the element that is queried and tapped.
-                        .accessibilityIdentifier("fixture-row-\(fixture.id)")
+            }
+            .buttonStyle(.plain)
+            // The identifier belongs on the control, not its label:
+            // the Button is the element that is queried and tapped.
+            .accessibilityElement(children: .contain)
+            .accessibilityIdentifier("fixture-row-\(fixture.id)")
                     }
                 }
             }
@@ -570,6 +571,7 @@ private struct AdvancedFixtureFilterSheet: View {
         .padding(.horizontal, Theme.Spacing.lg)
         .padding(.vertical, Theme.Spacing.sm)
         .background(.bar)
+        .accessibilityElement(children: .contain)
     }
 }
 

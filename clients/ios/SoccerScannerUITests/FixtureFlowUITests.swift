@@ -80,7 +80,15 @@ final class FixtureFlowUITests: XCTestCase {
         let deadline = Date().addingTimeInterval(timeout)
         while Date() < deadline {
             if target.isHittable { return target }
-            app.swipeUp()
+            let list = app.tables.firstMatch
+            let scrollView = app.scrollViews.firstMatch
+            if list.exists {
+                list.swipeUp()
+            } else if scrollView.exists {
+                scrollView.swipeUp()
+            } else {
+                app.swipeUp()
+            }
         }
         return target
     }
