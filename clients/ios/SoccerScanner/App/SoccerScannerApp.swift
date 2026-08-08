@@ -56,14 +56,6 @@ final class AppContainer {
         environment: AppEnvironment,
         defaults: UserDefaults
     ) -> FixtureFetching {
-        #if DEBUG
-        let diagnosticMode = ProcessInfo.processInfo.environment["SOCCER_SCANNER_UI_TEST_MODE"] ?? "nil"
-        let diagnosticArguments = ProcessInfo.processInfo.arguments
-        let diagnosticDefaults = defaults.dictionaryRepresentation().keys.filter { $0.hasPrefix("UITest") }
-        print(
-            "SOCCER_SCANNER_DIAGNOSTIC env=\(diagnosticMode) args=\(diagnosticArguments) defaults=\(diagnosticDefaults)"
-        )
-        #endif
         switch (ProcessInfo.processInfo.environment["SOCCER_SCANNER_UI_TEST_MODE"]
             ?? ProcessInfo.processInfo.environment["SOCCER_SCANNER_ENVIRONMENT"]) {
         case "ui-test-failure":
