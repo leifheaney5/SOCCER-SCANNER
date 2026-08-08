@@ -93,15 +93,22 @@ jobs:
         run: |
           set -o pipefail
           mkdir -p build
-          xcodebuild test \
-            -project SoccerScanner.xcodeproj \
-            -scheme SoccerScanner \
-            -destination "id=${{ steps.simulator.outputs.udid }}" \
-            -resultBundlePath build/TestResults.xcresult \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGN_IDENTITY="" \
-            2>&1 | tee build/xcodebuild.log
-          status=${PIPESTATUS[0]}
+          status=0
+          for scheme in SoccerScanner SoccerScannerUnitTests; do
+            result_bundle="build/${scheme}-TestResults.xcresult"
+            xcodebuild test \
+              -project SoccerScanner.xcodeproj \
+              -scheme "$scheme" \
+              -destination "id=${{ steps.simulator.outputs.udid }}" \
+              -resultBundlePath "$result_bundle" \
+              CODE_SIGNING_ALLOWED=NO \
+              CODE_SIGN_IDENTITY="" \
+              2>&1 | tee -a build/xcodebuild.log
+            current_status=${PIPESTATUS[0]}
+            if [ "$current_status" -ne 0 ]; then
+              status="$current_status"
+            fi
+          done
           exit "$status"
 
       - name: Upload test results

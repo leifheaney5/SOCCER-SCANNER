@@ -60,9 +60,6 @@ targets:
     platform: iOS
     sources:
       - path: SoccerScannerTests
-    settings:
-      base:
-        TEST_HOST: ''
     dependencies:
       - target: SoccerScanner
 
@@ -89,8 +86,16 @@ schemes:
       environmentVariables:
         SOCCER_SCANNER_UI_TEST_MODE: ui-test
       targets:
-        - SoccerScannerTests
         - SoccerScannerUITests
     run:
       environmentVariables:
         SOCCER_SCANNER_ENVIRONMENT: development
+
+  SoccerScannerUnitTests:
+    build:
+      targets:
+        SoccerScanner: all
+    test:
+      gatherCoverageData: true
+      targets:
+        - SoccerScannerTests

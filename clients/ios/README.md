@@ -57,6 +57,8 @@ Apple Developer Program enrolment, App Store Connect app-record ownership, signi
 
 The repository separates signing-free simulator verification from signed archive
 creation. `fastlane test` and the GitHub Actions test job disable code signing.
+The GitHub Actions test job runs the UI and hosted unit suites as separate
+schemes so UI tests can control each app launch independently.
 The manual archive lanes require `APPLE_TEAM_ID` (10-character Team ID),
 `APPLE_BUNDLE_ID` (the registered bundle ID), and a numeric `BUILD_NUMBER`.
 They pass `CODE_SIGN_STYLE=Automatic` and `-allowProvisioningUpdates` to
