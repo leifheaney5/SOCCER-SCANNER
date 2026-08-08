@@ -58,27 +58,57 @@ final class FixtureFlowUITests: XCTestCase {
                 "fixture-row-fx_0123456789abcdef01234567": "Association Sportive",
             ]
             if let label = fixtureLabels[identifier] {
-                return app.buttons.matching(
-                    NSPredicate(format: "label CONTAINS %@", label)
-                ).firstMatch
+                return labelledElement(app, containing: label)
             }
         }
 
         switch identifier {
-        case "advanced-filter-reset": return app.buttons["Reset"]
-        case "advanced-filter-close": return app.buttons["Close"]
-        case "advanced-filter-apply": return app.buttons["Apply"]
-        case "advanced-competition": return app.buttons["Competition"]
-        case "settings-privacy-link": return app.links["Privacy"]
-        case "settings-terms-link": return app.links["Terms of Service"]
+        case "advanced-filter-reset": return labelledElement(app, equalTo: "Reset")
+        case "advanced-filter-close": return labelledElement(app, equalTo: "Close")
+        case "advanced-filter-apply": return labelledElement(app, equalTo: "Apply")
+        case "advanced-competition": return labelledElement(app, equalTo: "Competition")
+        case "settings-privacy-link": return labelledElement(app, equalTo: "Privacy")
+        case "settings-terms-link": return labelledElement(app, equalTo: "Terms of Service")
         case "settings-support-unavailable":
-            return app.staticTexts["Support contact is not configured for this build."]
+            return labelledElement(
+                app,
+                equalTo: "Support contact is not configured for this build."
+            )
         default:
             if identifier.hasPrefix("timezone-") {
-                return app.buttons[String(identifier.dropFirst("timezone-".count))]
+                return labelledElement(
+                    app,
+                    equalTo: String(identifier.dropFirst("timezone-".count))
+                )
             }
             return identified
         }
+    }
+
+    private func labelledElement(
+        _ app: XCUIApplication,
+        equalTo label: String
+    ) -> XCUIElement {
+        let button = app.buttons[label]
+        if button.exists { return button }
+        let link = app.links[label]
+        if link.exists { return link }
+        let staticText = app.staticTexts[label]
+        if staticText.exists { return staticText }
+        return app.descendants(matching: .any).matching(
+            NSPredicate(format: "label == %@", label)
+        ).firstMatch
+    }
+
+    private func labelledElement(
+        _ app: XCUIApplication,
+        containing text: String
+    ) -> XCUIElement {
+        let button = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", text)).firstMatch
+        if button.exists { return button }
+        return app.descendants(matching: .any).matching(
+            NSPredicate(format: "label CONTAINS %@", text)
+        ).firstMatch
     }
 
     private func waitForList(_ app: XCUIApplication) {
@@ -252,18 +282,18 @@ final class FixtureFlowUITests: XCTestCase {
         XCTAssertTrue(waitForElement(app, "fixture-row-fx_cccccccccccccccccccccccc").exists)
         app.swipeDown()
 
-        app.buttons["Live"].tap()
+        labelledElement(app, equalTo: "Live").tap()
         XCTAssertTrue(element(app, "fixture-row-fx_aaaaaaaaaaaaaaaaaaaaaaaa").waitForExistence(timeout: 10))
         XCTAssertTrue(element(app, "fixture-row-fx_bbbbbbbbbbbbbbbbbbbbbbbb").exists)
         XCTAssertFalse(element(app, "fixture-row-fx_cccccccccccccccccccccccc").exists)
 
-        app.buttons["Upcoming"].tap()
+        labelledElement(app, equalTo: "Upcoming").tap()
         XCTAssertTrue(element(app, "fixtures-filtered-empty").waitForExistence(timeout: 10))
 
-        app.buttons["Finished"].tap()
+        labelledElement(app, equalTo: "Finished").tap()
         XCTAssertTrue(element(app, "fixtures-filtered-empty").waitForExistence(timeout: 10))
 
-        app.buttons["All"].tap()
+        labelledElement(app, equalTo: "All").tap()
         XCTAssertTrue(waitForElement(app, "fixture-row-fx_cccccccccccccccccccccccc").exists)
 
         XCTAssertTrue(element(app, "fixture-search").waitForExistence(timeout: 10))
@@ -289,8 +319,8 @@ final class FixtureFlowUITests: XCTestCase {
         XCTAssertTrue(waitForHittable(app, "advanced-filter-apply").isHittable)
 
         waitForHittable(app, "advanced-competition").tap()
-        XCTAssertTrue(app.buttons["Premier League"].waitForExistence(timeout: 10))
-        app.buttons["Premier League"].tap()
+        XCTAssertTrue(labelledElement(app, equalTo: "Premier League").waitForExistence(timeout: 10))
+        labelledElement(app, equalTo: "Premier League").tap()
         waitForHittable(app, "advanced-filter-close").tap()
 
         // Close is cancel: the applied badge and rows remain unchanged.
@@ -299,8 +329,8 @@ final class FixtureFlowUITests: XCTestCase {
 
         waitForHittable(app, "advanced-filter-button").tap()
         waitForHittable(app, "advanced-competition").tap()
-        XCTAssertTrue(app.buttons["Premier League"].waitForExistence(timeout: 10))
-        app.buttons["Premier League"].tap()
+        XCTAssertTrue(labelledElement(app, equalTo: "Premier League").waitForExistence(timeout: 10))
+        labelledElement(app, equalTo: "Premier League").tap()
         waitForHittable(app, "advanced-filter-reset").tap()
         waitForHittable(app, "advanced-filter-apply").tap()
 
@@ -309,8 +339,8 @@ final class FixtureFlowUITests: XCTestCase {
 
         waitForHittable(app, "advanced-filter-button").tap()
         waitForHittable(app, "advanced-competition").tap()
-        XCTAssertTrue(app.buttons["Premier League"].waitForExistence(timeout: 10))
-        app.buttons["Premier League"].tap()
+        XCTAssertTrue(labelledElement(app, equalTo: "Premier League").waitForExistence(timeout: 10))
+        labelledElement(app, equalTo: "Premier League").tap()
         waitForHittable(app, "advanced-filter-apply").tap()
 
         XCTAssertEqual(element(app, "advanced-filter-count").label, "1")
@@ -581,8 +611,8 @@ final class FixtureFlowUITests: XCTestCase {
         XCTAssertEqual(datePicker.value as? String, datePickerTargetDay)
 
         element(app, "status-filter").tap()
-        XCTAssertTrue(app.buttons["Upcoming"].waitForExistence(timeout: 10))
-        app.buttons["Upcoming"].tap()
+        XCTAssertTrue(labelledElement(app, equalTo: "Upcoming").waitForExistence(timeout: 10))
+        labelledElement(app, equalTo: "Upcoming").tap()
 
         let longFixture = waitForHittable(app, "fixture-row-\(accessibilityFixtureID)")
         XCTAssertTrue(longFixture.exists)
@@ -653,8 +683,8 @@ final class FixtureFlowUITests: XCTestCase {
 
         XCTAssertTrue(element(app, "status-filter").isHittable)
         element(app, "status-filter").tap()
-        XCTAssertTrue(app.buttons["Upcoming"].waitForExistence(timeout: 10))
-        app.buttons["Upcoming"].tap()
+        XCTAssertTrue(labelledElement(app, equalTo: "Upcoming").waitForExistence(timeout: 10))
+        labelledElement(app, equalTo: "Upcoming").tap()
 
         let longFixture = waitForHittable(app, "fixture-row-fx_0123456789abcdef01234567")
         XCTAssertTrue(longFixture.exists)
