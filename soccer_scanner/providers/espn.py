@@ -492,10 +492,14 @@ class EspnProvider:
                 for future in done:
                     league_id = pending.pop(future)
                     try:
-                        resolved, observation = future.result()
+                        resolved, observation, refresh_failure, used_stale = future.result()
                         metadata[league_id] = resolved
                         if observation is not None:
                             observations.append(observation)
+                        if refresh_failure:
+                            failures.append(f'league_metadata_{refresh_failure}')
+                        if used_stale:
+                            failures.append('league_metadata_stale')
                     except ProviderRequestError as error:
                         if error.observation is not None:
                             observations.append(error.observation)
@@ -523,7 +527,7 @@ class EspnProvider:
     def _resolve_league_metadata(self, league_id, event_id, budget):
         cached = self.league_metadata.get(league_id)
         if cached is not None:
-            return cached, None
+            return cached, None, None, False
         if not event_id:
             raise ProviderRequestError('missing_event_id')
         observations = []
@@ -558,13 +562,32 @@ class EspnProvider:
 
         if self.cache is None:
             resolved = load()
+            refresh_failure = None
+            used_stale = False
         else:
-            lookup = self.cache.get_or_load(
-                f'espn-league-metadata:{league_id}',
-                load,
-                ttl_seconds=self.league_metadata_ttl_seconds,
-                stale_ttl_seconds=7 * 24 * 60 * 60,
-            )
-            resolved = lookup.value
-        self.league_metadata[league_id] = resolved
-        return resolved, observations[0] if observations else None
+            cache_key = f'espn-league-metadata:{league_id}'
+            try:
+                lookup = self.cache.get_or_load(
+                    cache_key,
+                    load,
+                    ttl_seconds=self.league_metadata_ttl_seconds,
+                    stale_ttl_seconds=7 * 24 * 60 * 60,
+                )
+                resolved = lookup.value
+                refresh_failure = None
+                used_stale = False
+            except ProviderRequestError as error:
+                stale_lookup = self.cache.get(cache_key, allow_stale=True)
+                if stale_lookup.status != 'stale':
+                    raise
+                resolved = stale_lookup.value
+                refresh_failure = error.category
+                used_stale = True
+        if not used_stale:
+            self.league_metadata[league_id] = resolved
+        return (
+            resolved,
+            observations[0] if observations else None,
+            refresh_failure,
+            used_stale,
+        )

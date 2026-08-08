@@ -1,0 +1,13 @@
+This TestFlight build exercises the native fixture list and detail experience.
+
+Please check:
+- previous, today, next, and direct date selection;
+- timezone changes around midnight;
+- All, Live, Upcoming, and Finished filtering;
+- search and advanced filter Apply/Close/Reset behavior;
+- score reveal and re-hide behavior;
+- fixture Universal Links with date and timezone query state;
+- Settings privacy, terms, data-source, and support messaging.
+
+Please report the device model, iOS version, selected timezone, fixture date,
+and whether the issue occurred online, offline, or after returning to the app.

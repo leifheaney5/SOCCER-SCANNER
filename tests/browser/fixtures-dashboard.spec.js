@@ -43,6 +43,116 @@ test('URL state initializes controls and filter changes replace the URL', async 
     await expect.poll(() => page.evaluate(() => location.search)).toContain('competition=Scottish+Premiership');
 });
 
+test('mobile primary controls stay outside the sheet and Close discards advanced draft changes', async ({page}) => {
+    await page.setViewportSize({width: 390, height: 844});
+    await mockFixtures(page);
+    await page.goto('/?date=2026-08-03');
+
+    const toggle = page.locator('#filter-toggle');
+    await toggle.focus();
+    await toggle.click();
+    const dialog = page.locator('#filter-dialog');
+    await expect(dialog).toBeVisible();
+    await expect(dialog).toHaveRole('dialog', {name: 'Fixture filters'});
+    expect(await page.locator('#secondary-filters').evaluate(element => element.parentElement.id)).toBe('filter-dialog-content');
+    expect(await page.locator('#fixture-search').evaluate(element => element.parentElement.parentElement.id)).toBe('primary-filters');
+    expect(await page.locator('.status-filters').evaluate(element => element.parentElement.id)).toBe('primary-filters');
+    await expect(dialog.locator('#fixture-search')).toHaveCount(0);
+    await expect(dialog.locator('.status-filters')).toHaveCount(0);
+
+    await page.locator('#competition-filter').selectOption('Scottish Premiership');
+    await expect.poll(() => page.evaluate(() => location.search)).not.toContain('competition=Scottish+Premiership');
+    await page.locator('#close-filter-dialog').click();
+
+    await expect(dialog).toBeHidden();
+    await expect(page.locator('#competition-filter')).toHaveValue('');
+    await expect.poll(() => page.evaluate(() => document.activeElement?.id)).toBe('filter-toggle');
+});
+
+test('mobile primary changes commit immediately and advanced Apply commits draft URL state', async ({page}) => {
+    await page.setViewportSize({width: 390, height: 844});
+    await mockFixtures(page);
+    await page.goto('/?date=2026-08-03');
+
+    await page.locator('#fixture-search').fill('Arsenal');
+    await page.locator('#status-live').click();
+    await expect.poll(() => page.evaluate(() => location.search)).toContain('q=Arsenal');
+    await expect.poll(() => page.evaluate(() => location.search)).toContain('status=live');
+
+    await page.locator('#filter-toggle').click();
+    await expect(page.locator('#filter-dialog')).toBeVisible();
+    await page.locator('#competition-filter').selectOption('Premier League');
+    await page.locator('#time-filter').selectOption('afternoon');
+    await expect.poll(() => page.evaluate(() => location.search)).not.toContain('competition=Premier+League');
+    await expect.poll(() => page.evaluate(() => location.search)).not.toContain('time=afternoon');
+    await page.locator('#clear-filters').click();
+    await expect(page.locator('#competition-filter')).toHaveValue('');
+    await expect(page.locator('#time-filter')).toHaveValue('all');
+    await page.locator('#competition-filter').selectOption('Premier League');
+    await page.locator('#time-filter').selectOption('afternoon');
+    await page.locator('#apply-filter-dialog').click();
+
+    await expect(page.locator('#filter-dialog')).toBeHidden();
+    await expect(page.locator('#fixture-result-count')).toContainText('1 match');
+    await expect.poll(() => page.evaluate(() => location.search)).toContain('q=Arsenal');
+    await expect.poll(() => page.evaluate(() => location.search)).toContain('status=live');
+    await expect.poll(() => page.evaluate(() => location.search)).toContain('competition=Premier+League');
+    await expect.poll(() => page.evaluate(() => location.search)).toContain('time=afternoon');
+    await expect(page.locator('#status-live')).toHaveAttribute('aria-pressed', 'true');
+});
+
+test('mobile filter dialog has a source-level viewport and safe-area contract', async ({page}) => {
+    await page.setViewportSize({width: 320, height: 568});
+    await mockFixtures(page);
+    await page.goto('/?date=2026-08-03');
+
+    await expect(page.locator('meta[name="viewport"]')).toHaveAttribute(
+        'content',
+        /viewport-fit=cover/,
+    );
+    const baseCss = await page.request.get('/static/css/base.css').then(response => response.text());
+    const fixturesCss = await page.request.get('/static/css/fixtures.css').then(response => response.text());
+    expect(baseCss).toContain('env(safe-area-inset-top');
+    expect(baseCss).toContain('env(safe-area-inset-left');
+    expect(baseCss).toContain('env(safe-area-inset-right');
+    expect(baseCss).toContain('env(safe-area-inset-bottom');
+    expect(baseCss).toMatch(/\.pwa-update-notice[\s\S]*bottom:\s*max\(16px,\s*env\(safe-area-inset-bottom/);
+    expect(fixturesCss).toContain('.filter-toolbar');
+    expect(fixturesCss).toContain('.filter-dialog');
+    expect(fixturesCss).toMatch(/\.filter-toolbar\s*\{[\s\S]*top:\s*calc\(var\(--header-height\) \+ env\(safe-area-inset-top, 0px\) \+ 4px\)/);
+    expect(fixturesCss).toContain('env(safe-area-inset-bottom');
+    await expect(page.locator('.filter-toolbar')).toBeVisible();
+    await page.locator('#filter-toggle').click();
+    await expect(page.locator('#filter-dialog')).toBeVisible();
+    await expect(page.locator('#primary-filters')).toBeVisible();
+    await expect(page.locator('#fixture-search')).toBeVisible();
+    await expect(page.locator('#status-all')).toBeVisible();
+    await expect(page.locator('#competition-filter')).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+});
+
+for (const width of [320, 375, 390, 430]) {
+    test(`compact date controls do not overlap Filters at ${width}px`, async ({page}) => {
+        await page.setViewportSize({width, height: 700});
+        await mockFixtures(page);
+        await page.goto('/?date=2026-08-03');
+
+        const boxes = await page.evaluate(() => {
+            const date = document.querySelector('.date-controls').getBoundingClientRect();
+            const filters = document.getElementById('filter-toggle').getBoundingClientRect();
+            return {
+                date: {left: date.left, right: date.right, top: date.top, bottom: date.bottom},
+                filters: {left: filters.left, right: filters.right, top: filters.top, bottom: filters.bottom},
+            };
+        });
+        const intersects = boxes.date.left < boxes.filters.right
+            && boxes.date.right > boxes.filters.left
+            && boxes.date.top < boxes.filters.bottom
+            && boxes.date.bottom > boxes.filters.top;
+        expect(intersects).toBe(false);
+    });
+}
+
 test('timezone is visible, shareable, and structured provider statuses render correctly', async ({page}) => {
     const structured = structuredClone(fixturePayload);
     structured.matches[0].status = {code: 'in_progress', raw: 'STATUS_IN_PROGRESS', completed: false};
@@ -125,6 +235,11 @@ test('hidden scores never enter DOM content and reveal consistently', async ({pa
     await expect(page.getByText('95 – 94', {exact: true})).toBeVisible();
     await expect(page.getByText('Score unavailable', {exact: true})).toBeVisible();
     await expect(page.getByText('07:45 PM', {exact: true})).toBeVisible();
+
+    await page.locator('#score-toggle').click();
+    await expect(page.locator('#score-toggle')).toHaveAttribute('aria-pressed', 'false');
+    await expect(page.getByText('Score hidden', {exact: true}).first()).toBeVisible();
+    await expect(page.getByText('97 – 96', {exact: true})).toHaveCount(0);
 });
 
 test('fixtures render paired identities, crest fallbacks, groups, and live-first feature', async ({page}) => {
@@ -326,6 +441,7 @@ test('sort selection is visible and shareable', async ({page}) => {
 
     await expect.poll(() => page.evaluate(() => location.search)).toContain('sort=competition');
     await expect(page.locator('#sort-filter')).toHaveValue('competition');
+    await expect(page.locator('#active-filter-count')).toHaveText('1');
 });
 
 test('desktop fixture selection populates complete spoiler-safe match context', async ({page}) => {
@@ -595,15 +711,24 @@ test('visual tokens, type roles, and reduced motion match the product contract',
     expect(styles.contextPosition).toBe('sticky');
 });
 
-for (const width of [320, 375, 430, 768, 1024, 1280, 1440]) {
-    test(`dashboard has no horizontal overflow at ${width}px`, async ({page}) => {
-        await page.setViewportSize({width, height: width < 600 ? 800 : 900});
+for (const {width, height} of [
+    {width: 320, height: 568},
+    {width: 375, height: 667},
+    {width: 390, height: 844},
+    {width: 430, height: 932},
+    {width: 768, height: 900},
+    {width: 1024, height: 900},
+    {width: 1280, height: 900},
+    {width: 1440, height: 900},
+]) {
+    test(`dashboard has no horizontal overflow at ${width}x${height}`, async ({page}) => {
+        await page.setViewportSize({width, height});
         await mockFixtures(page);
         await page.goto('/?date=2026-08-03');
         await expect(page.locator('#fixture-result-count')).toContainText('13 matches');
 
         const measurements = await page.evaluate(() => {
-            const targetIds = ['previous-date', 'today-date', 'next-date', 'filter-toggle', 'score-toggle'];
+            const targetIds = ['previous-date', 'today-date', 'next-date', 'filter-toggle', 'fixture-search', 'status-all', 'score-toggle'];
             return {
                 documentWidth: document.documentElement.scrollWidth,
                 viewportWidth: document.documentElement.clientWidth,
@@ -616,6 +741,7 @@ for (const width of [320, 375, 430, 768, 1024, 1280, 1440]) {
                 contextDisplay: getComputedStyle(document.getElementById('match-context')).display,
                 filterToggleDisplay: getComputedStyle(document.getElementById('filter-toggle')).display,
                 secondaryDisplay: getComputedStyle(document.getElementById('secondary-filters')).display,
+                toolbarHeight: document.querySelector('.filter-toolbar').getBoundingClientRect().height,
             };
         });
         expect(measurements.documentWidth).toBeLessThanOrEqual(measurements.viewportWidth);
@@ -626,7 +752,8 @@ for (const width of [320, 375, 430, 768, 1024, 1280, 1440]) {
 
         if (width <= 767) {
             expect(measurements.filterToggleDisplay).not.toBe('none');
-            expect(measurements.secondaryDisplay).toBe('none');
+            expect(measurements.toolbarHeight).toBeLessThan(200);
+            await expect(page.locator('#filter-dialog')).toBeHidden();
             for (const target of measurements.targets) {
                 expect(target.height, `${target.id} height`).toBeGreaterThanOrEqual(44);
                 expect(target.width, `${target.id} width`).toBeGreaterThanOrEqual(44);

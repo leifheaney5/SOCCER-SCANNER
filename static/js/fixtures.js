@@ -64,6 +64,12 @@ let matchContext = null;
 let teamDrawer = null;
 let refreshController = null;
 let timezoneControl = null;
+let filterDialog = null;
+let filterDialogManager = null;
+let filterDraft = null;
+let filterMediaQuery = null;
+
+const advancedFilterFields = ['competition', 'country', 'timeWindow', 'sort', 'hideFinished', 'timezone'];
 
 function setState(patch, metadata = {}) {
     return store.dispatch(patch, metadata);
@@ -75,7 +81,30 @@ function syncUrl(mode = 'replace') {
     history[method]({dashboard: true}, '', `${location.pathname}?${query}`);
 }
 
-function syncControls() {
+function filterValues(source = state) {
+    return Object.fromEntries(advancedFilterFields.map(field => [field, source[field]]));
+}
+
+function activeFilterCount(source = state) {
+    return Number(Boolean(source.competition))
+        + Number(Boolean(source.country))
+        + Number(source.status !== 'all')
+        + Number(Boolean(source.query))
+        + Number(source.timeWindow !== 'all')
+        + Number(source.sort !== 'kickoff')
+        + Number(source.hideFinished);
+}
+
+function advancedFilterHasValues(source = state, baseline = state) {
+    return Boolean(source.competition)
+        || Boolean(source.country)
+        || source.timeWindow !== 'all'
+        || source.sort !== 'kickoff'
+        || Boolean(source.hideFinished)
+        || source.timezone !== baseline.timezone;
+}
+
+function syncControls({filterState = filterDraft || state} = {}) {
     byId('dashboard-date').value = state.date;
     const dateError = byId('date-error');
     dateError.hidden = !state.dateError;
@@ -84,29 +113,26 @@ function syncControls() {
     if (![...timezone.options].some(option => option.value === state.timezone)) {
         timezone.add(new Option(state.timezone.replaceAll('_', ' '), state.timezone));
     }
-    timezone.value = state.timezone;
-    byId('country-filter').value = state.country;
-    byId('time-filter').value = state.timeWindow;
-    byId('sort-filter').value = state.sort;
-    byId('hide-finished').checked = state.hideFinished;
+    timezone.value = filterState.timezone;
+    byId('country-filter').value = filterState.country;
+    byId('time-filter').value = filterState.timeWindow;
+    byId('sort-filter').value = filterState.sort;
+    byId('hide-finished').checked = filterState.hideFinished;
     byId('fixture-search').value = state.query;
     byId('clear-search').hidden = !state.query;
     const competition = byId('competition-filter');
-    if ([...competition.options].some(option => option.value === state.competition)) {
-        competition.value = state.competition;
+    if ([...competition.options].some(option => option.value === filterState.competition)) {
+        competition.value = filterState.competition;
     }
     document.querySelectorAll('[data-status]').forEach(button => {
         button.setAttribute('aria-pressed', String(button.dataset.status === state.status));
     });
-    const activeFilters = Number(Boolean(state.competition))
-        + Number(Boolean(state.country))
-        + Number(state.status !== 'all')
-        + Number(Boolean(state.query))
-        + Number(state.timeWindow !== 'all')
-        + Number(state.hideFinished);
+    const activeFilters = activeFilterCount(state);
     byId('active-filter-count').textContent = String(activeFilters);
     byId('active-filter-count').hidden = activeFilters === 0;
-    byId('clear-filters').hidden = activeFilters === 0;
+    byId('clear-filters').hidden = filterDialog?.open
+        ? !advancedFilterHasValues(filterState, state)
+        : !(activeFilters || advancedFilterHasValues(state));
     syncScoreToggle(byId('score-toggle'), scoresRevealed);
     timezoneControl?.sync();
 }
@@ -144,6 +170,14 @@ function populateCompetitions(matches) {
     } else if (state.country) {
         setState({country: ''}, {reason: 'reconcile'});
         syncUrl('replace');
+    }
+    if (filterDraft) {
+        if (filterDraft.competition && !names.includes(filterDraft.competition)) {
+            filterDraft.competition = '';
+        }
+        if (filterDraft.country && !countries.includes(filterDraft.country)) {
+            filterDraft.country = '';
+        }
     }
 }
 
@@ -262,8 +296,17 @@ function cancelPendingSearch() {
     searchTimer = null;
 }
 
+function flushPendingSearch() {
+    const hasPendingSearch = Boolean(searchTimer);
+    const query = byId('fixture-search').value;
+    cancelPendingSearch();
+    if (hasPendingSearch && query !== state.query) {
+        setState({query}, {reason: 'filter-input'});
+    }
+}
+
 function applyFilter(patch, {historyMode = 'push'} = {}) {
-    if (!Object.hasOwn(patch, 'query')) cancelPendingSearch();
+    if (!Object.hasOwn(patch, 'query')) flushPendingSearch();
     setState(patch, {reason: 'filter'});
     syncControls();
     syncUrl(historyMode);
@@ -298,43 +341,155 @@ function applyTimezone(timezone) {
     loadFixtures();
 }
 
+function isMobileFilterLayout() {
+    return Boolean(filterMediaQuery?.matches);
+}
+
+function moveSecondaryFiltersForViewport() {
+    const secondaryFilters = byId('secondary-filters');
+    const dialogContent = byId('filter-dialog-content');
+    const toolbar = document.querySelector('.filter-toolbar');
+    if (!secondaryFilters || !dialogContent || !toolbar) return;
+    if (isMobileFilterLayout()) {
+        dialogContent.append(secondaryFilters);
+    } else {
+        if (filterDialog?.open) filterDialogManager?.close(filterDialog, {restoreFocus: false});
+        toolbar.append(secondaryFilters);
+    }
+}
+
+function updateFilterDraft(patch) {
+    filterDraft = {...(filterDraft || filterValues()), ...patch};
+    syncControls({filterState: filterDraft});
+}
+
+function closeFilterDialog() {
+    filterDraft = null;
+    filterDialogManager?.close(filterDialog);
+}
+
+function commitFilterDraft() {
+    if (!filterDraft) return closeFilterDialog();
+    const patch = {};
+    advancedFilterFields.forEach(field => {
+        if (filterDraft[field] !== state[field]) patch[field] = filterDraft[field];
+    });
+    const timezoneChanged = Object.hasOwn(patch, 'timezone');
+    delete patch.timezone;
+    if (timezoneChanged) {
+        cancelPendingSearch();
+        setState({...patch, timezone: filterDraft.timezone, fixture: ''}, {reason: 'filter-dialog'});
+        selectedFixtureId = null;
+        matchContext?.reset();
+        syncControls({filterState: state});
+        syncUrl('push');
+        loadFixtures();
+    } else if (Object.keys(patch).length > 0) {
+        applyFilter(patch);
+    }
+    closeFilterDialog();
+}
+
+function bindFilterDialog(dialogManager) {
+    filterDialogManager = dialogManager;
+    filterDialog = byId('filter-dialog');
+    filterMediaQuery = window.matchMedia('(max-width: 767px)');
+    moveSecondaryFiltersForViewport();
+    filterMediaQuery.addEventListener?.('change', moveSecondaryFiltersForViewport);
+    byId('filter-toggle').addEventListener('click', () => {
+        if (!isMobileFilterLayout()) return;
+        filterDraft = filterValues();
+        syncControls({filterState: filterDraft});
+        byId('filter-toggle').setAttribute('aria-expanded', 'true');
+        filterDialogManager.open(filterDialog, byId('filter-toggle'));
+    });
+    byId('close-filter-dialog').addEventListener('click', closeFilterDialog);
+    byId('cancel-filter-dialog').addEventListener('click', closeFilterDialog);
+    byId('apply-filter-dialog').addEventListener('click', commitFilterDraft);
+    filterDialog.addEventListener('keydown', event => {
+        if (event.key !== 'Tab') return;
+        const focusable = [...filterDialog.querySelectorAll(
+            'button:not([disabled]), select:not([disabled]), input:not([disabled]), [href], [tabindex]:not([tabindex="-1"])',
+        )].filter(element => element.offsetParent !== null);
+        if (!focusable.length) return;
+        const first = focusable[0];
+        const last = focusable.at(-1);
+        if (event.shiftKey && document.activeElement === first) {
+            event.preventDefault();
+            last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+            event.preventDefault();
+            first.focus();
+        }
+    });
+    filterDialog.addEventListener('click', event => {
+        if (event.target === filterDialog) closeFilterDialog();
+    });
+    filterDialog.addEventListener('close', () => {
+        filterDraft = null;
+        byId('filter-toggle').setAttribute('aria-expanded', 'false');
+        syncControls();
+    });
+}
+
 function bindEvents() {
     byId('previous-date').addEventListener('click', () => chooseDate(shiftDate(state.date, -1)));
     byId('today-date').addEventListener('click', () => chooseDate(todayLocal(new Date(), state.timezone)));
     byId('next-date').addEventListener('click', () => chooseDate(shiftDate(state.date, 1)));
     byId('dashboard-date').addEventListener('change', event => chooseDate(event.target.value));
-    byId('timezone-filter').addEventListener('change', event => applyTimezone(event.target.value));
-    byId('competition-filter').addEventListener('change', event => applyFilter({competition: event.target.value}));
-    byId('country-filter').addEventListener('change', event => applyFilter({country: event.target.value}));
-    byId('time-filter').addEventListener('change', event => applyFilter({timeWindow: event.target.value}));
-    byId('sort-filter').addEventListener('change', event => applyFilter({sort: event.target.value}));
-    byId('hide-finished').addEventListener('change', event => applyFilter({hideFinished: event.target.checked}));
+    byId('timezone-filter').addEventListener('change', event => {
+        if (filterDialog?.open) updateFilterDraft({timezone: event.target.value});
+        else applyTimezone(event.target.value);
+    });
+    byId('competition-filter').addEventListener('change', event => {
+        if (filterDialog?.open) updateFilterDraft({competition: event.target.value});
+        else applyFilter({competition: event.target.value});
+    });
+    byId('country-filter').addEventListener('change', event => {
+        if (filterDialog?.open) updateFilterDraft({country: event.target.value});
+        else applyFilter({country: event.target.value});
+    });
+    byId('time-filter').addEventListener('change', event => {
+        if (filterDialog?.open) updateFilterDraft({timeWindow: event.target.value});
+        else applyFilter({timeWindow: event.target.value});
+    });
+    byId('sort-filter').addEventListener('change', event => {
+        if (filterDialog?.open) updateFilterDraft({sort: event.target.value});
+        else applyFilter({sort: event.target.value});
+    });
+    byId('hide-finished').addEventListener('change', event => {
+        if (filterDialog?.open) updateFilterDraft({hideFinished: event.target.checked});
+        else applyFilter({hideFinished: event.target.checked});
+    });
     document.querySelector('.status-filters').addEventListener('click', event => {
         const button = event.target.closest('[data-status]');
-        if (button) applyFilter({status: button.dataset.status});
+        if (!button) return;
+        applyFilter({status: button.dataset.status});
     });
     byId('fixture-search').addEventListener('input', event => {
         clearTimeout(searchTimer);
         const query = event.target.value;
         byId('clear-search').hidden = !query;
-        searchTimer = setTimeout(() => applyFilter({query}, {historyMode: 'replace'}), 150);
+        searchTimer = setTimeout(() => {
+            searchTimer = null;
+            applyFilter({query}, {historyMode: 'replace'});
+        }, 150);
     });
     byId('clear-search').addEventListener('click', () => {
         cancelPendingSearch();
         applyFilter({query: ''}, {historyMode: 'replace'});
     });
-    byId('clear-filters').addEventListener('click', () => applyFilter({
-        competition: '',
-        country: '',
-        status: 'all',
-        query: '',
-        timeWindow: 'all',
-        hideFinished: false,
-    }));
-    byId('filter-toggle').addEventListener('click', event => {
-        const expanded = event.currentTarget.getAttribute('aria-expanded') === 'true';
-        event.currentTarget.setAttribute('aria-expanded', String(!expanded));
-        byId('secondary-filters').classList.toggle('is-open', !expanded);
+    byId('clear-filters').addEventListener('click', () => {
+        const patch = {
+            competition: '',
+            country: '',
+            timeWindow: 'all',
+            hideFinished: false,
+            sort: 'kickoff',
+            timezone: state.timezone,
+        };
+        if (filterDialog?.open) updateFilterDraft(patch);
+        else applyFilter({...patch, status: 'all', query: ''});
     });
     byId('score-toggle').addEventListener('click', () => {
         scoresRevealed = !scoresRevealed;
@@ -436,6 +591,7 @@ function init() {
         getTimeZone: () => state.timezone,
         onChange: applyTimezone,
     });
+    bindFilterDialog(dialogManager);
     syncUrl('replace');
     syncControls();
     bindEvents();

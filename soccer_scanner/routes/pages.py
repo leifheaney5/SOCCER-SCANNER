@@ -132,10 +132,12 @@ def apple_app_site_association():
             'details': [{
                 'appIDs': [f'{team_id}.{bundle_id}'],
                 'components': [
+                    {
+                        '/': '/fixtures/*.ics',
+                        'exclude': True,
+                        'comment': 'Keep calendar downloads in the browser',
+                    },
                     {'/': '/fixtures/*', 'comment': 'Fixture detail'},
-                    {'/': '/teams/*', 'comment': 'Team detail'},
-                    {'/': '/competitions/*', 'comment': 'Competition detail'},
-                    {'/': '/calendar', 'comment': 'Calendar'},
                 ],
             }],
         },

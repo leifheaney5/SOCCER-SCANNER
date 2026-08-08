@@ -12,7 +12,7 @@ from soccer_scanner.providers.espn import (
     EspnProvider,
     normalize_event,
 )
-from soccer_scanner.providers.http import HttpObservation
+from soccer_scanner.providers.http import HttpObservation, ProviderRequestError
 from soccer_scanner.services.cache_backend import MemoryCacheBackend
 from soccer_scanner.services.team_identity import TeamIdentityResolver
 
@@ -273,6 +273,47 @@ def test_global_scoreboard_caches_one_summary_resolution_per_league():
         'sports/soccer/all/summary',
         'sports/soccer/all/scoreboard',
     ]
+
+
+def test_stale_league_metadata_preserves_fixtures_when_summary_fails():
+    global_event = event()
+    global_event['uid'] = 's:600~l:19425~e:401234'
+    clock_value = [0.0]
+    cache = MemoryCacheBackend(clock=lambda: clock_value[0])
+    cache.set(
+        'espn-league-metadata:19425',
+        {'name': 'Leagues Cup', 'slug': 'concacaf.leagues.cup', 'emblem': None},
+        ttl_seconds=10,
+        stale_ttl_seconds=100,
+    )
+    clock_value[0] = 11.0
+    client = Mock()
+    client.get_json.side_effect = [
+        (
+            {'events': [global_event]},
+            HttpObservation(requestCount=1, timeoutCount=0, rateLimitCount=0, durationMs=4),
+        ),
+        ProviderRequestError(
+            'timeout',
+            observation=HttpObservation(
+                requestCount=1,
+                timeoutCount=1,
+                rateLimitCount=0,
+                durationMs=4,
+            ),
+        ),
+    ]
+
+    outcome = EspnProvider(client, cache=cache).fetch_range(
+        date(2026, 8, 4),
+        date(2026, 8, 4),
+    )
+
+    assert outcome.status is ProviderStatus.PARTIAL
+    assert len(outcome.fixtures) == 1
+    assert outcome.fixtures[0]['competition']['name'] == 'Leagues Cup'
+    assert 'league_metadata_timeout' in outcome.failureCategories
+    assert 'league_metadata_stale' in outcome.failureCategories
 
 
 def test_adapter_resolves_canonical_identity_only_through_registry():

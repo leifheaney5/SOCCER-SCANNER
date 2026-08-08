@@ -28,7 +28,11 @@ public struct AppEnvironment: Sendable, Equatable {
     public static func current(
         processInfo: ProcessInfo = .processInfo
     ) -> AppEnvironment {
-        switch processInfo.environment["SOCCER_SCANNER_ENVIRONMENT"]?.lowercased() {
+        switch (processInfo.environment["SOCCER_SCANNER_UI_TEST_MODE"]
+            ?? processInfo.environment["SOCCER_SCANNER_ENVIRONMENT"])?.lowercased() {
+        case "ui-test-production": return .production
+        case "ui-test", "ui-test-failure", "ui-test-team-failure", "ui-test-partial",
+             "ui-test-stale", "ui-test-empty", "ui-test-accessibility": return .development
         case "development": return .development
         case "staging": return .staging
         default: return .production

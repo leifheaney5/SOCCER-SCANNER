@@ -48,8 +48,14 @@ private struct ErrorEnvelope: Decodable {
     let error: Body
 }
 
+private struct FixtureEnvelope: Decodable {
+    let fixture: Fixture
+}
+
 public protocol FixtureFetching: Sendable {
     func fixtures(date: String, timeZone: TimeZone) async throws -> FixtureDay
+    func fixture(id: String) async throws -> Fixture
+    func teamAnalysis(canonicalId: String) async throws -> TeamAnalysis
     func appConfig() async throws -> AppConfig
 }
 
@@ -77,6 +83,26 @@ public actor APIClient: FixtureFetching {
             throw APIError.invalidRequest(message: "Could not build the fixtures URL.")
         }
         return try await get(url, as: FixtureDay.self)
+    }
+
+    public func fixture(id: String) async throws -> Fixture {
+        let envelope = try await get(
+            environment.baseURL
+                .appendingPathComponent("api/v2/fixtures")
+                .appendingPathComponent(id),
+            as: FixtureEnvelope.self
+        )
+        return envelope.fixture
+    }
+
+    public func teamAnalysis(canonicalId: String) async throws -> TeamAnalysis {
+        try await get(
+            environment.baseURL
+                .appendingPathComponent("api/v2/teams")
+                .appendingPathComponent(canonicalId)
+                .appendingPathComponent("analysis"),
+            as: TeamAnalysis.self
+        )
     }
 
     public func appConfig() async throws -> AppConfig {

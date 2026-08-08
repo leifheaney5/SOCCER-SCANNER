@@ -107,6 +107,11 @@ class CanonicalFixtureService:
         stale = []
         failed = []
         provider_cache = {}
+        # One request may fan out to multiple providers and to provider-owned
+        # metadata lookups. Share one monotonic budget so the configured
+        # deadline bounds the complete request rather than multiplying by the
+        # number of providers.
+        request_budget = RequestBudget(self.provider_budget_seconds)
 
         for provider in self.providers:
             provider_name = self._provider_name(provider)
@@ -119,7 +124,7 @@ class CanonicalFixtureService:
                 provider_outcome = selected.fetch_range(
                     provider_start,
                     provider_end,
-                    budget=RequestBudget(self.provider_budget_seconds),
+                    budget=request_budget,
                 )
                 if provider_outcome.status in {
                     ProviderStatus.UNAVAILABLE,

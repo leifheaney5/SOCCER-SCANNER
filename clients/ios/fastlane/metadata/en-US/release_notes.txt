@@ -1,0 +1,9 @@
+Navigate football fixtures with less friction in this native Soccer Scanner preview.
+
+- Move between previous, current, and next fixture days, or choose a date directly.
+- Use your timezone for both kickoff times and fixture-day membership.
+- Search and filter fixtures by status, competition, country, time window, and sort order.
+- Open fixture links directly in the native fixture experience.
+- Scores remain hidden until you choose to reveal them.
+
+Fixture data may be delayed, incomplete, or unavailable when a provider cannot report it.

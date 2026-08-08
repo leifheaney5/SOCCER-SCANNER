@@ -9,6 +9,9 @@
     <h2>Data stored on this device</h2>
     <p>Score visibility is stored only for the current browser-tab session using sessionStorage. Scores start hidden in each new session. Dates, timezones, and filters are encoded in the current URL when you use them.</p>
     <p>Soccer Scanner does not maintain a guest favorite profile or read legacy favorite data. Older browser data may remain until you clear this site's stored data in your browser.</p>
+    <h2>Native iOS app</h2>
+    <p>The native iOS app does not store a score-visibility preference between launches; scores start hidden each time. It has no account, analytics, crash reporting, or advertising SDKs, and it does not create a cross-device profile.</p>
+    <p>Each native API request includes a short-lived <code>X-Request-ID</code> so an operational failure can be traced. It is not used as an account identifier or for tracking.</p>
     <h2>Service operation</h2>
     <p>Short-lived request identifiers, rate-limit counters, and operational metrics help keep the service reliable. Provider keys and fixture scores are not written to application logs.</p>
     <h2>External services</h2>

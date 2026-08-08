@@ -1,5 +1,43 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Native SwiftUI fixture navigation, local filtering, spoiler-safe detail/settings
+  surfaces, on-demand provider-verified team intelligence, route-driven fixture
+  Universal Links, adaptive accessibility-size rows, and TestFlight release
+  metadata.
+- App Store submission lanes now stop before building when legal Terms
+  placeholders or a verified support URL are still missing.
+- Submission preflight also runs the shared repository release-asset validator,
+  preventing manual lanes from bypassing metadata and CI-contract checks.
+- Signed archive lanes now fail before building when Apple identifiers, App
+  Store Connect credentials, or the numeric build number are missing; simulator
+  tests remain explicitly signing-free.
+- Mobile fixture filter sheets, safe-area handling, focus management, 200%/400%
+  reflow coverage, release asset/CI validation, beta-note lane wiring, and
+  stable WebKit match-sheet focus restoration.
+
+### Changed
+
+- Provider fan-out now shares one request budget, and stale ESPN metadata preserves
+  usable fixtures while reporting a partial outcome.
+- The privacy page now documents native iOS score-preference, request-ID, and
+  analytics behavior; the native app root explicitly imports the Observation
+  module required by its observable composition root.
+- iOS CI now selects simulators using numeric runtime versions through a tested,
+  dependency-free helper instead of lexicographic inline parsing.
+- iOS CI now also runs when its shared release validator or Terms preflight input
+  changes, keeping release-gate edits from bypassing macOS verification.
+- Generated Xcode projects/user state are ignored, iOS workflow permissions are
+  read-only, and CI jobs have explicit timeouts.
+- Native fixture detail now shares score visibility with the list and exposes an
+  explicit reveal/hide control without weakening the launch-hidden default.
+- Native fixture detail now preserves every provider-reported broadcast entry,
+  labels streaming versus broadcast listings, and shows supplied regions without
+  implying availability.
+
 ## 2.0.0 - 2026-08-04
 
 ### Added

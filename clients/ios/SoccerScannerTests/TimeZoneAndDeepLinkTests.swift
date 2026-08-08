@@ -60,11 +60,55 @@ final class TimeZoneFormattingTests: XCTestCase {
 }
 
 final class DeepLinkTests: XCTestCase {
+    func testFixtureLinksConvertToRoutesWithTheirTimezone() {
+        let fixtureID = "fx_" + String(repeating: "d", count: 24)
+        let link = DeepLink.parse(
+            URL(string: "https://soccerscanner.pro/fixtures/\(fixtureID)?timezone=Asia/Tokyo&date=2026-08-05")!
+        )
+
+        XCTAssertEqual(
+            link.map { AppRoute($0) },
+            .fixture(
+                id: fixtureID,
+                timeZoneIdentifier: "Asia/Tokyo",
+                calendarDay: "2026-08-05"
+            )
+        )
+    }
+
+    func testNonFixtureLinksConvertToSafeUnsupportedRoutes() {
+        XCTAssertEqual(
+            AppRoute(.team(canonicalId: "arsenal")),
+            .unsupported(.team(canonicalId: "arsenal"))
+        )
+        XCTAssertEqual(
+            AppRoute(.competition(canonicalId: "premier-league")),
+            .unsupported(.competition(canonicalId: "premier-league"))
+        )
+        XCTAssertEqual(AppRoute(.calendar), .unsupported(.calendar))
+    }
+
+    @MainActor
+    func testRouterRetainsAValidRouteUntilItIsConsumedAndIgnoresMalformedURLs() {
+        let fixtureID = "fx_" + String(repeating: "e", count: 24)
+        let route = AppRoute.fixture(id: fixtureID, timeZoneIdentifier: nil, calendarDay: nil)
+        let router = AppRouter()
+
+        router.handle(URL(string: "https://soccerscanner.pro/fixtures/\(fixtureID)")!)
+        XCTAssertEqual(router.route, route)
+
+        router.handle(URL(string: "https://evil.example.com/fixtures/\(fixtureID)")!)
+        XCTAssertEqual(router.route, route)
+
+        router.consume(route)
+        XCTAssertNil(router.route)
+    }
+
     func testParsesEveryRoutedUniversalLink() {
         let fixtureId = "fx_" + String(repeating: "a", count: 24)
         XCTAssertEqual(
             DeepLink.parse(URL(string: "https://soccerscanner.pro/fixtures/\(fixtureId)")!),
-            .fixture(id: fixtureId, timeZoneIdentifier: nil)
+            .fixture(id: fixtureId, timeZoneIdentifier: nil, calendarDay: nil)
         )
         XCTAssertEqual(
             DeepLink.parse(URL(string: "https://soccerscanner.pro/teams/arsenal")!),
@@ -84,11 +128,18 @@ final class DeepLinkTests: XCTestCase {
         let fixtureId = "fx_" + String(repeating: "b", count: 24)
         XCTAssertEqual(
             DeepLink.parse(URL(string: "https://soccerscanner.pro/fixtures/\(fixtureId)?timezone=Asia/Tokyo")!),
-            .fixture(id: fixtureId, timeZoneIdentifier: "Asia/Tokyo")
+            .fixture(id: fixtureId, timeZoneIdentifier: "Asia/Tokyo", calendarDay: nil)
         )
         XCTAssertEqual(
             DeepLink.parse(URL(string: "https://soccerscanner.pro/fixtures/\(fixtureId)?timezone=Mars/Olympus")!),
-            .fixture(id: fixtureId, timeZoneIdentifier: nil)
+            .fixture(id: fixtureId, timeZoneIdentifier: nil, calendarDay: nil)
+        )
+        XCTAssertEqual(
+            DeepLink.parse(URL(string: "https://soccerscanner.pro/fixtures/\(fixtureId)?date=2026-02-28")!),
+            .fixture(id: fixtureId, timeZoneIdentifier: nil, calendarDay: "2026-02-28")
+        )
+        XCTAssertNil(
+            DeepLink.parse(URL(string: "https://soccerscanner.pro/fixtures/\(fixtureId)?date=2026-02-30")!)
         )
     }
 
