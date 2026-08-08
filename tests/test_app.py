@@ -338,7 +338,8 @@ class SoccerScannerRoutesTest(unittest.TestCase):
     def test_provider_transport_configuration_is_bounded(self):
         self.assertGreaterEqual(app.config['PROVIDER_MAX_RETRIES'], 0)
         self.assertLessEqual(app.config['PROVIDER_MAX_RETRIES'], 3)
-        self.assertLessEqual(app.config['PROVIDER_MAX_JSON_BYTES'], 2_000_000)
+        self.assertGreaterEqual(app.config['PROVIDER_MAX_JSON_BYTES'], 4_000_000)
+        self.assertLessEqual(app.config['PROVIDER_MAX_JSON_BYTES'], 5_000_000)
         self.assertLessEqual(app.config['PROVIDER_RETRY_AFTER_MAX'], 60)
         self.assertLessEqual(app.config['PROVIDER_POOL_CONNECTIONS'], 16)
         self.assertLessEqual(app.config['PROVIDER_POOL_MAXSIZE'], 32)
