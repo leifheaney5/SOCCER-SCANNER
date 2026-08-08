@@ -21,6 +21,8 @@
 
 ### Changed
 
+- Live is now represented by the fixture status filter rather than a duplicate
+  top-level navigation destination.
 - Increased the bounded ESPN provider response guard to 5 MB so current global
   scoreboard payloads are accepted without removing response-size protection.
 - Provider fan-out now shares one request budget, and stale ESPN metadata preserves

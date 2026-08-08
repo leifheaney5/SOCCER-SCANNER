@@ -27,6 +27,7 @@ class SoccerScannerRoutesTest(unittest.TestCase):
         self.assertIn('aria-label="Primary navigation"', html)
         self.assertIn('aria-current="page"', html)
         self.assertIn('href="https://select-xi.pro/"', html)
+        self.assertNotIn('>Live</a>', html)
         self.assertIn('aria-labelledby="team-drawer-title"', html)
         self.assertIn('aria-labelledby="match-context-dialog-title"', html)
         self.assertNotIn('class="suite-rail"', html)
@@ -36,6 +37,14 @@ class SoccerScannerRoutesTest(unittest.TestCase):
         self.assertNotIn('>Favorites</a>', html)
         self.assertNotIn('id="favorites-only"', html)
         self.assertNotIn('id="export-favorites"', html)
+
+    def test_live_filter_url_keeps_fixtures_navigation_active(self):
+        response = self.client.get('/?status=live')
+        html = response.get_data(as_text=True)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('class="nav-link active" aria-current="page">Fixtures</a>', html)
+        self.assertNotIn('>Live</a>', html)
 
     def test_team_analysis_has_a_stable_route(self):
         response = self.client.get('/teams')

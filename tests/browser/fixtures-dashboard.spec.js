@@ -33,6 +33,9 @@ test('URL state initializes controls and filter changes replace the URL', async 
     await expect(page.locator('#competition-filter')).toHaveValue('Premier League');
     await expect(page.locator('#status-live')).toHaveAttribute('aria-pressed', 'true');
     await expect(page.locator('#fixture-search')).toHaveValue('Arsenal');
+    await expect(page.locator('#primary-navigation a', {hasText: 'Fixtures'}))
+        .toHaveAttribute('aria-current', 'page');
+    await expect(page.locator('#primary-navigation a', {hasText: 'Live'})).toHaveCount(0);
 
     await page.locator('#fixture-search').fill('Celtic');
     await expect.poll(() => page.evaluate(() => location.search)).toContain('q=Celtic');
