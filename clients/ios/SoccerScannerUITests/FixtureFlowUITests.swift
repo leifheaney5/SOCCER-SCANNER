@@ -17,23 +17,25 @@ final class FixtureFlowUITests: XCTestCase {
             "-AppleLanguages", "(en)",
             "-AppleLocale", "en_US",
         ] + arguments
-        app.launchEnvironment["SOCCER_SCANNER_UI_TEST_UITestStubData"] = "1"
-        for flag in [
-            "UITestFailure",
-            "UITestTeamFailure",
-            "UITestPartial",
-            "UITestStale",
-            "UITestEmpty",
-            "UITestAccessibilityFixtures",
-        ] where arguments.contains("-(flag)") {
-            app.launchEnvironment["SOCCER_SCANNER_UI_TEST_(flag)"] = "1"
+        let mode: String
+        if arguments.contains("-UITestFailure") {
+            mode = "ui-test-failure"
+        } else if arguments.contains("-UITestTeamFailure") {
+            mode = "ui-test-team-failure"
+        } else if arguments.contains("-UITestPartial") {
+            mode = "ui-test-partial"
+        } else if arguments.contains("-UITestStale") {
+            mode = "ui-test-stale"
+        } else if arguments.contains("-UITestEmpty") {
+            mode = "ui-test-empty"
+        } else if arguments.contains("-UITestAccessibilityFixtures") {
+            mode = "ui-test-accessibility"
+        } else if environment == "production" {
+            mode = "ui-test-production"
+        } else {
+            mode = "ui-test"
         }
-        if let deepLinkIndex = arguments.firstIndex(of: "-UITestDeepLink"),
-           arguments.index(after: deepLinkIndex) < arguments.endIndex {
-            app.launchEnvironment["SOCCER_SCANNER_UI_TEST_UITestDeepLink"] =
-                arguments[arguments.index(after: deepLinkIndex)]
-        }
-        app.launchEnvironment["SOCCER_SCANNER_ENVIRONMENT"] = environment
+        app.launchEnvironment["SOCCER_SCANNER_ENVIRONMENT"] = mode
         app.launch()
         return app
     }

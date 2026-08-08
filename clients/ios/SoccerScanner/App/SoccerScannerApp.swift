@@ -56,6 +56,24 @@ final class AppContainer {
         environment: AppEnvironment,
         defaults: UserDefaults
     ) -> FixtureFetching {
+        switch ProcessInfo.processInfo.environment["SOCCER_SCANNER_ENVIRONMENT"] {
+        case "ui-test-failure":
+            return PreviewFixtureClient(behaviour: .failure(.providerUnavailable(message: "stub")))
+        case "ui-test-team-failure":
+            return PreviewFixtureClient(behaviour: .teamFailure)
+        case "ui-test-partial":
+            return PreviewFixtureClient(behaviour: .partial)
+        case "ui-test-stale":
+            return PreviewFixtureClient(behaviour: .stale)
+        case "ui-test-empty":
+            return PreviewFixtureClient(behaviour: .empty)
+        case "ui-test-accessibility":
+            return PreviewFixtureClient(behaviour: .accessibility)
+        case "ui-test", "ui-test-production":
+            return PreviewFixtureClient(behaviour: .loaded)
+        default:
+            break
+        }
         guard Self.flag("UITestStubData", defaults: defaults) else {
             return APIClient(environment: environment)
         }
