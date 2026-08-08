@@ -65,10 +65,10 @@ final class FixtureFlowUITests: XCTestCase {
         }
 
         switch identifier {
-        case "advanced-filter-reset": return labelledElement(app, equalTo: "Reset")
-        case "advanced-filter-close": return labelledElement(app, equalTo: "Close")
-        case "advanced-filter-apply": return labelledElement(app, equalTo: "Apply")
-        case "advanced-competition": return labelledElement(app, equalTo: "Competition")
+        case "advanced-filter-reset": return labelledElement(app, containing: "Reset")
+        case "advanced-filter-close": return labelledElement(app, containing: "Close")
+        case "advanced-filter-apply": return labelledElement(app, containing: "Apply")
+        case "advanced-competition": return labelledElement(app, containing: "Competition")
         case "settings-privacy-link": return labelledElement(app, equalTo: "Privacy")
         case "settings-terms-link": return labelledElement(app, equalTo: "Terms of Service")
         case "settings-support-unavailable":
