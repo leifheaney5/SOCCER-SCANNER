@@ -469,7 +469,8 @@ private struct AdvancedFixtureFilterSheet: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
+            VStack(spacing: 0) {
+                ScrollView {
                 VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
                     Picker(
                         String(localized: "Competition"),
@@ -525,8 +526,8 @@ private struct AdvancedFixtureFilterSheet: View {
                 .padding(.top, Theme.Spacing.lg)
                 .padding(.bottom, Theme.Spacing.xl)
             }
-            .scrollDismissesKeyboard(.interactively)
-            .safeAreaInset(edge: .bottom, spacing: 0) {
+                .scrollDismissesKeyboard(.interactively)
+
                 actionBar
             }
             .navigationTitle(String(localized: "Advanced filters"))
@@ -589,11 +590,6 @@ struct FixtureRow: View {
         .padding(.vertical, Theme.Spacing.xs)
         .frame(minHeight: Theme.minimumTapTarget)
         .contentShape(Rectangle())
-        // Children are deliberately left addressable rather than combined:
-        // `.combine` would flatten the row and hide the score elements from
-        // both assistive technology queries and UI tests.
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel(accessibilitySummary)
     }
 
     private var normalLayout: some View {

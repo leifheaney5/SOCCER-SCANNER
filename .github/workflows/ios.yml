@@ -94,6 +94,7 @@ jobs:
           set -o pipefail
           mkdir -p build
           status=0
+          set +e
           for scheme in SoccerScanner SoccerScannerUnitTests; do
             result_bundle="build/${scheme}-TestResults.xcresult"
             if [ "$scheme" = "SoccerScanner" ]; then
@@ -114,6 +115,7 @@ jobs:
               status="$current_status"
             fi
           done
+          set -e
           exit "$status"
 
       - name: Upload test results
