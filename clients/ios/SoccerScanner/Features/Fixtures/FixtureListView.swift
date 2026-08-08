@@ -70,7 +70,7 @@ public struct FixtureListView: View {
             Task { await consumeRouteIfNeeded(route) }
         }
         .onChange(of: scenePhase) { _, phase in
-            guard initialLoadCompleted, phase == .active else { return }
+            guard initialLoadCompleted, phase == .active, router.route == nil else { return }
             Task { await model.load() }
         }
         .sheet(isPresented: $advancedFilterPresented) {
@@ -126,6 +126,20 @@ public struct FixtureListView: View {
     }
 
     private var fixtureControls: some View {
+        Group {
+            if dynamicTypeSize.isAccessibilitySize {
+                ScrollView(.vertical, showsIndicators: false) {
+                    fixtureControlContent
+                }
+                .frame(maxHeight: 240)
+                .accessibilityIdentifier("fixture-controls-scroll")
+            } else {
+                fixtureControlContent
+            }
+        }
+    }
+
+    private var fixtureControlContent: some View {
         VStack(spacing: Theme.Spacing.sm) {
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: Theme.Spacing.sm) {

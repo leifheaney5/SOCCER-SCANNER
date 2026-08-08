@@ -93,6 +93,8 @@ final class FixtureFlowUITests: XCTestCase {
     ) -> XCUIElement {
         let button = app.buttons[label]
         if button.exists { return button }
+        let menuItem = app.menuItems[label]
+        if menuItem.exists { return menuItem }
         let link = app.links[label]
         if link.exists { return link }
         let staticText = app.staticTexts[label]
@@ -108,6 +110,8 @@ final class FixtureFlowUITests: XCTestCase {
     ) -> XCUIElement {
         let button = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", text)).firstMatch
         if button.exists { return button }
+        let menuItem = app.menuItems.matching(NSPredicate(format: "label CONTAINS %@", text)).firstMatch
+        if menuItem.exists { return menuItem }
         return app.descendants(matching: .any).matching(
             NSPredicate(format: "label CONTAINS %@", text)
         ).firstMatch
@@ -205,17 +209,28 @@ final class FixtureFlowUITests: XCTestCase {
     private func scrollContent(_ app: XCUIApplication, for identifier: String? = nil) {
         let collection = app.collectionViews["fixtures-list"]
         let list = app.tables.firstMatch
+        let controlsScroll = app.scrollViews["fixture-controls-scroll"]
         let scrollView = app.scrollViews.firstMatch
         let isSettingsElement = identifier?.hasPrefix("settings-") == true
-        if isSettingsElement, list.exists {
+        let isControlElement = [
+            "previous-day", "today-day", "next-day", "date-picker", "timezone-menu",
+            "selected-day", "status-filter", "advanced-filter-button",
+        ].contains(identifier ?? "")
+        if identifier == nil, scrollView.exists {
+            scrollView.swipeUp()
+        } else if isControlElement, controlsScroll.exists {
+            controlsScroll.swipeUp()
+        } else if isControlElement, scrollView.exists {
+            scrollView.swipeUp()
+        } else if isSettingsElement, list.exists {
             list.swipeUp()
-        } else if identifier?.hasPrefix("fixture-") == true, collection.exists {
+        } else if identifier?.hasPrefix("fixture-") == true, collection.exists, collection.isHittable {
             collection.swipeUp()
-        } else if list.exists {
+        } else if list.exists, list.isHittable {
             list.swipeUp()
-        } else if collection.exists {
+        } else if collection.exists, collection.isHittable {
             collection.swipeUp()
-        } else if scrollView.exists {
+        } else if scrollView.exists, scrollView.isHittable {
             scrollView.swipeUp()
         } else {
             app.swipeUp()
@@ -282,7 +297,7 @@ final class FixtureFlowUITests: XCTestCase {
             let option = element(app, "timezone-\(identifier)")
             XCTAssertTrue(option.waitForExistence(timeout: 10))
             option.tap()
-            waitForValue(timeZoneMenu, toEqual: identifier)
+            waitForValue(timeZoneMenu, toEqual: identifier == "UTC" ? "GMT" : identifier)
         }
     }
 
@@ -395,10 +410,15 @@ final class FixtureFlowUITests: XCTestCase {
 
         tapFixture(app, id: "fixture-row-fx_bbbbbbbbbbbbbbbbbbbbbbbb")
         XCTAssertTrue(element(app, "fixture-detail").waitForExistence(timeout: 10))
-        XCTAssertTrue(app.staticTexts["National Sports"].waitForExistence(timeout: 10))
-        XCTAssertTrue(app.staticTexts["GB"].exists)
-        XCTAssertTrue(app.staticTexts["Broadcast"].exists)
-        XCTAssertTrue(app.staticTexts["Availability varies by region and subscription. Listings may be incomplete or out of date."].exists)
+        let nationalSports = app.staticTexts["National Sports"]
+        XCTAssertTrue(nationalSports.waitForExistence(timeout: 10))
+        scrollToElement(nationalSports, in: app)
+        let region = app.staticTexts["GB"]
+        XCTAssertTrue(region.exists)
+        let broadcast = app.staticTexts["Broadcast"]
+        XCTAssertTrue(broadcast.exists)
+        let availability = app.staticTexts["Availability varies by region and subscription. Listings may be incomplete or out of date."]
+        XCTAssertTrue(availability.exists)
     }
 
     func testFixtureDetailCanRevealAndHideItsScore() {
@@ -588,7 +608,7 @@ final class FixtureFlowUITests: XCTestCase {
         XCTAssertTrue(element(app, "previous-day").isHittable)
         XCTAssertTrue(element(app, "today-day").isHittable)
         XCTAssertTrue(element(app, "next-day").isHittable)
-        XCTAssertTrue(element(app, "status-filter").isHittable)
+        XCTAssertTrue(waitForHittable(app, "status-filter").isHittable)
         XCTAssertTrue(element(app, "score-toggle").isHittable)
         XCTAssertFalse(element(app, "fixture-score").exists)
     }
@@ -607,7 +627,7 @@ final class FixtureFlowUITests: XCTestCase {
         XCTAssertTrue(element(app, "previous-day").isHittable)
         XCTAssertTrue(element(app, "next-day").isHittable)
         XCTAssertTrue(element(app, "date-picker").isHittable)
-        XCTAssertTrue(element(app, "status-filter").isHittable)
+        XCTAssertTrue(waitForHittable(app, "status-filter").isHittable)
 
         let initialDay = selectedDay(app)
         element(app, "next-day").tap()
@@ -695,7 +715,7 @@ final class FixtureFlowUITests: XCTestCase {
         ], orientation: .landscapeLeft)
         waitForList(app)
 
-        XCTAssertTrue(element(app, "status-filter").isHittable)
+        XCTAssertTrue(waitForHittable(app, "status-filter").isHittable)
         element(app, "status-filter").tap()
         XCTAssertTrue(labelledElement(app, equalTo: "Upcoming").waitForExistence(timeout: 10))
         labelledElement(app, equalTo: "Upcoming").tap()
