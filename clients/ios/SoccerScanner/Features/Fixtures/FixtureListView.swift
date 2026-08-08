@@ -430,7 +430,6 @@ public struct FixtureListView: View {
             .buttonStyle(.plain)
             // The identifier belongs on the control, not its label:
             // the Button is the element that is queried and tapped.
-            .accessibilityElement(children: .contain)
             .accessibilityIdentifier("fixture-row-\(fixture.id)")
                     }
                 }
