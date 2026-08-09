@@ -8,9 +8,11 @@ The global scoreboard carries a provider league ID in each event UID but does no
 
 ESPN coverage is useful but not treated as a contractual guarantee; the UI surfaces partial, stale, and unavailable states. The provider's terms, rate limits, geographic coverage, and schemas can change.
 
+Team crests remain provider-owned: the adapter uses ESPN's supplied team logo, then its supplied logo collection, and finally ESPN's official default team-logo asset when no crest exists.
+
 ## Football-Data.org
 
-Football-Data.org is optional and disabled when `FOOTBALL_DATA_API_KEY` is absent. When configured, its adapter can enrich canonical fixture coverage and backs legacy team analysis plus declared squad and standings capabilities. Its provider IDs never become canonical route IDs.
+Football-Data.org is optional and disabled when `FOOTBALL_DATA_API_KEY` is absent. When configured, its adapter can enrich canonical fixture coverage and backs declared squad and standings capabilities. Team analysis is temporarily disabled. Its provider IDs never become canonical route IDs.
 
 ## SofaScore
 

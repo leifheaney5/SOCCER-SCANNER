@@ -402,6 +402,7 @@ final class FixtureFlowUITests: XCTestCase {
         tapFixture(app, id: "fixture-row-fx_aaaaaaaaaaaaaaaaaaaaaaaa")
 
         XCTAssertTrue(element(app, "fixture-detail").waitForExistence(timeout: 10))
+        XCTAssertFalse(element(app, "team-intelligence-home-arsenal").exists)
     }
 
     func testFixtureDetailShowsAllProviderBroadcastEntriesAndRegions() {
@@ -439,44 +440,6 @@ final class FixtureFlowUITests: XCTestCase {
         scoreToggle.tap()
         XCTAssertTrue(element(app, "detail-score-hidden").waitForExistence(timeout: 10))
         XCTAssertFalse(element(app, "detail-score").exists)
-    }
-
-    func testFixtureDetailOpensTeamIntelligenceWithoutRevealingScore() {
-        let app = launchApp()
-        waitForList(app)
-
-        tapFixture(app, id: "fixture-row-fx_aaaaaaaaaaaaaaaaaaaaaaaa")
-        XCTAssertTrue(element(app, "fixture-detail").waitForExistence(timeout: 10))
-        XCTAssertTrue(element(app, "detail-score-hidden").exists)
-        XCTAssertFalse(element(app, "detail-score").exists)
-
-        let teamButton = element(app, "team-intelligence-home-arsenal")
-        XCTAssertTrue(teamButton.waitForExistence(timeout: 10))
-        teamButton.tap()
-
-        XCTAssertTrue(element(app, "team-intelligence-view").waitForExistence(timeout: 10))
-        XCTAssertTrue(element(app, "team-intelligence-identity").exists)
-        XCTAssertTrue(element(app, "team-intelligence-stats").exists)
-        XCTAssertTrue(app.staticTexts["Arsenal"].exists)
-        XCTAssertTrue(app.staticTexts["Wins"].exists)
-        XCTAssertFalse(element(app, "detail-score").exists)
-    }
-
-    func testTeamIntelligenceShowsGenericRetryableFailure() {
-        let app = launchApp(arguments: ["-UITestTeamFailure", "YES"])
-        waitForList(app)
-
-        tapFixture(app, id: "fixture-row-fx_aaaaaaaaaaaaaaaaaaaaaaaa")
-        XCTAssertTrue(element(app, "fixture-detail").waitForExistence(timeout: 10))
-        element(app, "team-intelligence-home-arsenal").tap()
-
-        XCTAssertTrue(element(app, "team-intelligence-unavailable").waitForExistence(timeout: 10))
-        XCTAssertTrue(element(app, "team-intelligence-retry").exists)
-        XCTAssertTrue(app.staticTexts["Verified team data is temporarily unavailable."].exists)
-        XCTAssertFalse(app.staticTexts["Fixture provider request failed"].exists)
-
-        element(app, "team-intelligence-retry").tap()
-        XCTAssertTrue(element(app, "team-intelligence-unavailable").waitForExistence(timeout: 10))
     }
 
     func testSettingsExposeLegalLinksAndSpoilerExplanationWithoutScores() {

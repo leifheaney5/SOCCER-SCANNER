@@ -49,7 +49,7 @@ Returns a recently cached canonical fixture as `{"fixture": ...}`. Invalid IDs r
 
 ### `GET /api/v2/teams/{canonicalId}/analysis`
 
-Resolves the maintained canonical team ID to Football-Data.org and returns verified team analysis. Missing mappings return `404 team_identity_unavailable`. The endpoint is unavailable without a working provider credential.
+Temporarily unavailable while Team Intelligence is disabled. The route returns the generic `404 not_found` envelope until the feature is re-enabled.
 
 ### `GET /api/v2/capabilities`
 
@@ -68,9 +68,9 @@ Returns typed `supported`, `unavailable`, or `not_supported` states for provider
 - `/calendar`: bounded seven-day calendar.
 - `/fixtures/{id}`: canonical dashboard deep-link redirect.
 - `/fixtures/{id}.ics`: score-free RFC 5545 event.
-- `/teams`, `/teams/{canonicalId}`: team discovery and stable team page.
+- `/teams`, `/teams/{canonicalId}`: reserved Team Intelligence routes; currently return `404` while the feature is disabled.
 - `/competitions/{canonicalId}`: stable competition page.
 - `/league-tables`: consent-gated third-party table embed.
 - `/privacy`, `/data-sources`, `/offline`: product information and offline shell.
 
-Legacy `/api/competitions`, `/api/teams/{id}`, `/api/team/{id}`, `/api/team-analysis/{id}`, and `/api/matches-today` remain for compatibility. New clients should prefer `/api/v2` because legacy errors and provider-shaped response fields are not the canonical contract.
+Legacy `/api/competitions`, `/api/teams/{id}`, `/api/team/{id}`, `/api/team-analysis/{id}`, and `/api/matches-today` remain for compatibility; team-analysis routes currently return `404` while Team Intelligence is disabled. New clients should prefer `/api/v2` because legacy errors and provider-shaped response fields are not the canonical contract.

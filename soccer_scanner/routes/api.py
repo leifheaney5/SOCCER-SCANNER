@@ -4,7 +4,7 @@ import re
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import requests
-from flask import Blueprint, current_app, g, jsonify, request
+from flask import Blueprint, abort, current_app, g, jsonify, request
 
 from soccer_scanner.domain.models import FixtureState, FixtureUnavailable
 
@@ -50,6 +50,8 @@ def team(team_id):
 
 @api.get('/team-analysis/<team_id>')
 def team_analysis(team_id):
+    if not current_app.extensions['feature_flags'].is_enabled('team_intelligence'):
+        abort(404)
     try:
         return jsonify(current_app.extensions['team_analysis'].analyze(team_id))
     except requests.RequestException as error:
@@ -58,6 +60,8 @@ def team_analysis(team_id):
 
 @api.get('/v2/teams/<canonical_id>/analysis')
 def canonical_team_analysis(canonical_id):
+    if not current_app.extensions['feature_flags'].is_enabled('team_intelligence'):
+        abort(404)
     if not re.fullmatch(r'[a-z0-9][a-z0-9-]{0,79}', canonical_id):
         return jsonify({
             'error': {

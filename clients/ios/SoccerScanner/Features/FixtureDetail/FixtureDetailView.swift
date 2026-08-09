@@ -7,7 +7,6 @@ public struct FixtureDetailView: View {
     let providers: [ProviderReport]
     let freshness: Freshness?
     let client: FixtureFetching
-    @State private var selectedTeam: TeamIntelligenceDestination?
 
     public init(
         fixture: Fixture,
@@ -86,28 +85,6 @@ public struct FixtureDetailView: View {
                 )
             }
 
-            if hasTeamIntelligence {
-                Section(String(localized: "Team intelligence")) {
-                    if let canonicalId = canonicalId(for: fixture.homeTeam) {
-                        teamIntelligenceButton(
-                            team: fixture.homeTeam,
-                            canonicalId: canonicalId,
-                            role: "home"
-                        )
-                    }
-                    if let canonicalId = canonicalId(for: fixture.awayTeam) {
-                        teamIntelligenceButton(
-                            team: fixture.awayTeam,
-                            canonicalId: canonicalId,
-                            role: "away"
-                        )
-                    }
-                    Text(String(localized: "View provider-verified team identity and aggregate season statistics."))
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
-            }
-
             Section(String(localized: "Where to watch")) {
                 if fixture.broadcasts.isEmpty {
                     Text(String(localized: "No broadcast listing was provided."))
@@ -158,38 +135,7 @@ public struct FixtureDetailView: View {
         }
         .navigationTitle(String(localized: "Match details"))
         .navigationBarTitleDisplayMode(.inline)
-        .sheet(item: $selectedTeam) { destination in
-            TeamIntelligenceView(team: destination.team, client: client)
-                .presentationDetents([.medium, .large])
-                .presentationDragIndicator(.visible)
-        }
         .accessibilityIdentifier("fixture-detail")
-    }
-
-    private var hasTeamIntelligence: Bool {
-        canonicalId(for: fixture.homeTeam) != nil || canonicalId(for: fixture.awayTeam) != nil
-    }
-
-    private func canonicalId(for team: Team) -> String? {
-        guard let canonicalId = team.canonicalId?.trimmingCharacters(in: .whitespacesAndNewlines),
-              !canonicalId.isEmpty else { return nil }
-        return canonicalId
-    }
-
-    private func teamIntelligenceButton(
-        team: Team,
-        canonicalId: String,
-        role: String
-    ) -> some View {
-        Button {
-            selectedTeam = TeamIntelligenceDestination(team: team, canonicalId: canonicalId)
-        } label: {
-            Label(
-                String(localized: "\(team.name) team intelligence"),
-                systemImage: "chart.bar.xaxis"
-            )
-        }
-        .accessibilityIdentifier("team-intelligence-\(role)-\(canonicalId)")
     }
 
     private func providerStatusLabel(_ status: String?) -> String {
@@ -217,11 +163,4 @@ public struct FixtureDetailView: View {
               let away = fixture.score?.fullTime?.away else { return nil }
         return "\(home) – \(away)"
     }
-}
-
-private struct TeamIntelligenceDestination: Identifiable {
-    let team: Team
-    let canonicalId: String
-
-    var id: String { canonicalId }
 }

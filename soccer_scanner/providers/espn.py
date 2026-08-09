@@ -32,6 +32,10 @@ ESPN_COMPETITION_IDS = {
     'arg.1': 'liga-profesional',
 }
 
+ESPN_DEFAULT_TEAM_LOGO = (
+    'https://a.espncdn.com/i/teamlogos/default-team-logo-500.png'
+)
+
 
 _STATUS_MAP = {
     'STATUS_SCHEDULED': 'scheduled',
@@ -90,6 +94,24 @@ def _nullable_int(value):
         return None
 
 
+def _first_logo(payload):
+    if not isinstance(payload, dict):
+        return None
+    direct = _nullable_text(payload.get('logo'))
+    if direct:
+        return direct
+    logos = payload.get('logos')
+    if not isinstance(logos, list):
+        return None
+    for item in logos:
+        if not isinstance(item, dict):
+            continue
+        logo = _nullable_text(item.get('href') or item.get('url'))
+        if logo:
+            return logo
+    return None
+
+
 def _streaming_services(competition_event):
     broadcasts = competition_event.get('broadcasts')
     if not isinstance(broadcasts, list):
@@ -146,7 +168,7 @@ def _team(competitor, identities=None):
         'name': name,
         'shortName': _nullable_text(payload.get('shortDisplayName')) or abbreviation,
         'tla': abbreviation,
-        'crest': _nullable_text(payload.get('logo')),
+        'crest': _first_logo(payload) or ESPN_DEFAULT_TEAM_LOGO,
     }
 
 

@@ -257,10 +257,26 @@ function createFixtureCard(match, revealed, selectedId = null) {
     return card;
 }
 
+function competitionEmblem(competition) {
+    if (competition?.emblem) return competition.emblem;
+    if (/\bfriendly\b/i.test(competition?.name || '')) {
+        return '/static/icons/competition-friendly.png';
+    }
+    return null;
+}
+
 function createCompetitionIdentity(competition) {
     const identity = node('div', 'competition-identity');
-    const emblemTeam = {name: competition?.name || 'Competition', crest: competition?.emblem};
-    identity.append(createCrest(emblemTeam, {size: 28, lazy: true, className: 'competition-emblem'}));
+    const emblemTeam = {
+        name: competition?.name || 'Competition',
+        crest: competitionEmblem(competition),
+    };
+    identity.append(createCrest(emblemTeam, {
+        size: 28,
+        lazy: true,
+        className: 'competition-emblem',
+        allowLocal: true,
+    }));
     const text = node('div', 'competition-copy');
     text.append(node('h3', 'competition-name', competition?.name || 'Other competition'));
     const area = competition?.area?.name;
