@@ -19,7 +19,7 @@ class SoccerScannerRoutesTest(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         for element_id in (
-            'dashboard-date', 'fixture-stream', 'team-drawer', 'score-toggle',
+            'dashboard-date', 'fixture-stream', 'score-toggle',
             'daily-summary', 'featured-match', 'match-context',
             'match-context-dialog', 'dashboard-status', 'data-notice',
         ):
@@ -28,7 +28,8 @@ class SoccerScannerRoutesTest(unittest.TestCase):
         self.assertIn('aria-current="page"', html)
         self.assertIn('href="https://select-xi.pro/"', html)
         self.assertNotIn('>Live</a>', html)
-        self.assertIn('aria-labelledby="team-drawer-title"', html)
+        self.assertNotIn('team-drawer', html)
+        self.assertNotIn('Team intelligence', html)
         self.assertIn('aria-labelledby="match-context-dialog-title"', html)
         self.assertNotIn('class="suite-rail"', html)
         self.assertNotIn('>Teams</a>', html)
@@ -46,11 +47,19 @@ class SoccerScannerRoutesTest(unittest.TestCase):
         self.assertIn('class="nav-link active" aria-current="page">Fixtures</a>', html)
         self.assertNotIn('>Live</a>', html)
 
-    def test_team_analysis_has_a_stable_route(self):
+    def test_team_analysis_is_temporarily_unavailable(self):
         response = self.client.get('/teams')
 
-        self.assertEqual(response.status_code, 200)
-        self.assertIn(b'<h1>Team Analysis</h1>', response.data)
+        self.assertEqual(response.status_code, 404)
+        self.assertNotIn(b'<h1>Team Analysis</h1>', response.data)
+
+    def test_team_analysis_api_surfaces_are_temporarily_unavailable(self):
+        legacy = self.client.get('/api/team-analysis/57')
+        canonical = self.client.get('/api/v2/teams/arsenal/analysis')
+
+        self.assertEqual(legacy.status_code, 404)
+        self.assertEqual(canonical.status_code, 404)
+        self.assertEqual(canonical.json['error']['code'], 'not_found')
 
     def test_compatibility_routes_remain_available(self):
         fixtures = self.client.get('/matches-today')
@@ -155,12 +164,10 @@ class SoccerScannerRoutesTest(unittest.TestCase):
         self.assertNotIn('Mars', location)
 
     def test_team_and_competition_deep_pages_have_stable_routes(self):
-        team = self.client.get('/teams/arsenal')
         competition = self.client.get('/competitions/premier-league')
         unknown_team = self.client.get('/teams/not-mapped')
 
-        self.assertEqual(team.status_code, 200)
-        self.assertIn(b'data-team-id="arsenal"', team.data)
+        self.assertEqual(self.client.get('/teams/arsenal').status_code, 404)
         self.assertEqual(competition.status_code, 200)
         self.assertIn(b'Premier League', competition.data)
         self.assertEqual(unknown_team.status_code, 404)
@@ -496,10 +503,9 @@ class SoccerScannerRoutesTest(unittest.TestCase):
 
     def test_pages_use_shared_layout_and_external_assets(self):
         fixtures = self.client.get('/').get_data(as_text=True)
-        teams = self.client.get('/teams').get_data(as_text=True)
         standings = self.client.get('/league-tables').get_data(as_text=True)
 
-        for page in (fixtures, teams, standings):
+        for page in (fixtures, standings):
             self.assertIn('href="#main-content"', page)
             self.assertIn('/static/css/base.css', page)
             self.assertIn('/static/favicon.svg', page)
@@ -507,7 +513,6 @@ class SoccerScannerRoutesTest(unittest.TestCase):
             self.assertNotIn(' style=', page)
             self.assertIn('/static/js/dom.js', page)
         self.assertIn('/static/js/fixtures.js', fixtures)
-        self.assertIn('/static/js/teams.js', teams)
         self.assertIn('/static/js/standings.js', standings)
         self.assertEqual(standings.count('<iframe'), 1)
         self.assertIn('id="league-selector"', standings)
@@ -557,22 +562,17 @@ class SoccerScannerRoutesTest(unittest.TestCase):
         self.assertEqual(response.json['error']['retryAfterSeconds'], 30)
         self.assertEqual(response.headers['Retry-After'], '30')
 
-    @patch('soccer_scanner.services.teams.TeamAnalysisService.analyze')
-    def test_canonical_team_analysis_translates_to_compatible_provider_id(self, analyze):
-        analyze.return_value = {'team_info': {'name': 'Arsenal'}}
-
+    def test_canonical_team_analysis_is_disabled_even_for_known_team(self):
         response = self.client.get('/api/v2/teams/arsenal/analysis')
 
-        self.assertEqual(response.status_code, 200)
-        analyze.assert_called_once_with('57')
-        self.assertEqual(response.json['team_info']['canonicalId'], 'arsenal')
-        self.assertEqual(response.json['team_info']['providerId'], '57')
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.json['error']['code'], 'not_found')
 
     def test_canonical_team_analysis_rejects_raw_or_unknown_provider_id(self):
         response = self.client.get('/api/v2/teams/57/analysis')
 
         self.assertEqual(response.status_code, 404)
-        self.assertEqual(response.json['error']['code'], 'team_identity_unavailable')
+        self.assertEqual(response.json['error']['code'], 'not_found')
 
 
 if __name__ == '__main__':

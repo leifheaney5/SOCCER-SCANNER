@@ -116,6 +116,42 @@ def test_normalizes_provider_qualified_teams_nullable_scores_and_sourced_fields(
     assert normalized['referees'] is None
 
 
+def test_normalizes_first_valid_team_logo_from_logo_collection():
+    payload = event()
+    payload['competitions'][0]['competitors'][0]['team'].pop('logo')
+    payload['competitions'][0]['competitors'][0]['team']['logos'] = [
+        {'href': ''},
+        {'href': 'https://a.espncdn.com/i/teamlogos/soccer/500/10.png'},
+    ]
+    payload['competitions'][0]['competitors'][1]['team']['logos'] = [
+        {'url': 'https://a.espncdn.com/i/teamlogos/soccer/500/20.png'},
+    ]
+
+    normalized = normalize_event(payload, 'bra.1', 'Brasileirao')
+
+    assert normalized['homeTeam']['crest'] == (
+        'https://a.espncdn.com/i/teamlogos/soccer/500/10.png'
+    )
+    assert normalized['awayTeam']['crest'] == (
+        'https://a.espncdn.com/i/teamlogos/soccer/500/20.png'
+    )
+
+
+def test_normalizes_espn_default_team_logo_when_provider_has_no_crest():
+    payload = event()
+    payload['competitions'][0]['competitors'][0]['team'].pop('logo')
+    payload['competitions'][0]['competitors'][1]['team'].pop('logo', None)
+
+    normalized = normalize_event(payload, 'bra.1', 'Brasileirao')
+
+    assert normalized['homeTeam']['crest'] == (
+        'https://a.espncdn.com/i/teamlogos/default-team-logo-500.png'
+    )
+    assert normalized['awayTeam']['crest'] == (
+        'https://a.espncdn.com/i/teamlogos/default-team-logo-500.png'
+    )
+
+
 def test_normalizes_only_named_espn_streaming_services():
     normalized = normalize_event(
         event(competition={

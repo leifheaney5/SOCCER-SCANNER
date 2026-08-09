@@ -180,6 +180,11 @@ class AppConfigTest(unittest.TestCase):
         self.assertFalse(payload['features']['accounts'])
         self.assertFalse(payload['features']['favorites'])
 
+    def test_app_config_states_that_team_intelligence_is_temporarily_unavailable(self):
+        payload = self.client.get('/api/v2/app-config').json
+
+        self.assertFalse(payload['features']['team_intelligence'])
+
 
 if __name__ == '__main__':
     unittest.main()

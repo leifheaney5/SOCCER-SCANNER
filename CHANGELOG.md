@@ -5,7 +5,7 @@
 ### Added
 
 - Native SwiftUI fixture navigation, local filtering, spoiler-safe detail/settings
-  surfaces, on-demand provider-verified team intelligence, route-driven fixture
+  surfaces, route-driven fixture
   Universal Links, adaptive accessibility-size rows, and TestFlight release
   metadata.
 - App Store submission lanes now stop before building when legal Terms
@@ -21,6 +21,12 @@
 
 ### Changed
 
+- ESPN team normalization now preserves official crests from both singular and
+  collection-based provider logo fields, with ESPN's official default team logo
+  when no crest exists. Team Intelligence is temporarily disabled across web,
+  native, and API entry points.
+- Competition group headers now preserve official provider emblems and use the
+  friendly-category mark when a friendly competition has no supplied emblem.
 - Live is now represented by the fixture status filter rather than a duplicate
   top-level navigation destination.
 - Increased the bounded ESPN provider response guard to 5 MB so current global

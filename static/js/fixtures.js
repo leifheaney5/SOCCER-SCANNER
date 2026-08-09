@@ -2,13 +2,12 @@ const assetVersion = new URL(import.meta.url).searchParams.get('v');
 const versionedModule = path => (
     assetVersion ? `${path}?v=${encodeURIComponent(assetVersion)}` : path
 );
-const [appStoreModule, fixtureStateModule, scorePreferenceModule, fixtureRendererModule, matchContextModule, teamDrawerModule, refreshModule, dialogModule, timezoneControlModule] = await Promise.all([
+const [appStoreModule, fixtureStateModule, scorePreferenceModule, fixtureRendererModule, matchContextModule, refreshModule, dialogModule, timezoneControlModule] = await Promise.all([
     import(versionedModule('./app-store.js')),
     import(versionedModule('./fixture-state.js')),
     import(versionedModule('./score-preference.js')),
     import(versionedModule('./fixture-renderer.js')),
     import(versionedModule('./match-context.js')),
-    import(versionedModule('./team-drawer.js')),
     import(versionedModule('./refresh-controller.js')),
     import(versionedModule('./dialog-manager.js')),
     import(versionedModule('./timezone-control.js')),
@@ -41,7 +40,6 @@ const {
     setRenderTimeZone,
 } = fixtureRendererModule;
 const {createMatchContext} = matchContextModule;
-const {createTeamDrawer} = teamDrawerModule;
 const {createRefreshController} = refreshModule;
 const {createDialogManager} = dialogModule;
 const {createTimezoneControl} = timezoneControlModule;
@@ -61,7 +59,6 @@ let selectedFixtureId = state.fixture || null;
 let activeRequestController = null;
 let requestSequence = 0;
 let matchContext = null;
-let teamDrawer = null;
 let refreshController = null;
 let timezoneControl = null;
 let filterDialog = null;
@@ -214,7 +211,6 @@ function reflectCurrentResults() {
     byId('dashboard-status').textContent = `${summary.total} fixtures shown`;
     byId('fixture-stream-title').textContent = 'Match schedule';
     matchContext?.rerender();
-    teamDrawer?.rerender();
     if (selectedFixtureId && !matchContext?.selected()) {
         const match = payload.matches.find(item => String(item.canonicalFixtureId || item.id) === selectedFixtureId);
         const trigger = byId('fixture-stream').querySelector(
@@ -554,13 +550,6 @@ function bindEvents() {
 
 function init() {
     const dialogManager = createDialogManager();
-    teamDrawer = createTeamDrawer({
-        dialog: byId('team-drawer'),
-        content: byId('team-drawer-content'),
-        closeButton: byId('close-team-drawer'),
-        getRevealed: () => scoresRevealed,
-        dialogManager,
-    });
     matchContext = createMatchContext({
         panel: byId('match-context'),
         panelContent: byId('match-context-content'),
@@ -568,7 +557,6 @@ function init() {
         dialogContent: byId('match-context-dialog-content'),
         closeButton: byId('close-match-context'),
         getRevealed: () => scoresRevealed,
-        onTeam: (team, trigger) => teamDrawer.open(team, trigger),
         onClose: () => {
             const closedFixtureId = selectedFixtureId;
             selectedFixtureId = null;

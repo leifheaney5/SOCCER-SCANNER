@@ -9,20 +9,29 @@ function initials(name) {
     return letters.join('').toLocaleUpperCase();
 }
 
-function safeImageUrl(value) {
+function safeImageUrl(value, {allowLocal = false} = {}) {
     if (!value) return null;
     try {
         const rawValue = String(value).trim();
         const url = new URL(rawValue, window.location.origin);
         if (!SAFE_PROTOCOLS.has(url.protocol)) return null;
-        if (url.origin === window.location.origin && url.protocol !== 'data:') return null;
+        if (
+            url.origin === window.location.origin
+            && url.protocol !== 'data:'
+            && (!allowLocal || !url.pathname.startsWith('/static/'))
+        ) return null;
         return url.href;
     } catch {
         return null;
     }
 }
 
-export function createCrest(team, {size = 32, lazy = true, className = ''} = {}) {
+export function createCrest(team, {
+    size = 32,
+    lazy = true,
+    className = '',
+    allowLocal = false,
+} = {}) {
     const wrapper = document.createElement('span');
     wrapper.className = ['team-crest', className].filter(Boolean).join(' ');
     wrapper.setAttribute('aria-hidden', 'true');
@@ -34,7 +43,7 @@ export function createCrest(team, {size = 32, lazy = true, className = ''} = {})
         wrapper.replaceChildren(fallback);
     };
 
-    const src = safeImageUrl(team?.crest);
+    const src = safeImageUrl(team?.crest, {allowLocal});
     if (!src) {
         renderFallback();
         return wrapper;

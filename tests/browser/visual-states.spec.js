@@ -1,5 +1,5 @@
 import {expect, test} from '@playwright/test';
-import {fixturePayload, teamPayload} from './test-data.js';
+import {fixturePayload} from './test-data.js';
 
 test.use({serviceWorkers: 'block'});
 
@@ -48,15 +48,11 @@ test('capture synthetic desktop release states', async ({page}, testInfo) => {
     await page.screenshot({path: testInfo.outputPath('desktop-error.png'), fullPage: true});
 });
 
-test('capture synthetic mobile sheet and team drawer states', async ({page}, testInfo) => {
+test('capture synthetic mobile match sheet state', async ({page}, testInfo) => {
     await page.setViewportSize({width: 390, height: 844});
     await page.route('**/api/v2/fixtures**', route => route.fulfill({
         contentType: 'application/json',
         body: JSON.stringify(fixturePayload),
-    }));
-    await page.route('**/api/v2/teams/*/analysis', route => route.fulfill({
-        contentType: 'application/json',
-        body: JSON.stringify(teamPayload),
     }));
     await page.goto('/?date=2026-08-03');
     await expect(page.locator('#fixture-result-count')).toContainText('13 matches');
@@ -64,7 +60,4 @@ test('capture synthetic mobile sheet and team drawer states', async ({page}, tes
     await page.locator('.fixture-card[data-fixture-id="live-secret"] .details-button').click();
     await expect(page.locator('#match-context-dialog')).toBeVisible();
     await page.screenshot({path: testInfo.outputPath('mobile-match-sheet.png'), fullPage: true});
-    await page.locator('#match-context-dialog').getByRole('button', {name: 'Open Arsenal intelligence'}).click();
-    await expect(page.locator('#team-drawer')).toContainText('Arsenal');
-    await page.screenshot({path: testInfo.outputPath('mobile-team-drawer.png'), fullPage: true});
 });

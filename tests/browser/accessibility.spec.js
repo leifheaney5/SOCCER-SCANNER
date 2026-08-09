@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import {expect, test} from '@playwright/test';
-import {emptyFixturePayload, fixturePayload, teamPayload} from './test-data.js';
+import {emptyFixturePayload, fixturePayload} from './test-data.js';
 
 async function mockFixtures(page, payload = fixturePayload) {
     await page.route('**/api/v2/fixtures**', route => route.fulfill({
@@ -21,13 +21,9 @@ test('fixture dashboard and filters have no serious accessibility violations', a
     await expectNoSeriousViolations(page);
 });
 
-test('mobile navigation and nested fixture dialogs remain accessible', async ({page}) => {
+test('mobile navigation and fixture dialog remain accessible', async ({page}) => {
     await page.setViewportSize({width: 390, height: 844});
     await mockFixtures(page);
-    await page.route('**/api/v2/teams/*/analysis', route => route.fulfill({
-        contentType: 'application/json',
-        body: JSON.stringify(teamPayload),
-    }));
     await page.goto('/?date=2026-08-03');
     await page.locator('#nav-toggle').click();
     await expect(page.locator('#primary-navigation')).toBeVisible();
@@ -37,9 +33,7 @@ test('mobile navigation and nested fixture dialogs remain accessible', async ({p
     await page.locator('[data-fixture-id="live-secret"] .details-button').click();
     await expect(page.locator('#match-context-dialog')).toBeVisible();
     await expectNoSeriousViolations(page);
-    await page.locator('#match-context-dialog').getByRole('button', {name: 'Open Arsenal intelligence'}).click();
-    await expect(page.locator('#team-drawer')).toContainText('Arsenal');
-    await expectNoSeriousViolations(page);
+    await expect(page.locator('#match-context-dialog').getByRole('button', {name: /intelligence/})).toHaveCount(0);
 });
 
 test('mobile fixture filter dialog has accessible semantics and focus restoration', async ({page}) => {

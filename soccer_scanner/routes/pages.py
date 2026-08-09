@@ -4,7 +4,7 @@ import re
 
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from flask import Blueprint, Response, current_app, redirect, render_template, request, url_for
+from flask import Blueprint, Response, abort, current_app, redirect, render_template, request, url_for
 
 pages = Blueprint('pages', __name__)
 
@@ -21,6 +21,8 @@ def legacy_fixtures():
 
 @pages.get('/teams')
 def teams():
+    if not current_app.extensions['feature_flags'].is_enabled('team_intelligence'):
+        abort(404)
     return render_template('index.html')
 
 
@@ -243,6 +245,8 @@ def fixture_calendar(canonical_fixture_id):
 
 @pages.get('/teams/<canonical_id>')
 def team_page(canonical_id):
+    if not current_app.extensions['feature_flags'].is_enabled('team_intelligence'):
+        abort(404)
     if not re.fullmatch(r'[a-z0-9][a-z0-9-]{0,79}', canonical_id):
         return render_template('404.html'), 404
     provider_id = current_app.extensions['team_identities'].provider_id(canonical_id, 'football-data')

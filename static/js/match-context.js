@@ -52,17 +52,12 @@ function focusableElements(dialog) {
     )].filter(element => !element.hidden);
 }
 
-function createTeam(team, onTeam) {
+function createTeam(team) {
     const card = node('div', 'context-team');
     card.append(
         createCrest(team, {size: 52, lazy: false, className: 'team-crest--context'}),
         node('strong', 'context-team-name', team?.name || 'Team unavailable'),
     );
-    const button = node('button', 'context-team-button', 'Team intelligence');
-    button.type = 'button';
-    button.setAttribute('aria-label', `Open ${team?.name || 'team'} intelligence`);
-    button.addEventListener('click', event => onTeam?.(team, event.currentTarget));
-    card.append(button);
     return card;
 }
 
@@ -143,7 +138,7 @@ function createSourceInspector(match) {
     return inspector;
 }
 
-function createContextContent(match, revealed, onTeam, headingId) {
+function createContextContent(match, revealed, headingId) {
     const fragment = document.createDocumentFragment();
     const competition = node('p', 'context-competition', match?.competition?.name || 'Competition unavailable');
     const heading = node('h2', 'context-heading', `${match?.homeTeam?.name || 'Home team'} — ${match?.awayTeam?.name || 'Away team'}`);
@@ -151,9 +146,9 @@ function createContextContent(match, revealed, onTeam, headingId) {
     const status = node('p', `context-status context-status--${statusKind(match)}`, statusText(match));
     const matchup = node('div', 'context-matchup');
     matchup.append(
-        createTeam(match?.homeTeam, onTeam),
+        createTeam(match?.homeTeam),
         createScoreNode(match, revealed, {featured: true}),
-        createTeam(match?.awayTeam, onTeam),
+        createTeam(match?.awayTeam),
     );
 
     const details = node('dl', 'context-meta');
@@ -195,7 +190,6 @@ export function createMatchContext({
     dialogContent,
     closeButton,
     getRevealed,
-    onTeam,
     onClose,
     dialogManager,
 }) {
@@ -212,7 +206,6 @@ export function createMatchContext({
         target.replaceChildren(createContextContent(
             currentMatch,
             getRevealed(),
-            onTeam,
             desktop() ? 'match-context-title' : null,
         ));
         panel.classList.toggle('has-selection', desktop());
