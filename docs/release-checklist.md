@@ -18,7 +18,8 @@ Record the exact commit SHA and link the evidence for every completed gate.
   recorded below.
 - The previous deployed baseline was
   `7759b5dd1ec33ef7b70ab87488593ad4b4c749ba`.
-- Candidate release SHA: `64b6a6b625ae8ef2d9fd1606c9e54565097e2b58`.
+- Application merge SHA: `64b6a6b625ae8ef2d9fd1606c9e54565097e2b58`.
+- Final deployed SHA: `291420334bbdc830bd82ec0cb307e154c8ebfc88`.
 - No Apple Developer, App Store Connect, TestFlight, or secret access is
   performed by this checklist.
 
@@ -83,7 +84,7 @@ command output where applicable.
 
   ```powershell
   $env:BASE_URL = 'https://soccerscanner.pro'
-  $env:EXPECTED_SHA = '64b6a6b625ae8ef2d9fd1606c9e54565097e2b58'
+  $env:EXPECTED_SHA = '291420334bbdc830bd82ec0cb307e154c8ebfc88'
   $env:EXPECTED_ENVIRONMENT = 'production'
   npm run smoke:production
   ```
@@ -97,7 +98,7 @@ command output where applicable.
   fixture responses, spoiler-safe behavior, console/static errors, public
   assets, and the 320px smoke path using the candidate production-smoke result.
   Railway deployment `3206fab7-8758-426e-8e60-ad8010695aec` reached terminal
-  `SUCCESS`; both production health endpoints report the candidate SHA,
+  `SUCCESS`; both production health endpoints report the final deployed SHA,
   version `2.0.0`, schema `20260804_01`, durable Postgres, and shared Redis.
 - [x] Run the dependency/security checks required by `docs/testing.md`:
   `npm audit --audit-level=high` passed with 0 vulnerabilities and
@@ -152,10 +153,10 @@ the values below when they are credentials or environment-specific secrets.
   coverage. It is currently documented as absent; do not commit or print the
   credential. After configuration, verify `/health/providers`, fallback, and
   partial/stale behavior without claiming identical provider coverage.
-- [x] The candidate production deployment is identified by exact SHA
-  `64b6a6b625ae8ef2d9fd1606c9e54565097e2b58`, and the matching production
+- [x] The final production deployment is identified by exact SHA
+  `291420334bbdc830bd82ec0cb307e154c8ebfc88`, and the matching production
   smoke result is attached above. Railway deployment ID:
-  `3206fab7-8758-426e-8e60-ad8010695aec`.
+  `935f20ff-a8fd-47a1-af32-656ab1538454`.
 - [ ] The release build is installed on physical devices through TestFlight;
   Dynamic Type, VoiceOver, safe areas, Universal Links, spoiler behavior, and
   representative offline/provider-error states are reviewed.

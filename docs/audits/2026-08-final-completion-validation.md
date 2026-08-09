@@ -1,9 +1,10 @@
 # Final completion and production-validation record
 
 Audit date: 2026-08-08
-Release commit: `64b6a6b625ae8ef2d9fd1606c9e54565097e2b58`
+Application merge commit: `64b6a6b625ae8ef2d9fd1606c9e54565097e2b58`
+Final deployed commit: `291420334bbdc830bd82ec0cb307e154c8ebfc88`
 Previous deployed baseline: `7759b5dd1ec33ef7b70ab87488593ad4b4c749ba`
-Railway deployment: `3206fab7-8758-426e-8e60-ad8010695aec` (`SUCCESS`)
+Railway deployment: `935f20ff-a8fd-47a1-af32-656ab1538454` (`SUCCESS`)
 
 This record separates evidence that is available on the Windows checkout from
 evidence that requires GitHub macOS CI, Railway production, Apple hardware, or
@@ -22,7 +23,7 @@ or iOS compilation.
 | Concurrent providers under one shared deadline | yes | yes | n/a | yes | partial | Bounded executor and typed outcomes are covered locally/CI; live readiness reports ESPN ok and Football-Data disabled. |
 | Guest-only docs, SEO, route boundaries, and freshness labels | yes | yes | yes, accessibility/branding | yes | yes | Production smoke checks public routes/assets; `/teams` returns 404 and Team Intelligence remains disabled. |
 | iOS source/release readiness | source checks yes | yes | n/a | yes, macOS | not applicable | GitHub Actions iOS run `31289973761` generated, built, and tested the simulator target. Physical-device/TestFlight remains open. |
-| Exact deployment identity and public smoke | yes | yes | yes, local smoke | yes | yes | Smoke passed against `https://soccerscanner.pro` with the exact merged SHA: 143 fixtures, 143 unique IDs. |
+| Exact deployment identity and public smoke | yes | yes | yes, local smoke | yes | yes | Smoke passed against `https://soccerscanner.pro` with final deployed SHA `2914203...`: 143 fixtures, 143 unique IDs. |
 
 ## Local evidence
 
@@ -51,7 +52,7 @@ both passed.
   generation/build/unit/UI workflow (run `31289973761`).
 - The PR was merged into `main`; Railway deployment reached terminal `SUCCESS`.
 - `/health/version.commitSha` and `/health/ready.build.commitSha` equal the
-  merged full SHA.
+  final deployed full SHA `291420334bbdc830bd82ec0cb307e154c8ebfc88`.
 - `npm run smoke:production` passed against `https://soccerscanner.pro` with
   that exact SHA. Live readiness reports ESPN `ok` and Football-Data `disabled`;
   no provider failure was relabeled as successful data.
