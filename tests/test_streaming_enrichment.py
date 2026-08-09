@@ -19,6 +19,7 @@ class StreamingEnrichmentTest(unittest.TestCase):
 
         self.assertEqual(described['displayName'], 'Peacock')
         self.assertTrue(described['officialUrl'].startswith('https://'))
+        self.assertEqual(described['logoPath'], '/static/icons/streaming/peacock.svg')
         self.assertEqual(described['region'], 'US')
 
     def test_an_unknown_service_is_never_given_a_link(self):

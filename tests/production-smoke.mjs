@@ -19,6 +19,14 @@ async function getJson(path, expectedStatuses = [200]) {
     return {response, body: await response.json()};
 }
 
+async function getText(path, expectedStatuses = [200]) {
+    const response = await fetch(`${baseURL}${path}`, {headers: {'Cache-Control': 'no-cache'}});
+    if (!expectedStatuses.includes(response.status)) {
+        throw new Error(`${path} returned ${response.status}`);
+    }
+    return {response, body: await response.text()};
+}
+
 const live = await getJson('/health/live');
 const ready = await getJson('/health/ready');
 const version = await getJson('/health/version');
@@ -51,6 +59,21 @@ if (fixture.response.status === 200) {
     throw new Error('Fixture API failure did not use a stable error contract.');
 }
 
+for (const path of [
+    '/robots.txt',
+    '/sitemap.xml',
+    '/static/favicon.svg',
+    '/static/manifest.webmanifest',
+    '/static/icons/streaming/peacock.svg',
+]) {
+    const asset = await getText(path);
+    if (!asset.body.trim()) throw new Error(`${path} returned an empty body.`);
+}
+const terms = await getText('/terms');
+if (!terms.body.includes('name="robots" content="noindex, follow"')) {
+    throw new Error('Terms route is missing its noindex contract.');
+}
+
 const browser = await chromium.launch();
 try {
     const page = await browser.newPage({viewport: {width: 320, height: 844}, colorScheme: 'dark'});
@@ -78,8 +101,14 @@ try {
         revealedScores: document.querySelectorAll('.score-display--revealed').length,
         width: document.documentElement.scrollWidth,
         viewport: document.documentElement.clientWidth,
+        timezone: document.querySelector('[data-timezone-label]')?.textContent || '',
+        manifest: document.querySelector('link[rel="manifest"]')?.getAttribute('href') || '',
+        favicon: document.querySelector('link[rel="icon"]')?.getAttribute('href') || '',
     }));
     if (pageSafety.revealedScores !== 0) throw new Error('Scores were rendered before user reveal.');
+    if (!pageSafety.timezone || !pageSafety.manifest || !pageSafety.favicon) {
+        throw new Error(`Required public controls/assets are missing: ${JSON.stringify(pageSafety)}.`);
+    }
     if (pageSafety.width > pageSafety.viewport + 1) {
         throw new Error(`320px layout overflowed: ${pageSafety.width} > ${pageSafety.viewport}.`);
     }

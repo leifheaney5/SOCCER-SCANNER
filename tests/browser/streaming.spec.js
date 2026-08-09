@@ -7,6 +7,7 @@ const KNOWN_WITH_REGION = {
     region: 'US',
     regionKnown: true,
     officialUrl: 'https://www.peacocktv.com/',
+    logoPath: '/static/icons/streaming/peacock.svg',
     source: 'espn',
 };
 
@@ -45,6 +46,8 @@ test('fixture card shows the first streaming service with its region and a +N co
     const broadcast = page.locator('[data-fixture-id="live-secret"] .fixture-broadcast');
     await expect(broadcast).toHaveText('Peacock · US +2');
     await expect(broadcast).toHaveAttribute('aria-label', /Peacock \(US\)/);
+    await expect(broadcast.locator('img')).toHaveAttribute('width', '18');
+    await expect(broadcast.locator('img')).toHaveAttribute('height', '18');
 });
 
 test('detail panel renders each streaming service honestly, linking only verified services', async ({page}) => {
@@ -62,11 +65,14 @@ test('detail panel renders each streaming service honestly, linking only verifie
     const known = context.locator('.context-streaming-item', {hasText: 'Peacock'});
     await expect(known).toContainText('Peacock');
     await expect(known).toContainText('US');
+    await expect(known.locator('.streaming-service-icon')).toHaveCount(1);
+    await expect(known.locator('img')).toHaveAttribute('width', '28');
 
     // The known service without a reported region shows "Region unknown" —
     // never a guessed region.
     const regionless = context.locator('.context-streaming-item', {hasText: 'DAZN'});
     await expect(regionless).toContainText('Region unknown');
+    await expect(regionless.locator('.streaming-service-icon--generic')).toHaveCount(1);
 
     // The unrecognised service renders as plain text, with no anchor at all.
     const unverified = context.locator('.context-streaming-item', {hasText: 'Unverified Stream'});

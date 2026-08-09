@@ -34,7 +34,7 @@ Notifications remain intentionally deferred. Enabling them requires all of the f
 6. Idempotent delivery keyed by canonical fixture and provider event IDs, with corrections and cancellations supported.
 7. A legitimate, contractually permitted live-event source with freshness and outage metadata.
 
-Until those conditions are met, `notifications` stays `not_supported`. Client favorites remain local to the browser and are not interpreted as notification consent.
+Until those conditions are met, `notifications` stays `not_supported`. Soccer Scanner has no persistent favorite profile; client-side session and URL state are not interpreted as notification consent.
 
 ## Extension rule
 

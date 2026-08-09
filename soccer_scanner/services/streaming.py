@@ -35,13 +35,16 @@ class StreamingRegistry:
         if service_id is None:
             return None
         service = self._services[service_id]
-        return {
+        resolved = {
             'id': service['id'],
             'displayName': service['displayName'],
             'officialUrl': service['officialUrl'],
             'domains': list(service['domains']),
             'requiresAttribution': bool(service.get('requiresAttribution')),
         }
+        if service.get('logoPath'):
+            resolved['logoPath'] = service['logoPath']
+        return resolved
 
     def describe(self, broadcast):
         """Render-ready description, or None if this is not a streaming entry."""
@@ -55,7 +58,7 @@ class StreamingRegistry:
 
         service = self.resolve(raw_name)
         region = str(broadcast.get('region') or '').strip()
-        return {
+        described = {
             'id': service['id'] if service else None,
             'displayName': service['displayName'] if service else raw_name,
             'officialUrl': service['officialUrl'] if service else None,
@@ -63,3 +66,6 @@ class StreamingRegistry:
             'regionKnown': bool(region),
             'source': 'espn',
         }
+        if service and service.get('logoPath'):
+            described['logoPath'] = service['logoPath']
+        return described

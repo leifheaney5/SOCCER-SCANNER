@@ -21,6 +21,20 @@
 
 ### Changed
 
+- Fixture cards, featured fixtures, match details, source freshness, summaries,
+  calendar days, and fixture deep links now use the explicitly selected IANA
+  timezone. Selected fixtures remain open when a timezone change crosses a
+  local calendar date.
+- Calendar days now retain independent loading, empty, partial, stale, and
+  provider-error states; score visibility rerenders cached days without network
+  requests. Provider fan-out is concurrent under one shared deadline.
+- Canonical status labels now distinguish first half, second half, half time,
+  extra time, penalties, delayed, suspended, abandoned, and terminal outcomes.
+  Verified streaming listings have bounded local icons with safe generic
+  fallbacks.
+- Standings configuration now includes competition season type and review
+  deadlines, warning on rollover mismatches rather than silently trusting old
+  provider IDs.
 - ESPN team normalization now preserves official crests from both singular and
   collection-based provider logo fields, with ESPN's official default team logo
   when no crest exists. Team Intelligence is temporarily disabled across web,

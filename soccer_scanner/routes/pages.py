@@ -33,6 +33,7 @@ def league_tables():
         'league_tables.html',
         competitions=seasons.competitions,
         seasons_stale=seasons.is_stale(),
+        standings_warnings=seasons.review_warnings(),
     )
 
 
@@ -98,6 +99,11 @@ def robots():
 def sitemap():
     base = current_app.config['PUBLIC_BASE_URL'].rstrip('/')
     today = datetime.now(timezone.utc).date().isoformat()
+    routes = [
+        route for route in _SITEMAP_ROUTES
+        if route[0] != '/teams'
+        or current_app.extensions['feature_flags'].is_enabled('team_intelligence')
+    ]
     entries = [
         '  <url>'
         f'<loc>{base}{path}</loc>'
@@ -105,7 +111,7 @@ def sitemap():
         f'<changefreq>{frequency}</changefreq>'
         f'<priority>{priority}</priority>'
         '</url>'
-        for path, frequency, priority in _SITEMAP_ROUTES
+        for path, frequency, priority in routes
     ]
     document = '\n'.join([
         '<?xml version="1.0" encoding="UTF-8"?>',

@@ -16,7 +16,7 @@ git diff --check
 
 Python coverage includes provider transport bounds, ESPN status fixtures, Football-Data.org adaptation, canonical identity and merge behavior, truthful orchestration states, fresh/stale/expired caches, Redis distributed single-flight and fallback, rate-limit bursts, concurrent timezone reuse, team services, build identity, headers, routes, and API contracts.
 
-Browser coverage includes URL/history state, score non-leakage in DOM and accessibility content, fixture states and filters, refresh behavior, desktop/mobile dialogs, team request caching, favorites, calendar, deep links, PWA/offline sanitization, 320 px reflow, immutable assets, and axe scans. Synthetic screenshots cover default, revealed, filtered, context, favorite, partial, stale, empty, error, mobile sheet, and team drawer states. They are evidence artifacts, not pixel snapshots of provider data.
+Browser coverage includes URL/history state, score non-leakage in DOM and accessibility content, fixture states and filters, refresh behavior, desktop/mobile dialogs, calendar day-level failures and retries, timezone-preserving deep links, PWA/offline sanitization, 320 px reflow, immutable assets, and axe scans. Synthetic screenshots cover default, revealed, filtered, context, partial, stale, empty, error, and mobile-sheet states. Team Intelligence and persistent favorites are intentionally not active surfaces.
 
 The concurrency/load suite is deterministic and does not call external providers. Existing cache tests cover multi-worker Redis coordination, TTL expiration, and Redis fallback; browser team-drawer tests prove per-team request caching; HTTP tests exercise slow-provider budget and retry behavior.
 

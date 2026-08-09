@@ -735,6 +735,9 @@ body {
 }
 
 .fixture-broadcast {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
     overflow: hidden;
     color: var(--accent-secondary);
     font-size: 10px;
@@ -742,6 +745,53 @@ body {
     line-height: 1.25;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.streaming-service-icon {
+    display: inline-grid;
+    flex: 0 0 var(--streaming-icon-size, 18px);
+    width: var(--streaming-icon-size, 18px);
+    height: var(--streaming-icon-size, 18px);
+    place-items: center;
+    border-radius: 4px;
+    object-fit: contain;
+}
+
+.streaming-service-icon--generic {
+    color: var(--text-primary);
+    background: var(--surface-raised);
+    border: 1px solid currentColor;
+    box-sizing: border-box;
+}
+
+.streaming-service-icon--generic::after {
+    width: 55%;
+    height: 42%;
+    border: 1px solid currentColor;
+    border-radius: 1px;
+    content: '';
+}
+
+.streaming-service-icon--image {
+    background: var(--surface-raised);
+}
+
+.context-streaming-list {
+    display: grid;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.context-streaming-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.context-streaming-item .streaming-service-icon {
+    --streaming-icon-size: 28px;
 }
 
 .live-dot {

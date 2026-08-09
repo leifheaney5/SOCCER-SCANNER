@@ -17,7 +17,7 @@ CanonicalFixtureService
    +---------------------------- ESPN and optional Football-Data.org adapters
 ```
 
-The HTML shell is server rendered. Page behavior is split into cacheable JavaScript modules: URL/store coordination, fixture state and ranking, spoiler preference, rendering, adaptive refresh, match context, team drawer, favorites, calendar, dialogs, and PWA registration. Desktop and mobile use the same state; match context becomes a modal sheet below the desktop breakpoint.
+The HTML shell is server rendered. Page behavior is split into cacheable JavaScript modules: URL/store coordination, fixture state and ranking, spoiler preference, rendering, adaptive refresh, match context, calendar, dialogs, and PWA registration. Desktop and mobile use the same state; match context becomes a modal sheet below the desktop breakpoint. Team Intelligence modules remain dormant while that feature flag is disabled.
 
 ## Canonical fixture contract
 

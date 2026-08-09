@@ -21,6 +21,32 @@ class StandingsSeasonsTest(unittest.TestCase):
                 self.assertTrue(entry['tournamentId'])
                 self.assertTrue(entry['seasonId'])
 
+    def test_split_year_expected_season_rolls_over_without_changing_provider_ids(self):
+        entry = {'seasonType': 'split-year'}
+        self.assertEqual(
+            self.seasons.expected_season(entry, date(2026, 8, 8)),
+            '2026/27',
+        )
+        self.assertEqual(
+            self.seasons.expected_season(entry, date(2026, 2, 8)),
+            '2025/26',
+        )
+
+    def test_review_status_warns_on_rollover_and_expired_review(self):
+        entry = self.seasons.competitions[0]
+        statuses = self.seasons.review_status(entry, date(2026, 8, 16))
+        self.assertIn('review_due', statuses)
+        self.assertIn('season_mismatch', statuses)
+
+    def test_manual_and_calendar_year_seasons_have_explicit_rules(self):
+        self.assertIsNone(
+            self.seasons.expected_season({'seasonType': 'tournament'}, date(2026, 8, 8)),
+        )
+        self.assertEqual(
+            self.seasons.expected_season({'seasonType': 'calendar-year'}, date(2026, 8, 8)),
+            '2026',
+        )
+
     def test_embed_urls_are_https_and_on_the_declared_provider(self):
         for entry in self.seasons.competitions:
             with self.subTest(entry=entry['canonicalId']):

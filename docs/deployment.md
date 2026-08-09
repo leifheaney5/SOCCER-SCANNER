@@ -28,6 +28,11 @@ Railway supplies `PORT`, `RAILWAY_GIT_COMMIT_SHA`, `RAILWAY_ENVIRONMENT_NAME`, a
 
 The checked-in `railway.json` runs `alembic upgrade head` in Railway's pre-deploy container, starts Gunicorn explicitly, and gates activation on `/health/ready`. Do not run migrations inside each web replica.
 
+Fixture providers execute through a bounded two-worker fan-out with one shared
+monotonic request budget. A slow provider cannot grant another provider a fresh
+deadline; unfinished outcomes are reported as unavailable/timeout and stale
+provider cache remains eligible for fallback.
+
 ## Release procedure
 
 1. Run all commands in [testing](testing.md) from a clean worktree.

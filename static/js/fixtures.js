@@ -2,7 +2,7 @@ const assetVersion = new URL(import.meta.url).searchParams.get('v');
 const versionedModule = path => (
     assetVersion ? `${path}?v=${encodeURIComponent(assetVersion)}` : path
 );
-const [appStoreModule, fixtureStateModule, scorePreferenceModule, fixtureRendererModule, matchContextModule, refreshModule, dialogModule, timezoneControlModule] = await Promise.all([
+const [appStoreModule, fixtureStateModule, scorePreferenceModule, fixtureRendererModule, matchContextModule, refreshModule, dialogModule, timezoneControlModule, timeZoneModule] = await Promise.all([
     import(versionedModule('./app-store.js')),
     import(versionedModule('./fixture-state.js')),
     import(versionedModule('./score-preference.js')),
@@ -11,6 +11,7 @@ const [appStoreModule, fixtureStateModule, scorePreferenceModule, fixtureRendere
     import(versionedModule('./refresh-controller.js')),
     import(versionedModule('./dialog-manager.js')),
     import(versionedModule('./timezone-control.js')),
+    import(versionedModule('./time-zone.js')),
 ]);
 const {createStore} = appStoreModule;
 const {
@@ -43,6 +44,7 @@ const {createMatchContext} = matchContextModule;
 const {createRefreshController} = refreshModule;
 const {createDialogManager} = dialogModule;
 const {createTimezoneControl} = timezoneControlModule;
+const {calendarDateInZone} = timeZoneModule;
 
 const byId = id => document.getElementById(id);
 const detectedTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
@@ -210,9 +212,16 @@ function reflectCurrentResults() {
     byId('fixture-result-count').textContent = `${summary.total} ${summary.total === 1 ? 'match' : 'matches'}`;
     byId('dashboard-status').textContent = `${summary.total} fixtures shown`;
     byId('fixture-stream-title').textContent = 'Match schedule';
-    matchContext?.rerender();
-    if (selectedFixtureId && !matchContext?.selected()) {
-        const match = payload.matches.find(item => String(item.canonicalFixtureId || item.id) === selectedFixtureId);
+    const selectedMatch = selectedFixtureId
+        ? payload.matches.find(item => String(item.canonicalFixtureId || item.id) === selectedFixtureId)
+        : null;
+    if (selectedMatch && matchContext?.selected()) {
+        matchContext.update(selectedMatch);
+    } else {
+        matchContext?.rerender();
+    }
+    if (selectedMatch && !matchContext?.selected()) {
+        const match = selectedMatch;
         const trigger = byId('fixture-stream').querySelector(
             `.details-button[data-fixture-id="${CSS.escape(selectedFixtureId)}"]`,
         );
@@ -327,11 +336,17 @@ function chooseDate(date) {
 // Shared by the `#timezone-filter` select and the header timezone control so
 // the two views of `state.timezone` cannot drift: whichever one changes the
 // zone, this is the only place that applies it.
-function applyTimezone(timezone) {
+function applyTimezone(timezone, {extraPatch = {}, reason = 'timezone'} = {}) {
     cancelPendingSearch();
-    setState({timezone, fixture: ''}, {reason: 'timezone'});
-    selectedFixtureId = state.fixture || null;
-    matchContext?.reset();
+    const fixtureId = selectedFixtureId || state.fixture || '';
+    const selectedMatch = fixtureId
+        ? payload?.matches?.find(item => String(item.canonicalFixtureId || item.id) === fixtureId)
+        : null;
+    const date = selectedMatch?.utcDate
+        ? calendarDateInZone(selectedMatch.utcDate, timezone)
+        : state.date;
+    setState({...extraPatch, timezone, date, fixture: fixtureId}, {reason});
+    selectedFixtureId = fixtureId || null;
     syncControls();
     syncUrl('push');
     loadFixtures();
@@ -373,13 +388,10 @@ function commitFilterDraft() {
     const timezoneChanged = Object.hasOwn(patch, 'timezone');
     delete patch.timezone;
     if (timezoneChanged) {
-        cancelPendingSearch();
-        setState({...patch, timezone: filterDraft.timezone, fixture: ''}, {reason: 'filter-dialog'});
-        selectedFixtureId = null;
-        matchContext?.reset();
-        syncControls({filterState: state});
-        syncUrl('push');
-        loadFixtures();
+        applyTimezone(filterDraft.timezone, {
+            extraPatch: patch,
+            reason: 'filter-dialog',
+        });
     } else if (Object.keys(patch).length > 0) {
         applyFilter(patch);
     }
@@ -557,6 +569,7 @@ function init() {
         dialogContent: byId('match-context-dialog-content'),
         closeButton: byId('close-match-context'),
         getRevealed: () => scoresRevealed,
+        getTimezone: () => state.timezone,
         onClose: () => {
             const closedFixtureId = selectedFixtureId;
             selectedFixtureId = null;

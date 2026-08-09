@@ -44,6 +44,14 @@ export const MATCH_STATUSES = {
         tone: 'live',
         description: 'The match is being played right now.',
     }),
+    first_half: status('first_half', 'First half', '1H', 'active', {
+        active: true, terminal: false, refresh: true, scoreAvailable: true,
+        offlineEligible: false, tone: 'live', description: 'The first half is in progress.',
+    }),
+    second_half: status('second_half', 'Second half', '2H', 'active', {
+        active: true, terminal: false, refresh: true, scoreAvailable: true,
+        offlineEligible: false, tone: 'live', description: 'The second half is in progress.',
+    }),
     half_time: status('half_time', 'Half time', 'HT', 'active', {
         active: true,
         terminal: false,
@@ -70,6 +78,14 @@ export const MATCH_STATUSES = {
         offlineEligible: false,
         tone: 'live',
         description: 'The match is being decided by a penalty shootout.',
+    }),
+    finished_extra_time: status('finished_extra_time', 'Full time after extra time', 'AET', 'finished', {
+        active: false, terminal: true, refresh: false, scoreAvailable: true,
+        offlineEligible: true, tone: 'settled', description: 'The match finished after extra time.',
+    }),
+    finished_penalties: status('finished_penalties', 'Full time after penalties', 'PEN FT', 'finished', {
+        active: false, terminal: true, refresh: false, scoreAvailable: true,
+        offlineEligible: true, tone: 'settled', description: 'The match finished after a penalty shootout.',
     }),
     finished: status('finished', 'Full time', 'FT', 'finished', {
         active: false,
@@ -140,8 +156,8 @@ const PROVIDER_CODES = new Map(Object.entries({
     LIVE: 'in_progress',
     IN_PLAY: 'in_progress',
     IN_PROGRESS: 'in_progress',
-    FIRST_HALF: 'in_progress',
-    SECOND_HALF: 'in_progress',
+    FIRST_HALF: 'first_half',
+    SECOND_HALF: 'second_half',
     PAUSED: 'half_time',
     HALFTIME: 'half_time',
     HALF_TIME: 'half_time',
@@ -152,6 +168,12 @@ const PROVIDER_CODES = new Map(Object.entries({
     PENALTIES: 'penalties',
     PENALTY_SHOOTOUT: 'penalties',
     PEN: 'penalties',
+    FINISHED_AFTER_EXTRA_TIME: 'finished_extra_time',
+    FINISHED_EXTRA_TIME: 'finished_extra_time',
+    AET: 'finished_extra_time',
+    FINISHED_AFTER_PENALTIES: 'finished_penalties',
+    FINISHED_PENALTIES: 'finished_penalties',
+    PENALTY_FINISHED: 'finished_penalties',
     FINISHED: 'finished',
     FULL_TIME: 'finished',
     AWARDED: 'finished',
@@ -167,7 +189,14 @@ export function rawStatusCode(match) {
     const value = match?.status;
     const code = value && typeof value === 'object' ? value.code : value;
     if (code === undefined || code === null || String(code).trim() === '') return 'SCHEDULED';
-    return String(code).trim().toUpperCase().replace(/[\s-]+/g, '_');
+    const normalizedCode = String(code).trim().toUpperCase().replace(/[\s-]+/g, '_');
+    const raw = value && typeof value === 'object' ? value.raw : null;
+    const normalizedRaw = String(raw || '').trim().toUpperCase().replace(/[\s-]+/g, '_');
+    if (normalizedCode === 'IN_PROGRESS' && normalizedRaw.startsWith('STATUS_')) {
+        const rawCode = normalizedRaw.slice('STATUS_'.length);
+        if (PROVIDER_CODES.has(rawCode)) return rawCode;
+    }
+    return normalizedCode;
 }
 
 export function resolveStatus(match) {
