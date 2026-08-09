@@ -6,18 +6,19 @@ actions that require an Apple portal, a deployment owner, legal review, or a
 verified support owner.
 
 Do not treat a historical CI run, a source file, or a passing local static check
-as proof that the current uncommitted tree is buildable or ready for submission.
+as proof that a future or uncommitted tree is buildable or ready for submission.
 Record the exact commit SHA and link the evidence for every completed gate.
 
 ## Current checkout
 
 - Audited date: 2026-08-08.
-- Release candidate branch: `agent/final-completion-validation`.
-- The working tree contains the final-completion candidate changes. The exact
-  release SHA, macOS CI run, merge, Railway deployment, and production smoke
-  result are recorded only after those steps complete.
-- The last deployed baseline before this candidate was
+- Current branch: `main`.
+- The working tree is clean after the final-completion merge. The release SHA,
+  macOS CI run, merge, Railway deployment, and production smoke result are
+  recorded below.
+- The previous deployed baseline was
   `7759b5dd1ec33ef7b70ab87488593ad4b4c749ba`.
+- Candidate release SHA: `64b6a6b625ae8ef2d9fd1606c9e54565097e2b58`.
 - No Apple Developer, App Store Connect, TestFlight, or secret access is
   performed by this checklist.
 
@@ -31,12 +32,14 @@ command output where applicable.
   `1.0.0`, build `1`, launch-screen dictionary, non-exempt encryption flag,
   and portrait/landscape orientations. The bundle identifier remains a build
   setting; no Apple Team ID is stored here.
-- [ ] Generate the project with XcodeGen from `clients/ios/project.yml` and
-  confirm generation succeeds on macOS.
-- [ ] Run the current iOS workflow on macOS. It must generate the project,
+- [x] Generate the project with XcodeGen from `clients/ios/project.yml` and
+  confirm generation succeeds on macOS in GitHub Actions.
+- [x] Run the current iOS workflow on macOS. It generated the project,
   validate the privacy manifest and entitlements, build without signing,
-  run unit tests, run UI tests, and retain the `.xcresult` and failure logs.
-- [ ] Confirm the generated target has the intended deployment target (`iOS
+  ran unit tests and UI tests, and retained the `.xcresult` and failure logs in
+  the workflow artifacts. Successful run: GitHub Actions iOS run
+  `31289973761`.
+- [x] Confirm the generated target has the intended deployment target (`iOS
   17.0`), bundle identifier default (`pro.soccerscanner.app` unless the
   registered release value is supplied at build time), semantic version, and
   monotonic build number.
@@ -67,7 +70,7 @@ command output where applicable.
   contract before building. The App Store submission lanes also enforce the
   legal-placeholder and verified-support-URL gates before building. A current macOS workflow
   run is still required as evidence for the generated project and simulator
-  behavior.
+  behavior. Successful duplicate push-triggered run: `31289967184`.
 - [x] Run the repository verification matrix on the current candidate tree:
   Python tests (`264 passed, 72 subtests`), Node tests, smoke invariants (4),
   full Chromium and WebKit browser suites (94 each), JavaScript syntax, Python
@@ -75,22 +78,27 @@ command output where applicable.
   and `git diff --check`. Chromium and WebKit were run independently after the
   combined runner exposed a stale expectation plus a server cascade; both
   independent runs passed.
-- [ ] Run the production smoke script after the candidate deployment, with the
+- [x] Run the production smoke script after the candidate deployment, with the
   exact deployed SHA and environment recorded:
 
   ```powershell
   $env:BASE_URL = 'https://soccerscanner.pro'
-  $env:EXPECTED_SHA = '<candidate-full-sha>'
+  $env:EXPECTED_SHA = '64b6a6b625ae8ef2d9fd1606c9e54565097e2b58'
   $env:EXPECTED_ENVIRONMENT = 'production'
   npm run smoke:production
   ```
 
-  The smoke now also checks public robots/sitemap, favicon/manifest, the local
+  Result: passed with `status: ok`, `fixtureStatus: 200`, `fixtureState: success`,
+  143 fixtures, and 143 unique IDs. The smoke also checks public robots/sitemap,
+  favicon/manifest, the local
   streaming icon, Terms noindex behavior, the timezone control, asset-version
   tokens, spoiler safety, unique fixture IDs, and 320px layout safety.
-- [ ] Confirm production `/health/live`, `/health/ready`, `/health/version`,
+- [x] Confirm production `/health/live`, `/health/ready`, `/health/version`,
   fixture responses, spoiler-safe behavior, console/static errors, public
   assets, and the 320px smoke path using the candidate production-smoke result.
+  Railway deployment `3206fab7-8758-426e-8e60-ad8010695aec` reached terminal
+  `SUCCESS`; both production health endpoints report the candidate SHA,
+  version `2.0.0`, schema `20260804_01`, durable Postgres, and shared Redis.
 - [x] Run the dependency/security checks required by `docs/testing.md`:
   `npm audit --audit-level=high` passed with 0 vulnerabilities and
   `python -m pip_audit -r requirements.txt --progress-spinner off` passed with
@@ -144,9 +152,10 @@ the values below when they are credentials or environment-specific secrets.
   coverage. It is currently documented as absent; do not commit or print the
   credential. After configuration, verify `/health/providers`, fallback, and
   partial/stale behavior without claiming identical provider coverage.
-- [ ] The candidate production deployment is identified by exact SHA and the
-  matching production smoke result is attached above. The prior baseline SHA
-  is retained in the Current checkout section for historical reference only.
+- [x] The candidate production deployment is identified by exact SHA
+  `64b6a6b625ae8ef2d9fd1606c9e54565097e2b58`, and the matching production
+  smoke result is attached above. Railway deployment ID:
+  `3206fab7-8758-426e-8e60-ad8010695aec`.
 - [ ] The release build is installed on physical devices through TestFlight;
   Dynamic Type, VoiceOver, safe areas, Universal Links, spoiler behavior, and
   representative offline/provider-error states are reviewed.

@@ -1,8 +1,9 @@
 # Final completion and production-validation record
 
 Audit date: 2026-08-08
-Release candidate: `agent/final-completion-validation`
+Release commit: `64b6a6b625ae8ef2d9fd1606c9e54565097e2b58`
 Previous deployed baseline: `7759b5dd1ec33ef7b70ab87488593ad4b4c749ba`
+Railway deployment: `3206fab7-8758-426e-8e60-ad8010695aec` (`SUCCESS`)
 
 This record separates evidence that is available on the Windows checkout from
 evidence that requires GitHub macOS CI, Railway production, Apple hardware, or
@@ -13,15 +14,15 @@ or iOS compilation.
 
 | Requirement | Implemented | Unit tested | Browser tested | CI verified | Production verified | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
-| Explicit timezone formatting and selected-fixture preservation | yes | yes | yes, Chromium/WebKit | pending | pending | Includes cross-midnight date rollover, detail/source timestamps, deep links, and copied timezone state. |
-| Canonical match-status labels and descriptions | yes | yes | yes, Chromium/WebKit | pending | pending | Cards and match context consume the shared status contract. |
-| Streaming service icons and safe fallbacks | yes | yes | yes, Chromium/WebKit/axe | pending | pending | Registry-owned local asset metadata; verified links remain provider-owned. |
-| Calendar per-day failures, retry, and score-toggle no-refetch | yes | n/a | yes, Chromium/WebKit | pending | pending | Bounded loading and stale-response protection remain in the existing calendar route. |
-| Standings season rollover/review warnings | yes | yes | yes, existing standings coverage | pending | pending | No provider season IDs were invented; stale configuration is visibly withheld. |
-| Concurrent providers under one shared deadline | yes | yes | n/a | pending | pending | Bounded executor, typed timeout outcomes, deterministic composition, and stale fallback. |
-| Guest-only docs, SEO, route boundaries, and freshness labels | yes | yes | yes, accessibility/branding | pending | pending | No new routes or navigation; Team Intelligence remains disabled. |
-| iOS source/release readiness | source checks yes | yes | n/a | pending macOS | not applicable | Windows validates assets/configuration only; Swift compile and simulator tests require macOS CI. |
-| Exact deployment identity and public smoke | code ready | yes | local smoke coverage | pending | pending | Candidate must be merged, deployed, and checked against the exact full SHA. |
+| Explicit timezone formatting and selected-fixture preservation | yes | yes | yes, Chromium/WebKit | yes | partial | Local/CI browser coverage includes cross-midnight rollover; production smoke verifies the live timezone control and exact build. |
+| Canonical match-status labels and descriptions | yes | yes | yes, Chromium/WebKit | yes | partial | Cards and match context consume the shared status contract; live build identity verified. |
+| Streaming service icons and safe fallbacks | yes | yes | yes, Chromium/WebKit/axe | yes | yes | Production Peacock SVG returned 200; live fixture data remained provider-owned. |
+| Calendar per-day failures, retry, and score-toggle no-refetch | yes | n/a | yes, Chromium/WebKit | yes | partial | Browser/CI verified; production smoke verifies the deployed asset and dashboard shell. |
+| Standings season rollover/review warnings | yes | yes | yes, existing standings coverage | yes | partial | No provider season IDs were invented; stale configuration is visibly withheld. |
+| Concurrent providers under one shared deadline | yes | yes | n/a | yes | partial | Bounded executor and typed outcomes are covered locally/CI; live readiness reports ESPN ok and Football-Data disabled. |
+| Guest-only docs, SEO, route boundaries, and freshness labels | yes | yes | yes, accessibility/branding | yes | yes | Production smoke checks public routes/assets; `/teams` returns 404 and Team Intelligence remains disabled. |
+| iOS source/release readiness | source checks yes | yes | n/a | yes, macOS | not applicable | GitHub Actions iOS run `31289973761` generated, built, and tested the simulator target. Physical-device/TestFlight remains open. |
+| Exact deployment identity and public smoke | yes | yes | yes, local smoke | yes | yes | Smoke passed against `https://soccerscanner.pro` with the exact merged SHA: 143 fixtures, 143 unique IDs. |
 
 ## Local evidence
 
@@ -46,16 +47,14 @@ both passed.
 
 ## Pending external evidence
 
-- GitHub Actions must run the final pushed SHA, including the macOS iOS
-  generation/build/unit/UI workflow. A Windows source check cannot prove Swift
-  compilation.
-- The final PR must be merged into `main` before Railway deployment is treated
-  as the candidate release.
-- Railway must reach terminal `SUCCESS`; `/health/version.commitSha` and
-  `/health/ready.build.commitSha` must equal the merged full SHA.
-- `npm run smoke:production` must pass against `https://soccerscanner.pro` with
-  that exact SHA. Provider unavailability, if present, must remain reported as
-  live provider state rather than being relabeled as a successful data fetch.
+- GitHub Actions CI passed for the final pushed SHA, including macOS iOS
+  generation/build/unit/UI workflow (run `31289973761`).
+- The PR was merged into `main`; Railway deployment reached terminal `SUCCESS`.
+- `/health/version.commitSha` and `/health/ready.build.commitSha` equal the
+  merged full SHA.
+- `npm run smoke:production` passed against `https://soccerscanner.pro` with
+  that exact SHA. Live readiness reports ESPN `ok` and Football-Data `disabled`;
+  no provider failure was relabeled as successful data.
 - Physical-device/TestFlight review, VoiceOver, Dynamic Type, safe areas,
   Universal Links, App Store Connect metadata, legal placeholders, and support
   ownership remain human/Apple gates.
