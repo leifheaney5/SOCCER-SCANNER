@@ -7,7 +7,7 @@ Soccer Scanner 2.0 is a spoiler-safe football fixture workspace built with Flask
 - Scans fixtures by local calendar date and IANA timezone through ESPN's global soccer scoreboard, including every competition present in that provider response rather than a fixed league shortlist.
 - Keeps every score out of rendered DOM and accessibility content until the visitor explicitly reveals scores.
 - Groups fixtures by competition with canonical team identities, crest fallbacks, deterministic de-duplication, source freshness, and data-quality evidence.
-- Provides shareable filter and fixture URLs, a seven-day calendar, spoiler-free `.ics` exports, local favorites, and explicitly gated league-table embeds.
+- Provides shareable filter and fixture URLs, a seven-day calendar, spoiler-free `.ics` exports, session-scoped score visibility, and explicitly gated league-table embeds. It is guest-only: there are no accounts, persistent favorites, saved defaults, or cross-device synchronization.
 - Represents success, confirmed empty, partial, stale, rate-limited, and unavailable provider outcomes truthfully.
 - Runs as an installable PWA. Offline fixture snapshots omit live fixtures and recursively remove scores before storage.
 
@@ -81,4 +81,4 @@ The smoke checks root/live/ready/version, exact SHA and asset tokens, the fixtur
 
 ## Privacy and boundaries
 
-Score preference and favorites stay in browser `localStorage`; there are no user accounts. Client favorites are not notification consent. Events, lineups, detailed statistics, and notifications remain unavailable until legitimate providers and required consent infrastructure exist. Streaming services are shown only when a provider reports them for a fixture; each service's region is shown when the provider supplies one and labelled "Region unknown" otherwise; links point only at a service's own official homepage, never a guessed URL, and are omitted entirely for any service the app cannot verify. No match streams are hosted or provided by this application.
+Score visibility is session-scoped and starts hidden in each new session; no user accounts, persistent favorites, saved defaults, or cross-device synchronization exist. Timezone, date, filters, and selected fixture state may be URL-backed. Legacy browser favorite keys are not read. Events, lineups, detailed statistics, and notifications remain unavailable until legitimate providers and required consent infrastructure exist. Streaming services are shown only when a provider reports them for a fixture; each service's region is shown when the provider supplies one and labelled "Region unknown" otherwise; links point only at a service's own official homepage, never a guessed URL, and are omitted entirely for any service the app cannot verify. No match streams are hosted or provided by this application.

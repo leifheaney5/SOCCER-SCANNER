@@ -7,9 +7,13 @@ const [crestModule, fixtureRendererModule, fixtureStateModule] = await Promise.a
     import(versionedModule('./fixture-renderer.js')),
     import(versionedModule('./fixture-state.js')),
 ]);
+const timeZoneModule = await import(versionedModule('./time-zone.js'));
+const statusModule = await import(versionedModule('./match-status.js'));
 const {createCrest} = crestModule;
 const {createScoreNode, formatFreshness, resolveStreamingServices} = fixtureRendererModule;
 const {statusKind} = fixtureStateModule;
+const {formatDateTime, formatFixtureDate, formatKickoff} = timeZoneModule;
+const {statusLabel: canonicalStatusLabel} = statusModule;
 
 function node(tag, className = '', text = '') {
     const element = document.createElement(tag);
@@ -23,27 +27,9 @@ function sentenceCase(value) {
     return words ? words.charAt(0).toLocaleUpperCase() + words.slice(1) : '';
 }
 
-function statusText(match) {
-    const raw = String(match?.status || '').toUpperCase();
-    if (raw === 'PAUSED' || raw === 'HALFTIME') return 'Half-time';
-    const kind = statusKind(match);
-    if (kind === 'live') return 'Live now';
-    if (kind === 'finished') return 'Full-time';
-    if (kind === 'upcoming') return 'Upcoming';
-    return sentenceCase(kind);
-}
-
-function localKickoff(match) {
-    const date = new Date(match?.utcDate);
-    if (Number.isNaN(date.getTime())) return 'Kickoff time unavailable';
-    return date.toLocaleString([], {
-        weekday: 'long',
-        month: 'long',
-        day: 'numeric',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-    });
+function localKickoff(match, timeZone) {
+    if (!match?.utcDate) return 'Kickoff time unavailable';
+    return `${formatFixtureDate(match.utcDate, timeZone)} at ${formatKickoff(match.utcDate, timeZone)}`;
 }
 
 function focusableElements(dialog) {
@@ -91,6 +77,22 @@ function createStreamingSection(match) {
     const list = node('ul', 'context-streaming-list');
     for (const service of services) {
         const item = node('li', 'context-streaming-item');
+        const icon = typeof service.logoPath === 'string'
+            ? node('img', 'streaming-service-icon streaming-service-icon--image')
+            : node('span', 'streaming-service-icon streaming-service-icon--generic');
+        icon.setAttribute('aria-hidden', 'true');
+        if (icon.tagName === 'IMG') {
+            icon.src = service.logoPath.startsWith('/static/') && !service.logoPath.includes('://')
+                ? service.logoPath
+                : '';
+            icon.alt = '';
+            icon.width = 28;
+            icon.height = 28;
+            icon.addEventListener('error', () => {
+                icon.replaceWith(node('span', 'streaming-service-icon streaming-service-icon--generic'));
+            });
+        }
+        item.append(icon);
         if (service.officialUrl) {
             const link = node('a', 'context-streaming-link', service.displayName);
             link.href = service.officialUrl;
@@ -114,7 +116,7 @@ function createStreamingSection(match) {
     return section;
 }
 
-function createSourceInspector(match) {
+function createSourceInspector(match, timeZone) {
     const inspector = node('details', 'source-inspector');
     inspector.append(node('summary', '', 'Source and freshness'));
     const evidence = node('dl', 'source-inspector-list');
@@ -126,7 +128,7 @@ function createSourceInspector(match) {
         const updated = new Date(updatedAt);
         addMeta(evidence, 'Freshness', Number.isNaN(updated.getTime())
             ? freshness
-            : `${freshness} · ${updated.toLocaleString()}`);
+            : `${freshness} · ${formatDateTime(updatedAt, timeZone, {year: 'numeric'})} · ${timeZone}`);
     }
     const missingFields = match?.dataQuality?.missingFields;
     if (Array.isArray(missingFields) && missingFields.length) {
@@ -138,12 +140,12 @@ function createSourceInspector(match) {
     return inspector;
 }
 
-function createContextContent(match, revealed, headingId) {
+function createContextContent(match, revealed, headingId, timeZone) {
     const fragment = document.createDocumentFragment();
     const competition = node('p', 'context-competition', match?.competition?.name || 'Competition unavailable');
     const heading = node('h2', 'context-heading', `${match?.homeTeam?.name || 'Home team'} — ${match?.awayTeam?.name || 'Away team'}`);
     if (headingId) heading.id = headingId;
-    const status = node('p', `context-status context-status--${statusKind(match)}`, statusText(match));
+    const status = node('p', `context-status context-status--${statusKind(match)}`, canonicalStatusLabel(match));
     const matchup = node('div', 'context-matchup');
     matchup.append(
         createTeam(match?.homeTeam),
@@ -152,7 +154,7 @@ function createContextContent(match, revealed, headingId) {
     );
 
     const details = node('dl', 'context-meta');
-    addMeta(details, 'Local kickoff', localKickoff(match));
+    addMeta(details, 'Local kickoff', localKickoff(match, timeZone));
     addMeta(details, 'Venue', match?.venue);
     addMeta(details, 'Matchday', match?.matchday ?? match?.season?.currentMatchday ? `Matchday ${match?.matchday ?? match?.season?.currentMatchday}` : null);
     addMeta(details, 'Stage', sentenceCase(match?.stage));
@@ -163,7 +165,7 @@ function createContextContent(match, revealed, headingId) {
         const copy = node('button', 'control-button', 'Copy fixture link');
         copy.type = 'button';
         copy.addEventListener('click', async () => {
-            const link = `${location.origin}/fixtures/${encodeURIComponent(fixtureId)}`;
+            const link = `${location.origin}/fixtures/${encodeURIComponent(fixtureId)}?timezone=${encodeURIComponent(timeZone)}`;
             try {
                 await navigator.clipboard.writeText(link);
                 copy.textContent = 'Link copied';
@@ -179,7 +181,7 @@ function createContextContent(match, revealed, headingId) {
     const streamingSection = createStreamingSection(match);
     fragment.append(competition, heading, status, matchup, details);
     if (streamingSection) fragment.append(streamingSection);
-    fragment.append(actions, createSourceInspector(match));
+    fragment.append(actions, createSourceInspector(match, timeZone));
     return fragment;
 }
 
@@ -190,6 +192,7 @@ export function createMatchContext({
     dialogContent,
     closeButton,
     getRevealed,
+    getTimezone,
     onClose,
     dialogManager,
 }) {
@@ -207,6 +210,7 @@ export function createMatchContext({
             currentMatch,
             getRevealed(),
             desktop() ? 'match-context-title' : null,
+            getTimezone(),
         ));
         panel.classList.toggle('has-selection', desktop());
     }
@@ -236,6 +240,12 @@ export function createMatchContext({
             node('p', '', 'Choose a match to inspect the kickoff, venue, competition, and both teams.'),
         );
         close({restoreFocus: false});
+    }
+
+    function update(match) {
+        if (!match) return;
+        currentMatch = match;
+        render();
     }
 
     function onViewportChange() {
@@ -283,6 +293,7 @@ export function createMatchContext({
         open,
         close,
         reset,
+        update,
         rerender: render,
         selected: () => currentMatch,
     };

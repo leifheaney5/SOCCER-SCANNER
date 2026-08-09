@@ -62,7 +62,9 @@
 .calendar-teams span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .calendar-score { min-width: 90px; align-self: center; }
 .calendar-empty { padding: 18px 14px; color: var(--text-muted); font-size: 13px; }
-.calendar-error { padding: 20px; color: var(--text-secondary); }
+.calendar-day-message { display: grid; gap: 12px; padding: 18px 14px; color: var(--text-secondary); font-size: 13px; }
+.calendar-day-notice { margin: 0; padding: 10px 14px; color: var(--text-muted); font-size: 12px; }
+.calendar-retry { justify-self: start; min-height: 40px; padding: 0 12px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-secondary); color: var(--text-primary); font-weight: 650; }
 
 @media (max-width: 1100px) {
     .calendar-results[data-view="grid"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }

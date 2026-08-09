@@ -486,7 +486,7 @@ test('desktop fixture selection populates complete spoiler-safe match context', 
 
     const context = page.locator('#match-context');
     await expect(context).toContainText('Premier League');
-    await expect(context).toContainText('Live now');
+    await expect(context).toContainText('Live');
     await expect(context).toContainText('Monday, August 3');
     await expect(context).toContainText('Scanner Stadium');
     await expect(context.getByRole('button', {name: 'Copy fixture link'})).toBeVisible();

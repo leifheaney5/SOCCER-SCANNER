@@ -16,7 +16,9 @@ Football-Data.org is optional and disabled when `FOOTBALL_DATA_API_KEY` is absen
 
 ## SofaScore
 
-League tables use a SofaScore iframe only after explicit visitor activation. The embed is third-party presentation, not ingested data, not part of `/api/v2`, and not reported as a supported canonical standings capability.
+League tables use a SofaScore iframe only after explicit visitor activation. The embed is third-party presentation, not ingested data, not part of `/api/v2`, and not reported as a supported canonical standings capability. Season and tournament IDs are external configuration with an explicit verification date, review deadline, and competition-specific season type; rollover or expired-review warnings are shown rather than silently presenting an unverified table.
+
+Streaming listings are provider-reported only. Verified services may carry a local service icon and official homepage URL; unknown names remain unlinked text with an honest region label. No stream URL is inferred.
 
 ## Provenance rules
 

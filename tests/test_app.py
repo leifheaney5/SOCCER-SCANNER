@@ -111,6 +111,14 @@ class SoccerScannerRoutesTest(unittest.TestCase):
         self.assertNotIn('97', calendar.get_data(as_text=True))
         self.assertNotIn('96', calendar.get_data(as_text=True))
 
+    def test_sitemap_excludes_disabled_team_intelligence_and_internal_surfaces(self):
+        sitemap = self.client.get('/sitemap.xml').get_data(as_text=True)
+        self.assertNotIn('https://soccerscanner.pro/teams', sitemap)
+        self.assertNotIn('/api/', sitemap)
+        self.assertNotIn('/health/', sitemap)
+        self.assertNotIn('/offline', sitemap)
+        self.assertNotIn('/terms', sitemap)
+
     def _deep_link_for(self, query=''):
         """Redirect a fixture kicking off just after UTC midnight."""
         fixture_id = 'fx_' + ('b' * 24)

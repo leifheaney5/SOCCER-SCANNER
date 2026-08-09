@@ -16,6 +16,7 @@ const {describeStatus, statusShortLabel, statusLabel: canonicalStatusLabel} = st
 const {
     formatKickoff: formatKickoffInZone,
     formatFixtureDate,
+    formatDateTime,
     resolveTimeZone,
 } = timeZoneModule;
 
@@ -192,6 +193,34 @@ function enrichedStreamingServices(match) {
     );
 }
 
+function localLogoPath(value) {
+    return typeof value === 'string' && value.startsWith('/static/') && !value.includes('://')
+        ? value
+        : null;
+}
+
+function createGenericStreamingIcon(size) {
+    const icon = node('span', 'streaming-service-icon streaming-service-icon--generic');
+    icon.style.setProperty('--streaming-icon-size', `${size}px`);
+    icon.setAttribute('aria-hidden', 'true');
+    return icon;
+}
+
+function createStreamingIcon(service, size = 18) {
+    const logoPath = localLogoPath(service?.logoPath);
+    if (!logoPath) return createGenericStreamingIcon(size);
+    const image = node('img', 'streaming-service-icon streaming-service-icon--image');
+    image.src = logoPath;
+    image.alt = '';
+    image.width = size;
+    image.height = size;
+    image.loading = 'lazy';
+    image.decoding = 'async';
+    image.setAttribute('aria-hidden', 'true');
+    image.addEventListener('error', () => image.replaceWith(createGenericStreamingIcon(size)));
+    return image;
+}
+
 // Normalizes both payload shapes into one array so callers (the card and the
 // detail panel) never need to know which shape they received. Legacy
 // entries carry no verified region or link — `region`/`officialUrl` stay
@@ -215,13 +244,18 @@ function createStreamingNode(match) {
     if (Array.isArray(match?.streaming)) {
         const [first, ...rest] = services;
         const label = `${first.displayName} · ${first.region}`;
-        const summary = node('span', 'fixture-broadcast', rest.length ? `${label} +${rest.length}` : label);
+        const summary = node('span', 'fixture-broadcast');
+        summary.append(
+            createStreamingIcon(first),
+            node('span', '', rest.length ? `${label} +${rest.length}` : label),
+        );
         const watchWhere = services.map(service => `${service.displayName} (${service.region})`).join(', ');
         summary.setAttribute('aria-label', `Watch on ${watchWhere}`);
         return summary;
     }
     const text = `Streaming: ${services.map(service => service.displayName).join(', ')}`;
-    const summary = node('span', 'fixture-broadcast', text);
+    const summary = node('span', 'fixture-broadcast');
+    summary.append(createStreamingIcon(services[0]), node('span', '', text));
     summary.setAttribute('aria-label', text);
     return summary;
 }
@@ -345,7 +379,11 @@ export function renderSummary(container, matches, payload) {
     if (lastUpdated) {
         const updated = new Date(lastUpdated);
         if (!Number.isNaN(updated.getTime())) {
-            items.push(node('span', 'summary-updated', `Updated ${updated.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}`));
+            items.push(node(
+                'span',
+                'summary-updated',
+                `Updated ${formatDateTime(lastUpdated, activeTimeZone)} · ${activeTimeZone}`,
+            ));
         }
     }
     container.replaceChildren(...items);

@@ -15,9 +15,10 @@ import {
 
 test('every canonical status declares a complete behaviour contract', () => {
     const expected = [
-        'scheduled', 'delayed', 'in_progress', 'half_time', 'extra_time',
-        'penalties', 'finished', 'postponed', 'cancelled', 'suspended',
-        'abandoned', 'unknown',
+        'scheduled', 'delayed', 'in_progress', 'first_half', 'second_half',
+        'half_time', 'extra_time', 'penalties', 'finished_extra_time',
+        'finished_penalties', 'finished', 'postponed', 'cancelled',
+        'suspended', 'abandoned', 'unknown',
     ];
     assert.deepEqual(Object.keys(MATCH_STATUSES).sort(), [...expected].sort());
     for (const [key, status] of Object.entries(MATCH_STATUSES)) {
@@ -37,6 +38,9 @@ test('every canonical status declares a complete behaviour contract', () => {
 test('provider codes normalise onto the canonical taxonomy', () => {
     assert.equal(resolveStatus({status: 'IN_PLAY'}), 'in_progress');
     assert.equal(resolveStatus({status: 'LIVE'}), 'in_progress');
+    assert.equal(resolveStatus({status: 'FIRST_HALF'}), 'first_half');
+    assert.equal(resolveStatus({status: 'SECOND_HALF'}), 'second_half');
+    assert.equal(resolveStatus({status: {code: 'in_progress', raw: 'STATUS_FIRST_HALF'}}), 'first_half');
     assert.equal(resolveStatus({status: 'PAUSED'}), 'half_time');
     assert.equal(resolveStatus({status: 'HALFTIME'}), 'half_time');
     assert.equal(resolveStatus({status: 'HALF_TIME'}), 'half_time');
@@ -53,6 +57,8 @@ test('provider codes normalise onto the canonical taxonomy', () => {
     assert.equal(resolveStatus({status: 'DELAYED'}), 'delayed');
     assert.equal(resolveStatus({status: 'SCHEDULED'}), 'scheduled');
     assert.equal(resolveStatus({status: 'TIMED'}), 'scheduled');
+    assert.equal(resolveStatus({status: 'FINISHED_AFTER_EXTRA_TIME'}), 'finished_extra_time');
+    assert.equal(resolveStatus({status: 'FINISHED_AFTER_PENALTIES'}), 'finished_penalties');
 });
 
 test('object-shaped and missing statuses resolve safely', () => {

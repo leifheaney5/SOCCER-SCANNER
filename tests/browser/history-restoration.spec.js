@@ -95,7 +95,7 @@ test('changing timezone then going Back restores the previous timezone and keeps
     await page.locator('#timezone-filter').selectOption('Europe/London');
     await expect(page.locator('#dashboard-status')).toContainText('fixtures shown');
     await expect.poll(() => page.evaluate(() => location.search)).toContain('timezone=Europe%2FLondon');
-    await expect(page.locator('#match-context')).not.toContainText('Arsenal');
+    await expect(page.locator('#match-context')).toContainText('Arsenal');
 
     // The fixture itself is unchanged by a zone change, so Back should
     // restore it exactly as it restores the timezone.
@@ -104,6 +104,58 @@ test('changing timezone then going Back restores the previous timezone and keeps
     await expect(page.locator('#timezone-filter')).toHaveValue('America/New_York');
     await expect.poll(() => page.evaluate(() => location.search)).toContain('fixture=fx-arsenal');
     await expect(page.locator('#match-context')).toContainText('Arsenal');
+});
+
+test.describe('selected timezone is authoritative for fixture detail', () => {
+    test.use({timezoneId: 'UTC'});
+
+    test('keeps a cross-midnight fixture selected and formats card/detail in the selected zone', async ({page}) => {
+        const boundaryMatch = {
+            ...dayOnePayload.matches[0],
+            canonicalFixtureId: 'fx-boundary',
+            utcDate: '2026-08-03T23:45:00Z',
+            sourceUpdatedAt: '2026-08-03T12:00:00Z',
+        };
+        await page.unroute('**/api/v2/fixtures**');
+        await page.route('**/api/v2/fixtures**', route => {
+            const requestedDate = new URL(route.request().url()).searchParams.get('date');
+            return route.fulfill({
+                contentType: 'application/json',
+                body: JSON.stringify({
+                    ...dayOnePayload,
+                    date: requestedDate,
+                    matches: [boundaryMatch],
+                }),
+            });
+        });
+        await page.goto('/?date=2026-08-03&timezone=America%2FNew_York');
+        await expect(page.locator('#dashboard-status')).toContainText('fixtures shown');
+
+        await page.locator('.fixture-card[data-fixture-id="fx-boundary"] .details-button').click();
+        await expect(page.locator('.fixture-card[data-fixture-id="fx-boundary"] .score-display--kickoff')).toHaveText('07:45 PM');
+        await expect(page.locator('#match-context')).toContainText('07:45 PM');
+        await page.locator('#match-context').getByText('Source and freshness').click();
+        await expect(page.locator('#match-context')).toContainText('America/New_York');
+        await page.evaluate(() => {
+            window.__copiedFixtureLink = '';
+            Object.defineProperty(navigator, 'clipboard', {
+                configurable: true,
+                value: {writeText: value => { window.__copiedFixtureLink = value; return Promise.resolve(); }},
+            });
+        });
+        await page.locator('#match-context').getByRole('button', {name: 'Copy fixture link'}).click();
+        await expect.poll(() => page.evaluate(() => window.__copiedFixtureLink)).toContain('timezone=America%2FNew_York');
+
+        await page.locator('#timezone-filter').selectOption('Europe/London');
+        await expect(page.locator('#dashboard-status')).toContainText('fixtures shown');
+        await expect.poll(() => page.evaluate(() => location.search)).toContain('date=2026-08-04');
+        await expect.poll(() => page.evaluate(() => location.search)).toContain('timezone=Europe%2FLondon');
+        await expect.poll(() => page.evaluate(() => location.search)).toContain('fixture=fx-boundary');
+        await expect(page.locator('#match-context')).toContainText('Arsenal');
+        await expect(page.locator('.fixture-card[data-fixture-id="fx-boundary"]')).toHaveAttribute('aria-current', 'true');
+        await expect(page.locator('.fixture-card[data-fixture-id="fx-boundary"] .score-display--kickoff')).toHaveText('12:45 AM');
+        await expect(page.locator('#match-context')).toContainText('12:45 AM');
+    });
 });
 
 test('filters and sort survive a Back navigation', async ({page}) => {

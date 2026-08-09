@@ -11,13 +11,15 @@ Record the exact commit SHA and link the evidence for every completed gate.
 
 ## Current checkout
 
-- Audited date: 2026-08-07.
-- Current branch: `main`.
-- The working tree contains uncommitted product changes. A fresh macOS CI run
-  for the commit intended for release is required.
-- Read-only production health/version/provider and exact-SHA smoke checks were
-  performed on 2026-08-07. No deployment, Apple Developer, App Store Connect,
-  TestFlight, or secret access was performed while preparing this checklist.
+- Audited date: 2026-08-08.
+- Release candidate branch: `agent/final-completion-validation`.
+- The working tree contains the final-completion candidate changes. The exact
+  release SHA, macOS CI run, merge, Railway deployment, and production smoke
+  result are recorded only after those steps complete.
+- The last deployed baseline before this candidate was
+  `7759b5dd1ec33ef7b70ab87488593ad4b4c749ba`.
+- No Apple Developer, App Store Connect, TestFlight, or secret access is
+  performed by this checklist.
 
 ## Repository-controlled and automatable
 
@@ -66,33 +68,33 @@ command output where applicable.
   legal-placeholder and verified-support-URL gates before building. A current macOS workflow
   run is still required as evidence for the generated project and simulator
   behavior.
-- [x] Run the repository verification matrix on the current uncommitted tree:
-  Python tests (253 plus 72 subtests), Node tests (41), smoke invariants (4),
-  full Chromium (92) and WebKit (92) browser suites, syntax/compile checks,
-  release-asset validation, audit checks, and `git diff --check`. The exact
-  combined two-project Playwright invocation passed 184 tests in 3.1 minutes
-  after the
-  WebKit-native-dialog focus restoration fix.
-- [x] Run the production smoke script after the audited HEAD deployment, with the exact
-  deployed SHA and environment recorded:
+- [x] Run the repository verification matrix on the current candidate tree:
+  Python tests (`264 passed, 72 subtests`), Node tests, smoke invariants (4),
+  full Chromium and WebKit browser suites (94 each), JavaScript syntax, Python
+  compile, release-asset validation, npm audit, requirements-scoped pip-audit,
+  and `git diff --check`. Chromium and WebKit were run independently after the
+  combined runner exposed a stale expectation plus a server cascade; both
+  independent runs passed.
+- [ ] Run the production smoke script after the candidate deployment, with the
+  exact deployed SHA and environment recorded:
 
   ```powershell
   $env:BASE_URL = 'https://soccerscanner.pro'
-  $env:EXPECTED_SHA = '00557a8aee66c48663560f9b1380c6e2bd4b78ed'
+  $env:EXPECTED_SHA = '<candidate-full-sha>'
   $env:EXPECTED_ENVIRONMENT = 'production'
   npm run smoke:production
   ```
 
-  Result: passed with `status: ok`, `fixtureStatus: 200`, `fixtureState: success`,
-  79 fixtures, and 79 unique IDs. This verifies the audited committed baseline;
-  the current uncommitted tree is not claimed to be deployed.
-- [x] Confirm production `/health/live`, `/health/ready`, `/health/version`,
-  fixture responses, spoiler-safe behavior, console/static errors, and the 320px
-  smoke path using the production-smoke result. A green local test is not a
-  production check; the public smoke passed these checks.
-- [x] Run the dependency/security checks required by `docs/testing.md`, recording
-  unavailable tools rather than treating them as passed: npm audit passed with
-  0 vulnerabilities; `pip-audit` is unavailable on this Windows host.
+  The smoke now also checks public robots/sitemap, favicon/manifest, the local
+  streaming icon, Terms noindex behavior, the timezone control, asset-version
+  tokens, spoiler safety, unique fixture IDs, and 320px layout safety.
+- [ ] Confirm production `/health/live`, `/health/ready`, `/health/version`,
+  fixture responses, spoiler-safe behavior, console/static errors, public
+  assets, and the 320px smoke path using the candidate production-smoke result.
+- [x] Run the dependency/security checks required by `docs/testing.md`:
+  `npm audit --audit-level=high` passed with 0 vulnerabilities and
+  `python -m pip_audit -r requirements.txt --progress-spinner off` passed with
+  no known vulnerabilities.
 
 ## Human, portal, and external-configuration blockers
 
@@ -142,9 +144,9 @@ the values below when they are credentials or environment-specific secrets.
   coverage. It is currently documented as absent; do not commit or print the
   credential. After configuration, verify `/health/providers`, fallback, and
   partial/stale behavior without claiming identical provider coverage.
-- [x] The audited production deployment is identified by exact SHA
-  `00557a8aee66c48663560f9b1380c6e2bd4b78ed`, and the production smoke result is
-  attached above. A future release commit still requires a new result.
+- [ ] The candidate production deployment is identified by exact SHA and the
+  matching production smoke result is attached above. The prior baseline SHA
+  is retained in the Current checkout section for historical reference only.
 - [ ] The release build is installed on physical devices through TestFlight;
   Dynamic Type, VoiceOver, safe areas, Universal Links, spoiler behavior, and
   representative offline/provider-error states are reviewed.

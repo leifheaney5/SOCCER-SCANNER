@@ -4,7 +4,7 @@ A native SwiftUI client for the Soccer Scanner v2 API. It is not a web-view wrap
 
 ## Current scope
 
-The fixture list is the current native surface. It loads a selected calendar day in an explicit IANA timezone, provides previous/today/next and date-picker navigation, and filters loaded fixtures locally by status and search text. A row opens native fixture detail; scores begin hidden for each launch and can be revealed or hidden from either the list toolbar or the detail screen. When a fixture contains a verified canonical team ID, its detail screen can open on-demand provider-verified team identity and aggregate season statistics without rendering match-level scores.
+The fixture list is the current native surface. It loads a selected calendar day in an explicit IANA timezone, provides previous/today/next and date-picker navigation, and filters loaded fixtures locally by status and search text. A row opens native fixture detail; scores begin hidden for each launch and can be revealed or hidden from either the list toolbar or the detail screen. Team Intelligence is disabled for this release and is not exposed from native fixture detail.
 
 Fixture links are parsed by the app root from both `onOpenURL` and Universal Link user activities. Only a validated fixture route is consumed natively; unsupported or malformed routes leave the fixture list usable. The route lookup uses the typed fixture endpoint and reports a missing fixture without inventing a destination.
 
@@ -32,7 +32,7 @@ clients/ios/
 
 Windows cannot run Xcode, `xcodebuild`, iOS Simulator tests, or compile this target. The `.github/workflows/ios.yml` `iOS` workflow generates the Xcode project, validates the source and generated release settings, selects an available simulator, then runs the full unit/UI test scheme with signing disabled. It uploads both the `.xcresult` bundle and raw `xcodebuild` output when the run finishes.
 
-Historical evidence recorded on 2026-08-05 shows an earlier `iOS` workflow run passed 36 unit tests and 5 UI tests. It does not verify the current uncommitted native P0 changes. A fresh macOS workflow run for the commit containing those changes is required before calling this client compiled or its UI tests passing.
+Historical evidence recorded on 2026-08-05 shows an earlier `iOS` workflow run passed 36 unit tests and 5 UI tests. It does not verify the current release candidate. A fresh macOS workflow run for the candidate commit is required before calling this client compiled or its UI tests passing.
 
 The native client points production configuration at `https://soccerscanner.pro`.
 The audited committed HEAD was read-only smoke-verified there on 2026-08-07, but
@@ -101,9 +101,9 @@ not a substitute for an authenticated macOS CI run or portal review.
 - Calendar and global search do not yet have native screens. The server's
   `calendar_range_api` and `search` feature flags are currently disabled and no
   versioned native endpoint contract exists; the fixture list's local search is
-  the supported search surface for this release. Team intelligence is
-  intentionally reachable from fixture detail rather than being a primary tab;
-  dedicated team routes remain web-only.
+  the supported search surface for this release. Team Intelligence is disabled
+  across web, API, and native user-facing surfaces; its dormant compatibility
+  code remains out of the release navigation.
 - Physical-device accessibility validation, including VoiceOver and safe-area behaviour, requires macOS/device testing.
 - The native client does not persist fixture snapshots yet: disconnected launches
   show the typed unavailable state rather than presenting unverified cached data.

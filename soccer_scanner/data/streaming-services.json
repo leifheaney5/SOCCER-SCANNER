@@ -8,6 +8,7 @@
       "aliases": ["peacock", "peacock premium", "peacock tv"],
       "domains": ["peacocktv.com"],
       "officialUrl": "https://www.peacocktv.com/",
+      "logoPath": "/static/icons/streaming/peacock.svg",
       "requiresAttribution": false
     },
     {

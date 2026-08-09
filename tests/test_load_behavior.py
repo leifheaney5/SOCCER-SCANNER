@@ -12,17 +12,18 @@ from soccer_scanner.services.fixture_service import CanonicalFixtureService
 
 
 class SlowProvider:
-    def __init__(self, name, status, fixtures=()):
+    def __init__(self, name, status, fixtures=(), delay=0.04):
         self.provider_name = name
         self.status = status
         self.fixtures = tuple(fixtures)
+        self.delay = delay
         self.calls = 0
         self.lock = threading.Lock()
 
     def fetch_range(self, _start, _end, *, budget=None):
         with self.lock:
             self.calls += 1
-        time.sleep(0.04)
+        time.sleep(self.delay)
         return ProviderOutcome(
             provider=self.provider_name,
             status=self.status,
@@ -74,6 +75,31 @@ def test_simultaneous_timezone_requests_share_provider_fills():
     assert football.calls == 1
     assert {result['timezone'] for result in results} == {'UTC', 'Africa/Abidjan'}
     assert all(len(result['matches']) == 1 for result in results)
+
+
+def test_independent_providers_run_under_one_shared_deadline():
+    espn = SlowProvider(
+        'espn', ProviderStatus.SUCCESS, [normalized_fixture()], delay=0.2,
+    )
+    football = SlowProvider(
+        'football-data', ProviderStatus.SUCCESS, [], delay=0.2,
+    )
+    cache = MemoryCacheBackend(default_ttl_seconds=60, metrics=MetricsRegistry())
+    service = CanonicalFixtureService(
+        espn,
+        football,
+        cache,
+        provider_budget_seconds=0.8,
+    )
+
+    started = time.monotonic()
+    response = service.fixtures_for_date(date(2026, 8, 3), 'UTC')
+    elapsed = time.monotonic() - started
+
+    assert elapsed < 0.35, f'provider execution was sequential: {elapsed:.3f}s'
+    assert response['state'] == 'success'
+    assert response['providers']['espn']['status'] == 'success'
+    assert response['providers']['football-data']['status'] == 'success'
 
 
 def test_independent_cache_keys_fill_concurrently_without_a_global_lock():

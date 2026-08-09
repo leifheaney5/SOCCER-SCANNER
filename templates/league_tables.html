@@ -24,6 +24,15 @@
             the current season.
         </div>
         {% endif %}
+        {% if standings_warnings %}
+        <div class="standings-notice" role="status">
+            <strong>Season configuration awaiting verification.</strong>
+            {% for warning in standings_warnings %}
+            <span>{{ warning.name }} is configured for {{ warning.season }} and needs provider review.</span>
+            {% endfor %}
+            Do not treat an unavailable or mismatched table as verified current data.
+        </div>
+        {% endif %}
         <div class="standings-controls">
             <label for="league-selector">Competition</label>
             <select id="league-selector" class="league-selector">

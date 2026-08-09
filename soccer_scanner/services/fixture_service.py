@@ -1,6 +1,7 @@
 """Truthful orchestration for the canonical fixture API."""
 
 from dataclasses import asdict
+from concurrent.futures import ThreadPoolExecutor, wait
 from datetime import datetime, time, timedelta, timezone
 import logging
 from zoneinfo import ZoneInfo
@@ -113,15 +114,15 @@ class CanonicalFixtureService:
         # number of providers.
         request_budget = RequestBudget(self.provider_budget_seconds)
 
-        for provider in self.providers:
+        def load_provider(provider):
             provider_name = self._provider_name(provider)
             cache_key = (
                 f'provider-fixtures:{provider_name}:'
                 f'{provider_start.isoformat()}:{provider_end.isoformat()}'
             )
 
-            def load(selected=provider):
-                provider_outcome = selected.fetch_range(
+            def load():
+                provider_outcome = provider.fetch_range(
                     provider_start,
                     provider_end,
                     budget=request_budget,
@@ -140,40 +141,29 @@ class CanonicalFixtureService:
                     ttl_seconds=self.cache_ttl_seconds,
                     stale_ttl_seconds=self.stale_ttl_seconds,
                 )
-                provider_cache[provider_name] = lookup.status
-                outcome = _dict_outcome(lookup.value)
-                self._record_provider_health(outcome)
-                if outcome.status is not ProviderStatus.DISABLED:
-                    current.append(outcome)
-                else:
-                    current.append(outcome)
+                return {
+                    'provider': provider_name,
+                    'cache': lookup.status,
+                    'outcome': _dict_outcome(lookup.value),
+                    'stale': None,
+                }
             except _ProviderFailure as error:
-                failed.append(error.outcome)
-                self._record_provider_health(error.outcome)
-                provider_cache[provider_name] = 'miss'
+                stale_value = None
                 stale_lookup = self.cache.get(cache_key, allow_stale=True)
                 if stale_lookup.status == 'stale':
-                    stale.append(_dict_outcome(stale_lookup.value))
-            except Exception as error:
-                # Anything else (a cache-layer fault such as an oversized or
-                # unserializable value, a Redis timeout, a parse error in
-                # _outcome_dict, ...) must not take the whole request down:
-                # the other provider still deserves a chance. But this
-                # provider's outcome must be recorded as failed — both in
-                # `failed` (so `is_partial` and the response's
-                # `providers`/`coverage` blocks reflect reality instead of
-                # being composed as if only healthy providers existed) and
-                # in the health registry — and a within-TTL stale snapshot
-                # should still be served if one exists. `detail` stays a
-                # fixed, controlled string — never the exception message —
-                # because it is echoed by the public unauthenticated
-                # /health/providers endpoint; the exception itself is logged
-                # server-side only.
+                    stale_value = _dict_outcome(stale_lookup.value)
+                return {
+                    'provider': provider_name,
+                    'cache': 'miss',
+                    'outcome': None,
+                    'failed': error.outcome,
+                    'stale': stale_value,
+                }
+            except Exception:
                 logger.exception(
                     'Unhandled error while fetching fixtures from provider %r',
                     provider_name,
                 )
-                provider_cache[provider_name] = 'miss'
                 failure_outcome = ProviderOutcome(
                     provider=provider_name,
                     status=ProviderStatus.UNAVAILABLE,
@@ -187,21 +177,71 @@ class CanonicalFixtureService:
                     durationMs=0,
                     failureCategories=('internal_error',),
                 )
-                failed.append(failure_outcome)
-                self._record_provider_health(failure_outcome)
+                stale_value = None
                 try:
                     stale_lookup = self.cache.get(cache_key, allow_stale=True)
+                    if stale_lookup.status == 'stale':
+                        stale_value = _dict_outcome(stale_lookup.value)
                 except Exception:
-                    # The cache itself may be what just failed; a second
-                    # exception here must not escape and kill the request.
                     logger.exception(
                         'Stale-cache fallback also failed for provider %r',
                         provider_name,
                     )
-                    stale_lookup = None
-                if stale_lookup is not None and stale_lookup.status == 'stale':
-                    stale.append(_dict_outcome(stale_lookup.value))
-                continue
+                return {
+                    'provider': provider_name,
+                    'cache': 'miss',
+                    'outcome': None,
+                    'failed': failure_outcome,
+                    'stale': stale_value,
+                }
+
+        executor = ThreadPoolExecutor(
+            max_workers=min(len(self.providers), 2),
+            thread_name_prefix='soccer-fixture-provider',
+        )
+        futures = [executor.submit(load_provider, provider) for provider in self.providers]
+        done, pending = wait(futures, timeout=request_budget.remaining())
+        executor.shutdown(wait=False, cancel_futures=True)
+        results = []
+        for provider, future in zip(self.providers, futures):
+            provider_name = self._provider_name(provider)
+            if future in pending:
+                timeout_outcome = ProviderOutcome(
+                    provider=provider_name,
+                    status=ProviderStatus.UNAVAILABLE,
+                    fixtures=(),
+                    requestedResources=(),
+                    completedResources=(),
+                    requestCount=0,
+                    timeoutCount=1,
+                    rateLimitCount=0,
+                    sourceUpdatedAt=None,
+                    durationMs=round(self.provider_budget_seconds * 1000),
+                    failureCategories=('timeout',),
+                )
+                results.append({
+                    'provider': provider_name,
+                    'cache': 'miss',
+                    'outcome': None,
+                    'failed': timeout_outcome,
+                    'stale': None,
+                })
+            else:
+                results.append(future.result())
+
+        for result in results:
+            provider_name = result['provider']
+            provider_cache[provider_name] = result['cache']
+            if result.get('outcome') is not None:
+                outcome = result['outcome']
+                self._record_provider_health(outcome)
+                current.append(outcome)
+            if result.get('failed') is not None:
+                outcome = result['failed']
+                failed.append(outcome)
+                self._record_provider_health(outcome)
+            if result.get('stale') is not None:
+                stale.append(result['stale'])
 
         usable_current = [
             outcome for outcome in current

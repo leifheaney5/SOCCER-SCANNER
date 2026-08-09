@@ -26,6 +26,10 @@ selector.addEventListener('change', () => {
     if (revealed) loadSelectedStandings();
     else status.textContent = `${option.textContent} selected. Choose reveal to load standings.`;
 });
+frame.addEventListener('error', () => {
+    status.textContent = `${selector.options[selector.selectedIndex].textContent} is temporarily unavailable. Open directly to retry.`;
+    status.hidden = false;
+});
 reveal.addEventListener('click', () => {
     revealed = true;
     reveal.setAttribute('aria-pressed', 'true');
