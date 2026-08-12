@@ -20,6 +20,11 @@ League tables use a SofaScore iframe only after explicit visitor activation. The
 
 Streaming listings are provider-reported only. Verified services may carry a local service icon and official homepage URL; unknown names remain unlinked text with an honest region label. No stream URL is inferred.
 
+The free-source expansion contract and rollout criteria are documented in
+[free broadcast coverage](free-broadcast-coverage.md). Additional sources must
+match individual fixtures and pass link-safety and freshness checks before they
+can enrich the public API.
+
 ## Provenance rules
 
 Every canonical fixture retains provider IDs, a `sources` list, source update time, and explicit missing verified fields. Provider failures are categorized without exposing raw exception data. Unknown fields remain absent or null; Soccer Scanner does not infer events, lineups, statistics, broadcasts, or outcomes.
