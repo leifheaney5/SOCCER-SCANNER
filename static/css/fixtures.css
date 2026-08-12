@@ -40,6 +40,7 @@ body {
     gap: 8px;
     color: var(--text-muted);
     font-size: 11px;
+    grid-area: meta;
 }
 
 .fixture-venue,
@@ -712,12 +713,13 @@ body {
 
 .fixture-card {
     min-width: 0;
-    min-height: 84px;
-    padding: 10px 12px;
+    min-height: 72px;
+    padding: 8px 12px;
     display: grid;
-    grid-template-columns: 84px minmax(0, 1fr) 132px 88px;
+    grid-template-columns: 84px minmax(0, 1fr) minmax(132px, auto) minmax(160px, auto) 88px;
     align-items: center;
-    gap: 14px;
+    gap: 12px;
+    grid-template-areas: "status teams result meta action";
     overflow: hidden;
     border-bottom: 1px solid #242424;
     background: var(--bg-card);
@@ -743,6 +745,7 @@ body {
 }
 
 .fixture-status {
+    grid-area: status;
     min-width: 0;
     display: flex;
     flex-direction: column;
@@ -860,6 +863,7 @@ body {
 }
 
 .fixture-teams {
+    grid-area: teams;
     min-width: 0;
     display: grid;
     gap: 6px;
@@ -980,6 +984,7 @@ body {
     display: grid;
     justify-items: center;
     gap: 3px;
+    grid-area: result;
 }
 
 .fixture-result .fixture-broadcast {
@@ -988,6 +993,7 @@ body {
 }
 
 .fixture-action {
+    grid-area: action;
     display: flex;
     justify-content: flex-end;
 }

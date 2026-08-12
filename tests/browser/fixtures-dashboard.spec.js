@@ -284,6 +284,19 @@ test('fixtures render paired identities, crest fallbacks, groups, and live-first
     await expect(page.locator('[data-fixture-id="upcoming"] .fixture-broadcast')).toHaveCount(0);
 });
 
+test('fixture rows keep metadata on one compact desktop row', async ({page}) => {
+    await mockFixtures(page);
+    await page.setViewportSize({width: 1440, height: 900});
+    await page.goto('/?date=2026-08-03');
+    await expect(page.locator('#fixture-result-count')).toContainText('13 matches');
+
+    const card = page.locator('.fixture-card[data-fixture-id="live-secret"]');
+    await expect(card.locator('.fixture-meta')).toHaveCount(1);
+    await expect(card.locator('.fixture-meta')).toContainText('Scanner Stadium');
+    const height = await card.evaluate(element => element.getBoundingClientRect().height);
+    expect(height).toBeLessThan(120);
+});
+
 test('competition headers use official emblems and friendly category fallback', async ({page}) => {
     const friendlyPayload = structuredClone(fixturePayload);
     const friendlyMatch = structuredClone(friendlyPayload.matches[0]);
