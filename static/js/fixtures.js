@@ -15,6 +15,7 @@ const [appStoreModule, fixtureStateModule, scorePreferenceModule, fixtureRendere
 ]);
 const {createStore} = appStoreModule;
 const {
+    buildDateTabs,
     createState,
     filterMatches,
     groupMatches,
@@ -91,7 +92,8 @@ function activeFilterCount(source = state) {
         + Number(Boolean(source.query))
         + Number(source.timeWindow !== 'all')
         + Number(source.sort !== 'kickoff')
-        + Number(source.hideFinished);
+        + Number(source.hideFinished)
+        + Number(source.broadcastOnly);
 }
 
 function advancedFilterHasValues(source = state, baseline = state) {
@@ -124,7 +126,10 @@ function syncControls({filterState = filterDraft || state} = {}) {
         competition.value = filterState.competition;
     }
     document.querySelectorAll('[data-status]').forEach(button => {
-        button.setAttribute('aria-pressed', String(button.dataset.status === state.status));
+        const pressed = button.dataset.status === 'tv'
+            ? state.broadcastOnly
+            : !state.broadcastOnly && button.dataset.status === state.status;
+        button.setAttribute('aria-pressed', String(pressed));
     });
     const activeFilters = activeFilterCount(state);
     byId('active-filter-count').textContent = String(activeFilters);
@@ -134,6 +139,27 @@ function syncControls({filterState = filterDraft || state} = {}) {
         : !(activeFilters || advancedFilterHasValues(state));
     syncScoreToggle(byId('score-toggle'), scoresRevealed);
     timezoneControl?.sync();
+}
+
+function renderDateStrip() {
+    const strip = byId('date-strip');
+    if (!strip) return;
+    strip.replaceChildren(...buildDateTabs(state.date).map(tab => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'date-strip-item';
+        button.dataset.date = tab.date;
+        button.setAttribute('aria-current', tab.date === state.date ? 'date' : 'false');
+        const label = document.createElement('span');
+        label.className = 'date-strip-label';
+        label.textContent = tab.label;
+        const date = document.createElement('span');
+        date.className = 'date-strip-date';
+        date.textContent = tab.shortLabel;
+        button.append(label, date);
+        button.addEventListener('click', () => chooseDate(tab.date));
+        return button;
+    }));
 }
 
 function populateCompetitions(matches) {
@@ -329,6 +355,7 @@ function chooseDate(date) {
     selectedFixtureId = null;
     matchContext?.reset();
     syncControls();
+    renderDateStrip();
     syncUrl('push');
     loadFixtures();
 }
@@ -472,7 +499,11 @@ function bindEvents() {
     document.querySelector('.status-filters').addEventListener('click', event => {
         const button = event.target.closest('[data-status]');
         if (!button) return;
-        applyFilter({status: button.dataset.status});
+        if (button.dataset.status === 'tv') {
+            applyFilter({broadcastOnly: !state.broadcastOnly});
+            return;
+        }
+        applyFilter({status: button.dataset.status, broadcastOnly: false});
     });
     byId('fixture-search').addEventListener('input', event => {
         clearTimeout(searchTimer);
@@ -559,6 +590,8 @@ function bindEvents() {
     });
     byId('refresh-fixtures').addEventListener('click', () => refreshController?.refresh('manual'));
 }
+
+renderDateStrip();
 
 function init() {
     const dialogManager = createDialogManager();

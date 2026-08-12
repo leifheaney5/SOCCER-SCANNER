@@ -35,6 +35,19 @@ export function shiftDate(value, amount, timezone = undefined) {
     return calendarDateInZone(date, 'UTC');
 }
 
+export function buildDateTabs(selectedDate) {
+    const formatter = new Intl.DateTimeFormat('en-US', {weekday: 'short', month: 'short', day: 'numeric'});
+    const today = todayLocal(new Date(), 'UTC');
+    return [-2, -1, 0, 1, 2].map(offset => {
+        const date = shiftDate(selectedDate, offset, 'UTC');
+        const label = date === today ? 'Today'
+            : date === shiftDate(today, -1, 'UTC') ? 'Yesterday'
+                : date === shiftDate(today, 1, 'UTC') ? 'Tomorrow'
+                    : formatter.format(new Date(`${date}T12:00:00Z`));
+        return {date, label, shortLabel: formatter.format(new Date(`${date}T12:00:00Z`))};
+    });
+}
+
 export function isValidDate(value) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value || ''))) return false;
     const [year, month, day] = value.split('-').map(Number);
@@ -83,6 +96,7 @@ export function createState(search = '', defaultTimezone = 'UTC') {
         sort: SORT_VALUES.has(params.get('sort')) ? params.get('sort') : 'kickoff',
         timeWindow: TIME_WINDOWS.has(params.get('time')) ? params.get('time') : 'all',
         hideFinished: params.get('hideFinished') === '1',
+        broadcastOnly: params.get('tv') === '1',
         fixture: (params.get('fixture') || '').slice(0, 120),
         query: params.get('q') || '',
         toSearchParams() {
@@ -95,6 +109,7 @@ export function createState(search = '', defaultTimezone = 'UTC') {
             if (this.sort !== 'kickoff') next.set('sort', this.sort);
             if (this.timeWindow !== 'all') next.set('time', this.timeWindow);
             if (this.hideFinished) next.set('hideFinished', '1');
+            if (this.broadcastOnly) next.set('tv', '1');
             if (this.fixture) next.set('fixture', this.fixture);
             if (this.query) next.set('q', this.query);
             return next;
@@ -134,11 +149,13 @@ export function filterMatches(matches, state) {
             || (state.timeWindow === 'afternoon' && hour >= 12 && hour < 18)
             || (state.timeWindow === 'evening' && hour >= 18 && hour < 24)
             || (state.timeWindow === 'late-night' && hour >= 0 && hour < 6);
+        const hasVerifiedBroadcast = Array.isArray(match?.streaming) && match.streaming.length > 0;
         return (!state.competition || competitionName === state.competition)
             && (!state.country || country === state.country)
             && (state.status === 'all' || statusKind(match) === state.status)
             && (!state.hideFinished || statusKind(match) !== 'finished')
             && inTimeWindow
+            && (!state.broadcastOnly || hasVerifiedBroadcast)
             && (!query || normalizedSearchable.includes(query));
     });
 }

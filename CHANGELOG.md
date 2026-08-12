@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Changed
+
+- Improved fixture presentation with compact date browsing, stronger live-state hierarchy, optional venue/stage metadata, and verified on-TV filtering.
+
+## Unreleased
+
 ### Added
 
 - Native SwiftUI fixture navigation, local filtering, spoiler-safe detail/settings
