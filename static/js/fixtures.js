@@ -92,8 +92,7 @@ function activeFilterCount(source = state) {
         + Number(Boolean(source.query))
         + Number(source.timeWindow !== 'all')
         + Number(source.sort !== 'kickoff')
-        + Number(source.hideFinished)
-        + Number(source.broadcastOnly);
+        + Number(source.hideFinished);
 }
 
 function advancedFilterHasValues(source = state, baseline = state) {
@@ -126,10 +125,7 @@ function syncControls({filterState = filterDraft || state} = {}) {
         competition.value = filterState.competition;
     }
     document.querySelectorAll('[data-status]').forEach(button => {
-        const pressed = button.dataset.status === 'tv'
-            ? state.broadcastOnly
-            : !state.broadcastOnly && button.dataset.status === state.status;
-        button.setAttribute('aria-pressed', String(pressed));
+        button.setAttribute('aria-pressed', String(button.dataset.status === state.status));
     });
     const activeFilters = activeFilterCount(state);
     byId('active-filter-count').textContent = String(activeFilters);
@@ -499,11 +495,7 @@ function bindEvents() {
     document.querySelector('.status-filters').addEventListener('click', event => {
         const button = event.target.closest('[data-status]');
         if (!button) return;
-        if (button.dataset.status === 'tv') {
-            applyFilter({broadcastOnly: !state.broadcastOnly});
-            return;
-        }
-        applyFilter({status: button.dataset.status, broadcastOnly: false});
+        applyFilter({status: button.dataset.status});
     });
     byId('fixture-search').addEventListener('input', event => {
         clearTimeout(searchTimer);
