@@ -2,6 +2,58 @@ body {
     background: var(--bg-primary);
 }
 
+.date-strip {
+    min-width: 0;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(100px, 1fr));
+    gap: 6px;
+    margin: 0 0 16px;
+    overflow-x: auto;
+}
+
+.date-strip-item {
+    min-width: 0;
+    min-height: 54px;
+    padding: 8px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--bg-card);
+    color: var(--text-secondary);
+    text-align: left;
+    cursor: pointer;
+}
+
+.date-strip-item[aria-current="date"] {
+    border-color: var(--accent-secondary);
+    background: rgba(var(--accent-rgb), .1);
+    color: var(--text-primary);
+}
+
+.date-strip-label,
+.date-strip-date { display: block; }
+.date-strip-label { font-weight: 700; font-size: 12px; }
+.date-strip-date { margin-top: 3px; color: var(--text-muted); font-size: 11px; }
+
+.fixture-meta {
+    display: flex;
+    min-width: 0;
+    gap: 8px;
+    color: var(--text-muted);
+    font-size: 11px;
+}
+
+.fixture-venue,
+.fixture-stage {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.fixture-stage { color: var(--accent-secondary); font-weight: 700; }
+
+.fixture-card--live { border-color: rgba(239, 68, 68, .55); }
+.fixture-card--live .fixture-status-label { color: #dc2626; }
+
 .header-actions {
     position: relative;
     display: flex;
@@ -1445,6 +1497,10 @@ dialog::backdrop {
 }
 
 @media (max-width: 1099px) {
+    .filter-toolbar { align-items: flex-start; flex-wrap: wrap; }
+    .primary-filters { flex-wrap: wrap; max-width: 100%; }
+    .status-filters { width: 100%; max-width: 100%; flex-wrap: wrap; }
+
     .dashboard-layout {
         grid-template-columns: minmax(0, 1fr);
     }
@@ -1475,6 +1531,9 @@ dialog::backdrop {
 }
 
 @media (max-width: 767px) {
+    .date-strip { display: flex; margin-inline: -4px; padding-inline: 4px; }
+    .date-strip-item { min-width: 112px; }
+
     .dashboard-shell {
         padding: 16px 12px 48px;
     }

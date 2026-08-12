@@ -284,10 +284,18 @@ function createFixtureCard(match, revealed, selectedId = null) {
     const streamingNode = createStreamingNode(match);
     if (streamingNode) status.append(streamingNode);
 
+    const metadata = node('div', 'fixture-meta');
+    const venue = match?.venue?.name || match?.venue;
+    if (venue) metadata.append(node('span', 'fixture-venue', venue));
+    const leg = match?.stage || match?.round || match?.aggregate;
+    if (leg && !['REGULAR_SEASON', 'REGULAR'].includes(String(leg).toUpperCase())) {
+        metadata.append(node('span', 'fixture-stage', leg));
+    }
+
     const action = node('div', 'fixture-action');
     action.append(createDetailsButton(match));
     const mobileMeta = node('span', 'fixture-mobile-meta', match?.competition?.name || 'Competition');
-    card.append(status, createTeamRows(match), createScoreNode(match, revealed), mobileMeta, action);
+    card.append(status, createTeamRows(match), createScoreNode(match, revealed), metadata, mobileMeta, action);
     return card;
 }
 
