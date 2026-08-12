@@ -42,8 +42,10 @@ test('fixture card shows the first streaming service with its region and a +N co
     await mockFixturesWithStreaming(page);
     await page.goto('/?date=2026-08-03');
     await expect(page.locator('#fixture-result-count')).toContainText('13 matches');
+    await expect(page.getByRole('button', {name: 'On TV'})).toHaveCount(0);
 
     const broadcast = page.locator('[data-fixture-id="live-secret"] .fixture-broadcast');
+    await expect(broadcast.locator('xpath=..')).toHaveClass(/fixture-result/);
     await expect(broadcast).toHaveText('Peacock · US +2');
     await expect(broadcast).toHaveAttribute('aria-label', /Peacock \(US\)/);
     await expect(broadcast.locator('img')).toHaveAttribute('width', '18');

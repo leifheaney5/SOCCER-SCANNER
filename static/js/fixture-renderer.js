@@ -282,7 +282,6 @@ function createFixtureCard(match, revealed, selectedId = null) {
     const freshness = formatFreshness(match?.sourceUpdatedAt || match?.lastUpdated);
     if (freshness) status.append(node('span', 'fixture-freshness', freshness));
     const streamingNode = createStreamingNode(match);
-    if (streamingNode) status.append(streamingNode);
 
     const metadata = node('div', 'fixture-meta');
     const venue = match?.venue?.name || match?.venue;
@@ -292,10 +291,14 @@ function createFixtureCard(match, revealed, selectedId = null) {
         metadata.append(node('span', 'fixture-stage', leg));
     }
 
+    const result = node('div', 'fixture-result');
+    result.append(createScoreNode(match, revealed));
+    if (streamingNode) result.append(streamingNode);
+
     const action = node('div', 'fixture-action');
     action.append(createDetailsButton(match));
     const mobileMeta = node('span', 'fixture-mobile-meta', match?.competition?.name || 'Competition');
-    card.append(status, createTeamRows(match), createScoreNode(match, revealed), metadata, mobileMeta, action);
+    card.append(status, createTeamRows(match), result, metadata, mobileMeta, action);
     return card;
 }
 

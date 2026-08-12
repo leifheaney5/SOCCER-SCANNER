@@ -4,6 +4,7 @@
 
 ### Changed
 
+- Moved verified streaming information beside fixture scores and removed the separate On TV filter.
 - Improved fixture presentation with compact date browsing, stronger live-state hierarchy, optional venue/stage metadata, and verified on-TV filtering.
 
 ## Unreleased
