@@ -1,0 +1,389 @@
+openapi: 3.1.0
+info:
+  title: Soccer Scanner API
+  version: 2.0.0
+  description: >-
+    Public, spoiler-safe fixture and operational APIs. Scores are omitted from
+    search and operations responses and are hidden by the web client until the
+    visitor explicitly reveals them.
+servers:
+  - url: https://soccerscanner.pro
+    description: Production
+  - url: http://127.0.0.1:5000
+    description: Local development
+paths:
+  /api/v2/fixtures:
+    get:
+      operationId: listFixtures
+      summary: List fixtures for a local calendar date
+      parameters:
+        - $ref: '#/components/parameters/Date'
+        - $ref: '#/components/parameters/Timezone'
+      responses:
+        '200':
+          description: Fixture payload with provider and freshness state
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/RequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FixturePayload'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/ProviderUnavailable'
+  /api/v2/fixtures/{canonicalFixtureId}:
+    get:
+      operationId: getFixture
+      summary: Resolve a canonical fixture deep link
+      parameters:
+        - $ref: '#/components/parameters/CanonicalFixtureId'
+      responses:
+        '200':
+          description: Canonical fixture
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [fixture]
+                properties:
+                  fixture:
+                    $ref: '#/components/schemas/Fixture'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v2/search:
+    get:
+      operationId: searchFixtures
+      summary: Search teams, competitions, and nearby fixtures
+      description: >-
+        Feature-gated. The default search window is seven days and never
+        exceeds seven inclusive dates. Results are score-free and may be
+        partial when one date cannot be loaded.
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema: {type: string, minLength: 2}
+        - $ref: '#/components/parameters/Timezone'
+        - name: start
+          in: query
+          schema: {type: string, format: date}
+        - name: end
+          in: query
+          schema: {type: string, format: date}
+        - name: limit
+          in: query
+          schema: {type: integer, minimum: 1, maximum: 50, default: 20}
+        - name: offset
+          in: query
+          schema: {type: integer, minimum: 0, default: 0}
+      responses:
+        '200':
+          description: Typed, score-free search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchPayload'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /api/v2/capabilities:
+    get:
+      operationId: getCapabilities
+      summary: List provider capability states
+      responses:
+        '200':
+          description: Capability manifest
+          content:
+            application/json:
+              schema: {type: object, additionalProperties: true}
+  /api/v2/app-config:
+    get:
+      operationId: getAppConfig
+      summary: Get non-sensitive client configuration
+      responses:
+        '200':
+          description: Public feature and compatibility configuration
+          content:
+            application/json:
+              schema: {type: object, additionalProperties: true}
+  /api/v2/operations:
+    get:
+      operationId: getOperationsSummary
+      summary: Get protected read-only operational status
+      security: [{opsToken: []}]
+      responses:
+        '200':
+          description: Build, readiness, provider, rate-limit, and metrics status
+          content:
+            application/json:
+              schema: {type: object, additionalProperties: true}
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/v2/teams/{canonicalId}/analysis:
+    get:
+      operationId: getTeamAnalysis
+      summary: Get canonical team analysis when enabled
+      parameters:
+        - name: canonicalId
+          in: path
+          required: true
+          schema: {type: string, pattern: '^[a-z0-9][a-z0-9-]{0,79}$'}
+      responses:
+        '200':
+          description: Provider-backed team analysis
+          content:
+            application/json:
+              schema: {type: object, additionalProperties: true}
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/competitions:
+    get:
+      operationId: legacyCompetitions
+      deprecated: true
+      summary: Legacy Football-Data competition proxy
+      responses:
+        '200': {description: Provider-shaped compatibility response}
+  /api/teams/{competition_id}:
+    get:
+      operationId: legacyCompetitionTeams
+      deprecated: true
+      summary: Legacy competition-team proxy
+      parameters:
+        - {name: competition_id, in: path, required: true, schema: {type: string}}
+      responses:
+        '200': {description: Provider-shaped compatibility response}
+  /api/team/{team_id}:
+    get:
+      operationId: legacyTeam
+      deprecated: true
+      summary: Legacy team proxy
+      parameters:
+        - {name: team_id, in: path, required: true, schema: {type: string}}
+      responses:
+        '200': {description: Provider-shaped compatibility response}
+  /api/team-analysis/{team_id}:
+    get:
+      operationId: legacyTeamAnalysis
+      deprecated: true
+      summary: Disabled legacy team analysis proxy
+      parameters:
+        - {name: team_id, in: path, required: true, schema: {type: string}}
+      responses:
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/matches-today:
+    get:
+      operationId: legacyFixtures
+      deprecated: true
+      summary: Legacy fixture endpoint
+      parameters:
+        - $ref: '#/components/parameters/Date'
+        - $ref: '#/components/parameters/Timezone'
+      responses:
+        '200': {description: Compatibility fixture response}
+  /api/internal/identity-report:
+    get:
+      operationId: getIdentityReport
+      summary: Protected unresolved identity report
+      security: [{opsTokenBearer: []}]
+      parameters:
+        - name: limit
+          in: query
+          schema: {type: integer, minimum: 1, maximum: 500, default: 100}
+      responses:
+        '200': {description: Score-free identity diagnostics}
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /health/live:
+    get:
+      operationId: healthLive
+      summary: Process liveness
+      responses:
+        '200': {description: Process is alive}
+  /health/ready:
+    get:
+      operationId: healthReady
+      summary: Dependency and deployment readiness
+      responses:
+        '200': {description: Ready or degraded readiness payload}
+        '503': {description: Required dependencies are not ready}
+  /health/version:
+    get:
+      operationId: healthVersion
+      summary: Build identity
+      responses:
+        '200': {description: Build and deployment identity}
+  /health/providers:
+    get:
+      operationId: healthProviders
+      summary: Provider health snapshot
+      responses:
+        '200': {description: Provider health is always reportable}
+  /health/metrics:
+    get:
+      operationId: healthMetrics
+      summary: Operational metrics snapshot
+      security: [{opsTokenHeader: []}]
+      responses:
+        '200': {description: Sanitized metrics}
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+components:
+  securitySchemes:
+    opsToken:
+      type: apiKey
+      in: header
+      name: X-Ops-Token
+    opsTokenHeader:
+      type: apiKey
+      in: header
+      name: X-Ops-Token
+    opsTokenBearer:
+      type: http
+      scheme: bearer
+  parameters:
+    Date:
+      name: date
+      in: query
+      schema: {type: string, format: date}
+      description: Local calendar date; defaults to the server date.
+    Timezone:
+      name: timezone
+      in: query
+      schema: {type: string, default: UTC}
+      description: IANA timezone used for local date and kickoff presentation.
+    CanonicalFixtureId:
+      name: canonicalFixtureId
+      in: path
+      required: true
+      schema: {type: string, pattern: '^fx_[a-f0-9]{24}$'}
+  headers:
+    RequestId:
+      description: Request correlation identifier.
+      schema: {type: string}
+  responses:
+    InvalidRequest:
+      description: Invalid query or path parameters
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/ErrorEnvelope'}
+    Unauthorized:
+      description: Operations credentials are missing or invalid
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/ErrorEnvelope'}
+    NotFound:
+      description: Route or canonical resource is unavailable
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/ErrorEnvelope'}
+    RateLimited:
+      description: Request or provider rate limit
+      headers:
+        Retry-After: {schema: {type: integer}}
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/ErrorEnvelope'}
+    ProviderUnavailable:
+      description: All requested providers are unavailable
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/ErrorEnvelope'}
+  schemas:
+    ErrorEnvelope:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, retryable]
+          properties:
+            code: {type: string}
+            message: {type: string}
+            retryable: {type: boolean}
+            requestId: {type: string}
+            retryAfterSeconds: {type: integer, nullable: true}
+    FixturePayload:
+      type: object
+      required: [state, matches]
+      properties:
+        state: {type: string, enum: [success, empty_confirmed, partial, stale]}
+        matches:
+          type: array
+          items: {$ref: '#/components/schemas/Fixture'}
+        partial: {type: boolean}
+        lastUpdated: {type: string, format: date-time, nullable: true}
+        providers: {type: object, additionalProperties: true}
+        cache: {type: object, additionalProperties: true}
+    Fixture:
+      type: object
+      required: [canonicalFixtureId, utcDate, homeTeam, awayTeam, competition, status]
+      properties:
+        canonicalFixtureId: {type: string, pattern: '^fx_[a-f0-9]{24}$'}
+        utcDate: {type: string, format: date-time}
+        localDate: {type: string, format: date}
+        homeTeam: {$ref: '#/components/schemas/Team'}
+        awayTeam: {$ref: '#/components/schemas/Team'}
+        competition: {$ref: '#/components/schemas/Competition'}
+        status: {type: object, additionalProperties: true}
+        score: {type: object, nullable: true, additionalProperties: true}
+        streaming: {type: array, items: {type: object, additionalProperties: true}}
+    Team:
+      type: object
+      properties:
+        canonicalId: {type: string, nullable: true}
+        name: {type: string}
+        provider: {type: string, nullable: true}
+        providerId: {type: string, nullable: true}
+    Competition:
+      type: object
+      properties:
+        canonicalId: {type: string, nullable: true}
+        name: {type: string}
+        provider: {type: string, nullable: true}
+        providerId: {type: string, nullable: true}
+    SearchPayload:
+      type: object
+      required: [state, query, results, total, limit, offset, days]
+      properties:
+        state: {type: string, enum: [success, partial]}
+        query: {type: string}
+        total: {type: integer}
+        limit: {type: integer}
+        offset: {type: integer}
+        days: {type: array, items: {type: object, additionalProperties: true}}
+        results:
+          type: array
+          items:
+            oneOf:
+              - {$ref: '#/components/schemas/SearchEntity'}
+              - {$ref: '#/components/schemas/SearchFixture'}
+    SearchEntity:
+      type: object
+      required: [type, id, name]
+      properties:
+        type: {type: string, enum: [team, competition]}
+        id: {type: string}
+        name: {type: string}
+        canonicalId: {type: string, nullable: true}
+    SearchFixture:
+      type: object
+      required: [type, id, date, homeTeam, awayTeam, competition]
+      properties:
+        type: {const: fixture}
+        id: {type: string}
+        date: {type: string, format: date}
+        utcDate: {type: string, format: date-time}
+        status: {type: object, additionalProperties: true}
+        homeTeam: {type: object, required: [id, name], additionalProperties: false}
+        awayTeam: {type: object, required: [id, name], additionalProperties: false}
+        competition: {type: object, required: [id, name], additionalProperties: false}

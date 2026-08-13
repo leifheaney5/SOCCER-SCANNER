@@ -5,6 +5,7 @@ from unittest.mock import Mock, patch
 
 from app import app
 from soccer_scanner import create_app
+from soccer_scanner.services.feature_flags import FeatureFlagRegistry
 
 
 class SoccerScannerRoutesTest(unittest.TestCase):
@@ -77,6 +78,63 @@ class SoccerScannerRoutesTest(unittest.TestCase):
         self.assertIn(b'id="calendar-results"', response.data)
         self.assertIn(b'/static/js/calendar.js', response.data)
 
+    def test_global_search_is_score_free_and_feature_gated(self):
+        from soccer_scanner.services.search import SearchService
+
+        original_flags = self.app.extensions['feature_flags']
+        original_search = self.app.extensions.get('search_service')
+        self.app.extensions['feature_flags'] = FeatureFlagRegistry(overrides={'search': True})
+        self.app.extensions['search_service'] = SearchService(
+            Mock(fixtures_for_date=lambda *_args: {
+                'matches': [{
+                    'canonicalFixtureId': 'fx_' + ('c' * 24),
+                    'utcDate': '2026-08-13T18:00:00Z',
+                    'status': {'code': 'scheduled'},
+                    'homeTeam': {'canonicalId': 'arsenal', 'name': 'Arsenal', 'provider': 'espn', 'providerId': '359'},
+                    'awayTeam': {'name': 'Chelsea', 'provider': 'espn', 'providerId': '360'},
+                    'competition': {'canonicalId': 'premier-league', 'name': 'Premier League', 'provider': 'espn', 'providerId': 'eng.1'},
+                    'score': {'fullTime': {'home': 97, 'away': 96}},
+                }],
+            }),
+            today=date(2026, 8, 13),
+        )
+        try:
+            response = self.client.get('/api/v2/search?q=Arsenal&start=2026-08-13&end=2026-08-13')
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.json['state'], 'success')
+            self.assertNotIn('97', response.get_data(as_text=True))
+            disabled_flags = FeatureFlagRegistry(overrides={'search': False})
+            self.app.extensions['feature_flags'] = disabled_flags
+            disabled = self.client.get('/api/v2/search?q=Arsenal')
+            self.assertEqual(disabled.status_code, 404)
+        finally:
+            self.app.extensions['feature_flags'] = original_flags
+            if original_search is None:
+                self.app.extensions.pop('search_service', None)
+            else:
+                self.app.extensions['search_service'] = original_search
+
+    def test_operations_dashboard_requires_token_for_live_summary(self):
+        operations_app = create_app({'TESTING': True, 'OPS_ADMIN_TOKEN': 'ops-secret'})
+        client = operations_app.test_client()
+
+        page = client.get('/operations')
+        self.assertEqual(page.status_code, 200)
+        self.assertIn(b'id="operations-dashboard"', page.data)
+        self.assertEqual(client.get('/api/v2/operations').status_code, 401)
+        self.assertEqual(
+            client.get('/api/v2/operations', headers={'X-Ops-Token': 'wrong'}).status_code,
+            401,
+        )
+        response = client.get('/api/v2/operations', headers={'X-Ops-Token': 'ops-secret'})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('readiness', response.json)
+        self.assertIn('providers', response.json)
+        self.assertIn('metrics', response.json)
+        self.assertIn('diagnostics', response.json)
+        self.assertIn('backups', response.json['diagnostics'])
+        self.assertNotIn('ops-secret', response.get_data(as_text=True))
+
     def test_canonical_fixture_lookup_deep_link_and_ics_are_spoiler_free(self):
         fixture_id = 'fx_' + ('a' * 24)
         match = {
@@ -117,6 +175,7 @@ class SoccerScannerRoutesTest(unittest.TestCase):
         self.assertNotIn('/api/', sitemap)
         self.assertNotIn('/health/', sitemap)
         self.assertNotIn('/offline', sitemap)
+        self.assertNotIn('/operations', sitemap)
         self.assertNotIn('/terms', sitemap)
 
     def _deep_link_for(self, query=''):
@@ -296,6 +355,9 @@ class SoccerScannerRoutesTest(unittest.TestCase):
         self.assertIn('<link rel="canonical" href="https://soccerscanner.pro/">', html)
         self.assertIn('property="og:title"', html)
         self.assertIn('name="twitter:card"', html)
+        self.assertIn('"@type": "WebSite"', html)
+        self.assertIn('"@type": "BreadcrumbList"', html)
+        self.assertNotIn('"score"', html.lower())
         self.assertIn('/static/manifest.webmanifest', html)
         self.assertNotIn('score', html.lower().split('property="og:description"', 1)[-1].split('>', 1)[0])
 
@@ -334,6 +396,8 @@ class SoccerScannerRoutesTest(unittest.TestCase):
         self.assertEqual(sources.status_code, 200)
         self.assertIn(b'ESPN', sources.data)
         self.assertIn(b'Football-data.org', sources.data)
+        self.assertIn(b'Official competition listings', sources.data)
+        self.assertIn(b'Inventory', sources.data)
         self.assertEqual(missing.status_code, 404)
         self.assertIn(b'Page not found', missing.data)
         self.assertEqual(missing_api.status_code, 404)

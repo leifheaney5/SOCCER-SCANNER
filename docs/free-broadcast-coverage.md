@@ -9,9 +9,24 @@ broadcaster from a competition-wide rights deal.
 | Source | Coverage | Link type | Status |
 | --- | --- | --- | --- |
 | ESPN fixture broadcasts | Only when ESPN reports a streaming entry for the fixture | Verified service homepage from the streaming registry | Active |
+| Official competition listings | Inventory for future fixture-level adapters | Source-specific, after verification | Inventory |
+| UEFA match calendar and where-to-watch listings | Competition-level inventory for future fixture-level adapters | Source-specific, after verification | Inventory |
+| FIFA+ live football | Competition-level inventory; availability may vary by territory | Source-specific, after verification | Inventory |
+| Concacaf where-to-watch listings | Competition-level inventory for future fixture-level adapters | Source-specific, after verification | Inventory |
 
 ESPN data is the baseline. Missing broadcast data is rendered as missing data;
 it is never replaced with a guessed service or URL.
+
+The application registry lives in
+[`soccer_scanner/data/broadcast-sources.json`](../soccer_scanner/data/broadcast-sources.json).
+An entry marked `inventory` is not used to enrich fixtures; it records a source
+that still needs a real adapter and matching evidence.
+
+The current UEFA and Concacaf pages expose competition or tournament-level
+territory guidance rather than a stable fixture-by-fixture listing feed. That
+is useful discovery data, but it does not satisfy the admission contract by
+itself and remains inventory-only until an official fixture listing or
+machine-readable feed becomes available.
 
 ## Source admission contract
 
@@ -28,6 +43,19 @@ following:
 
 Competition-wide mappings are not sufficient on their own. A source must be
 able to establish that the broadcaster applies to the individual fixture.
+
+The reusable `OfficialBroadcastAdapter` now enforces this contract for fetched
+official listings: exactly one canonical fixture must match, the source must
+be configured, and any linked destination must be HTTPS on a source-declared
+domain. Missing links remain display-only; multiple matches are marked
+`ambiguous` and never become public links.
+
+Its observation mode returns the normalized records and the required coverage
+metrics (`observed`, `matched`, `verifiedLinks`, `regionKnown`, `stale`,
+`unmatched`, and `ambiguous`) so a source can be monitored before promotion.
+`BroadcastCoverageService` applies only `verified` records to fixture streaming
+metadata and leaves the input fixtures unchanged; all other observations remain
+available as diagnostics.
 
 ## Rollout order
 

@@ -395,6 +395,8 @@ def test_composed_fixtures_are_enriched_with_streaming_and_keep_raw_broadcasts()
         'region': 'US',
         'regionKnown': True,
         'source': 'espn',
+        'sourceId': 'espn-broadcasts',
+        'observedAt': '2026-08-03T12:00:00Z',
     }]
 
 

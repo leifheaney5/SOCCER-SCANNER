@@ -12,6 +12,7 @@ const {calendarDateInZone, resolveTimeZone, todayInZone} = timeZoneModule;
 const FILTER_STATUSES = new Set(['all', 'live', 'upcoming', 'finished']);
 const SORT_VALUES = new Set(['kickoff', 'competition', 'live', 'recommended']);
 const TIME_WINDOWS = new Set(['all', 'morning', 'afternoon', 'evening', 'late-night']);
+const AVAILABILITY_VALUES = new Set(['all', 'streaming', 'none', 'pinned']);
 
 /** Today in the selected zone — not the host's zone. */
 export function todayLocal(now = new Date(), timezone = undefined) {
@@ -96,6 +97,7 @@ export function createState(search = '', defaultTimezone = 'UTC') {
         sort: SORT_VALUES.has(params.get('sort')) ? params.get('sort') : 'kickoff',
         timeWindow: TIME_WINDOWS.has(params.get('time')) ? params.get('time') : 'all',
         hideFinished: params.get('hideFinished') === '1',
+        availability: AVAILABILITY_VALUES.has(params.get('availability')) ? params.get('availability') : 'all',
         fixture: (params.get('fixture') || '').slice(0, 120),
         query: params.get('q') || '',
         toSearchParams() {
@@ -108,6 +110,7 @@ export function createState(search = '', defaultTimezone = 'UTC') {
             if (this.sort !== 'kickoff') next.set('sort', this.sort);
             if (this.timeWindow !== 'all') next.set('time', this.timeWindow);
             if (this.hideFinished) next.set('hideFinished', '1');
+            if (this.availability !== 'all') next.set('availability', this.availability);
             if (this.fixture) next.set('fixture', this.fixture);
             if (this.query) next.set('q', this.query);
             return next;
@@ -122,6 +125,14 @@ export function filterMatches(matches, state) {
         .replace(/[\u0300-\u036f]/g, '')
         .toLocaleLowerCase();
     const query = normalizeSearch(state.query.trim());
+    let pinned = new Set();
+    if (state.availability === 'pinned') {
+        try {
+            pinned = new Set(JSON.parse(sessionStorage.getItem('soccer-scanner:pins') || '[]'));
+        } catch {
+            pinned = new Set();
+        }
+    }
     return (Array.isArray(matches) ? matches : []).filter(match => {
         const competitionName = match?.competition?.name || '';
         const country = match?.competition?.area?.name || '';
@@ -151,6 +162,14 @@ export function filterMatches(matches, state) {
             && (!state.country || country === state.country)
             && (state.status === 'all' || statusKind(match) === state.status)
             && (!state.hideFinished || statusKind(match) !== 'finished')
+            && (state.availability === 'all'
+                || (state.availability === 'streaming' && Array.isArray(match?.streaming) && match.streaming.length > 0)
+                || (state.availability === 'none' && (!Array.isArray(match?.streaming) || match.streaming.length === 0))
+                || (state.availability === 'pinned' && (
+                    pinned.has(`team:${String(match?.homeTeam?.canonicalId || match?.homeTeam?.name || '').trim().toLocaleLowerCase()}`)
+                    || pinned.has(`team:${String(match?.awayTeam?.canonicalId || match?.awayTeam?.name || '').trim().toLocaleLowerCase()}`)
+                    || pinned.has(`competition:${String(match?.competition?.canonicalId || match?.competition?.name || '').trim().toLocaleLowerCase()}`)
+                )))
             && inTimeWindow
             && (!query || normalizedSearchable.includes(query));
     });

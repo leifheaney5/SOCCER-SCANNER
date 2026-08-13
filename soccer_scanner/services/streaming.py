@@ -46,6 +46,9 @@ class StreamingRegistry:
             resolved['logoPath'] = service['logoPath']
         return resolved
 
+    def service_count(self):
+        return len(self._services)
+
     def describe(self, broadcast):
         """Render-ready description, or None if this is not a streaming entry."""
         if not isinstance(broadcast, dict):
@@ -65,6 +68,7 @@ class StreamingRegistry:
             'region': region or REGION_UNKNOWN,
             'regionKnown': bool(region),
             'source': 'espn',
+            'sourceId': 'espn-broadcasts',
         }
         if service and service.get('logoPath'):
             described['logoPath'] = service['logoPath']

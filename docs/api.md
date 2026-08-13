@@ -32,6 +32,7 @@ Successful response shape:
     "score": {"winner": null, "fullTime": {"home": null, "away": null}},
     "sources": ["espn"],
     "sourceUpdatedAt": "2026-08-03T18:59:00Z",
+    "streaming": [{"displayName": "Peacock", "region": "US", "regionKnown": true, "officialUrl": "https://www.peacocktv.com/", "observedAt": "2026-08-03T18:59:00Z"}],
     "dataQuality": {"missingFields": ["referees", "aggregate"]}
   }],
   "providers": {},
@@ -47,6 +48,19 @@ Valid states are `success`, `empty_confirmed`, `partial`, and `stale`. Total pro
 
 Returns a recently cached canonical fixture as `{"fixture": ...}`. Invalid IDs return `400`; expired or unknown links return `404`.
 
+### `GET /api/v2/search`
+
+Global search is feature-gated and enabled by default. When disabled by an
+operator, the route returns `404`. It accepts
+`q` (at least two characters), an optional IANA `timezone`, optional inclusive
+`start` and `end` dates, and `limit`/`offset` pagination. The date window is
+bounded to seven days and defaults to three days before through three days after
+the current server date.
+
+Results are typed `team`, `competition`, or `fixture` records with stable IDs.
+Fixture results contain status and teams but never score fields. A provider
+failure for one day preserves successful days and returns `state: "partial"`
+with per-day states. The endpoint returns `404` while the `search` feature flag
 ### `GET /api/v2/teams/{canonicalId}/analysis`
 
 Temporarily unavailable while Team Intelligence is disabled. The route returns the generic `404 not_found` envelope until the feature is re-enabled.
@@ -72,5 +86,7 @@ Returns typed `supported`, `unavailable`, or `not_supported` states for provider
 - `/competitions/{canonicalId}`: stable competition page.
 - `/league-tables`: consent-gated third-party table embed.
 - `/privacy`, `/data-sources`, `/offline`: product information and offline shell.
+- `/operations`: restricted read-only operations dashboard; live data requires
+  the `X-Ops-Token` header through `/api/v2/operations` when configured.
 
 Legacy `/api/competitions`, `/api/teams/{id}`, `/api/team/{id}`, `/api/team-analysis/{id}`, and `/api/matches-today` remain for compatibility; team-analysis routes currently return `404` while Team Intelligence is disabled. New clients should prefer `/api/v2` because legacy errors and provider-shaped response fields are not the canonical contract.

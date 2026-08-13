@@ -11,12 +11,18 @@ pages = Blueprint('pages', __name__)
 
 @pages.get('/')
 def fixtures():
-    return render_template('matches_today.html')
+    return render_template(
+        'matches_today.html',
+        search_enabled=current_app.extensions['feature_flags'].is_enabled('search'),
+    )
 
 
 @pages.get('/matches-today')
 def legacy_fixtures():
-    return render_template('matches_today.html')
+    return render_template(
+        'matches_today.html',
+        search_enabled=current_app.extensions['feature_flags'].is_enabled('search'),
+    )
 
 
 @pages.get('/teams')
@@ -49,12 +55,19 @@ def privacy():
 
 @pages.get('/data-sources')
 def data_sources():
-    return render_template('data_sources.html')
+    registry = current_app.extensions.get('broadcast_sources')
+    broadcast_sources = registry.sources() if registry is not None else []
+    return render_template('data_sources.html', broadcast_sources=broadcast_sources)
 
 
 @pages.get('/offline')
 def offline():
     return render_template('offline.html')
+
+
+@pages.get('/operations')
+def operations():
+    return render_template('operations.html')
 
 
 @pages.get('/terms')
@@ -63,7 +76,7 @@ def terms():
 
 
 # Surfaces that must never be advertised to crawlers or listed in the sitemap.
-_NON_INDEXABLE = ('/api/', '/health/', '/offline')
+_NON_INDEXABLE = ('/api/', '/health/', '/offline', '/operations')
 
 _SITEMAP_ROUTES = (
     ('/', 'daily', '1.0'),

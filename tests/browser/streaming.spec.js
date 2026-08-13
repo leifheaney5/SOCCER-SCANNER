@@ -99,6 +99,25 @@ test('detail panel renders each streaming service honestly, linking only verifie
     }
 });
 
+test('detail panel shows streaming observation freshness when supplied', async ({page}) => {
+    const payload = structuredClone(fixturePayload);
+    payload.matches[0].streaming = [{
+        displayName: 'Peacock',
+        region: 'US',
+        regionKnown: true,
+        officialUrl: 'https://www.peacocktv.com/',
+        logoPath: '/static/icons/streaming/peacock.svg',
+        observedAt: '2026-08-03T18:30:00Z',
+    }];
+    await page.route('**/api/v2/fixtures**', route => route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify(payload),
+    }));
+    await page.goto('/?date=2026-08-03');
+    await page.locator('[data-fixture-id="live-secret"] .details-button').click();
+    await expect(page.locator('.context-streaming')).toContainText('Observed');
+});
+
 test('older cached payloads without a streaming array still show unlinked broadcast names', async ({page}) => {
     await page.route('**/api/v2/fixtures**', route => route.fulfill({
         contentType: 'application/json',

@@ -171,6 +171,7 @@ class AppConfigTest(unittest.TestCase):
         self.assertGreater(len(payload['features']), 0)
         for name, enabled in payload['features'].items():
             self.assertIsInstance(enabled, bool, name)
+        self.assertTrue(payload['features']['streaming_logos'])
 
     def test_app_config_states_that_accounts_are_unavailable(self):
         payload = self.client.get('/api/v2/app-config').json
@@ -184,6 +185,11 @@ class AppConfigTest(unittest.TestCase):
         payload = self.client.get('/api/v2/app-config').json
 
         self.assertFalse(payload['features']['team_intelligence'])
+
+    def test_app_config_exposes_global_search_by_default(self):
+        payload = self.client.get('/api/v2/app-config').json
+
+        self.assertTrue(payload['features']['search'])
 
 
 if __name__ == '__main__':
