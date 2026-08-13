@@ -14,6 +14,16 @@ test('the header exposes the accessible home link with an inline mark', async ({
     await expect(homeLink.locator('svg')).toHaveAttribute('aria-hidden', 'true');
 });
 
+test('the footer is centered and identifies the copyright and app version', async ({page}) => {
+    await page.goto('/?date=2026-08-03');
+
+    const footer = page.locator('.app-footer');
+    const container = footer.locator('.footer-container');
+    await expect(container).toHaveCSS('justify-content', 'center');
+    await expect(container).toContainText('© 2026 Soccer Scanner');
+    await expect(container).toContainText('Version 2.0.0');
+});
+
 test('the header mark stays proportionate to the wordmark on legacy team and table pages', async ({page}) => {
     // /teams and /league-tables load their own stylesheets (teams.css, standings.css) that
     // predate the shared app-header design and once set .app-title to font-size: 2.2em. Both

@@ -284,17 +284,29 @@ svg {
 }
 
 .footer-container {
-    width: min(100%, 1400px);
+    width: min(100% - 32px, 1400px);
     margin: 0 auto;
-    padding: 20px;
+    padding: 20px 0;
     display: flex;
-    justify-content: space-between;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
     gap: 16px;
 }
 
+.footer-branding,
 .footer-container nav {
     display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
     gap: 16px;
+}
+
+.footer-version {
+    color: var(--text-muted);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
 }
 
 .footer-container a:hover {

@@ -89,7 +89,10 @@
     <main id="main-content">{% block content %}{% endblock %}</main>
     <footer class="app-footer">
         <div class="footer-container">
-            <span>Soccer Scanner</span>
+            <div class="footer-branding">
+                <span>© 2026 Soccer Scanner</span>
+                <span class="footer-version">Version {{ build.version }}</span>
+            </div>
             <nav aria-label="Product information">
                 <a href="/data-sources">Data sources</a>
                 <a href="/privacy">Privacy</a>
