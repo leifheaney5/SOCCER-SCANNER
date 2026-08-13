@@ -9,17 +9,21 @@ Do not treat a historical CI run, a source file, or a passing local static check
 as proof that a future or uncommitted tree is buildable or ready for submission.
 Record the exact commit SHA and link the evidence for every completed gate.
 
-## Current checkout
+## Historical release evidence
 
-- Audited date: 2026-08-08.
-- Current branch: `main`.
-- The working tree is clean after the final-completion merge. The release SHA,
-  macOS CI run, merge, Railway deployment, and production smoke result are
-  recorded below.
+- The evidence below describes the audited release candidate from 2026-08-08,
+  not the current uncommitted checkout.
+- Historical branch: `main`.
+- Historical working tree: clean after the final-completion merge. The release
+  SHA, macOS CI run, merge, Railway deployment, and production smoke result
+  remain recorded below for traceability.
 - The previous deployed baseline was
   `7759b5dd1ec33ef7b70ab87488593ad4b4c749ba`.
 - Application merge SHA: `64b6a6b625ae8ef2d9fd1606c9e54565097e2b58`.
 - Final deployed SHA: `291420334bbdc830bd82ec0cb307e154c8ebfc88`.
+- Current candidate status: this checkout must be independently staged,
+  committed, CI-verified, deployed, and smoke-tested before any of the
+  historical evidence below can be reused for it.
 - No Apple Developer, App Store Connect, TestFlight, or secret access is
   performed by this checklist.
 

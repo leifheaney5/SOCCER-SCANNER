@@ -29,6 +29,7 @@ export default defineConfig({
             ...process.env,
             FLASK_DEBUG: 'false',
             PORT: '5100',
+            FEATURE_SEARCH: 'true',
         },
     },
 });

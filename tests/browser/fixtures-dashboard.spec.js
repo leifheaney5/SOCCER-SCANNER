@@ -297,6 +297,48 @@ test('fixture rows keep metadata on one compact desktop row', async ({page}) => 
     expect(height).toBeLessThan(120);
 });
 
+test('streaming filter and coverage summary expose verified watch availability', async ({page}) => {
+    const payload = structuredClone(fixturePayload);
+    payload.matches[0].streaming = [{displayName: 'Peacock', region: 'US', regionKnown: true}];
+    await mockFixtures(page, payload);
+    await page.goto('/?date=2026-08-03');
+    await expect(page.locator('#daily-summary')).toContainText('1 with streaming');
+    await expect(page.locator('#daily-summary')).toContainText('13 sourced');
+
+    await page.locator('#availability-filter').selectOption('streaming');
+    await expect(page.locator('#fixture-result-count')).toContainText('1 match');
+    await expect(page.locator('.fixture-card')).toHaveCount(1);
+    await expect(page).toHaveURL(/availability=streaming/);
+});
+
+test('team and competition pins are session-only and accessible', async ({page}) => {
+    await mockFixtures(page);
+    await page.goto('/?date=2026-08-03');
+    const teamPin = page.locator('.pin-button[data-pin-kind="team"]').first();
+    await expect(teamPin).toHaveAttribute('aria-pressed', 'false');
+    await teamPin.click();
+    await expect(teamPin).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('.competition-header .pin-button')).toHaveCount(5);
+    await page.reload();
+    await expect(page.locator('.pin-button[data-pin-kind="team"]').first()).toHaveAttribute('aria-pressed', 'true');
+    await page.locator('#availability-filter').selectOption('pinned');
+    await expect(page.locator('.fixture-card')).toHaveCount(1);
+    await expect(page).toHaveURL(/availability=pinned/);
+});
+
+test('copy link preserves the current shareable fixture view state', async ({page, context, browserName}) => {
+    await mockFixtures(page);
+    await page.goto('/?date=2026-08-03&status=live&q=Arsenal');
+    if (browserName === 'chromium') await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+    await page.locator('#copy-fixture-link').click();
+    await expect(page.locator('#copy-fixture-link')).toHaveAttribute('aria-label', 'Fixture view link copied');
+    if (browserName === 'chromium') {
+        const copied = await page.evaluate(() => navigator.clipboard.readText());
+        expect(copied).toContain('status=live');
+        expect(copied).toContain('q=Arsenal');
+    }
+});
+
 test('competition headers use official emblems and friendly category fallback', async ({page}) => {
     const friendlyPayload = structuredClone(fixturePayload);
     const friendlyMatch = structuredClone(friendlyPayload.matches[0]);

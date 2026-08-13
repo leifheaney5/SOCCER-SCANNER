@@ -48,6 +48,34 @@
 
     <nav id="date-strip" class="date-strip" aria-label="Browse fixture dates"></nav>
 
+    {% if search_enabled %}
+    <section class="global-search-launcher" aria-label="Global fixture search">
+        <button id="global-search-trigger" class="global-search-trigger" type="button"
+                aria-haspopup="dialog" aria-controls="global-search-dialog">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+            <span>Search anywhere</span>
+            <kbd>/</kbd>
+        </button>
+    </section>
+
+    <dialog id="global-search-dialog" class="global-search-dialog" aria-labelledby="global-search-title">
+        <div class="global-search-frame">
+            <div class="dialog-header">
+                <h2 id="global-search-title">Search fixtures</h2>
+                <button id="global-search-close" class="icon-button" type="button" aria-label="Close global search">×</button>
+            </div>
+            <label class="global-search-input-wrap">
+                <span class="sr-only">Search teams, competitions, or fixtures</span>
+                <input id="global-search-input" type="search" role="combobox" aria-expanded="true"
+                       aria-controls="global-search-results" autocomplete="off"
+                       placeholder="Search teams, competitions, or fixtures">
+            </label>
+            <p id="global-search-status" class="global-search-status" role="status" aria-live="polite"></p>
+            <div id="global-search-results" class="global-search-results" role="listbox" aria-label="Search results"></div>
+        </div>
+    </dialog>
+    {% endif %}
+
     <section class="filter-toolbar" aria-label="Fixture filters">
         <div class="date-controls" aria-label="Choose fixture date">
             <button id="previous-date" class="icon-button" type="button" aria-label="Previous day">
@@ -131,6 +159,16 @@
                 </select>
             </label>
 
+            <label class="select-control">
+                <span class="sr-only">Watch availability</span>
+                <select id="availability-filter" aria-label="Watch availability">
+                    <option value="all">All watch availability</option>
+                    <option value="streaming">Streaming listed</option>
+                    <option value="none">No streaming listed</option>
+                    <option value="pinned">Pinned teams or competitions</option>
+                </select>
+            </label>
+
             <label class="check-control">
                 <input id="hide-finished" type="checkbox">
                 <span>Hide finished</span>
@@ -174,6 +212,9 @@
                     </div>
                     <div class="fixture-stream-actions">
                         <p id="fixture-result-count" class="result-count">Loading</p>
+                        <button id="copy-fixture-link" class="icon-button" type="button" aria-label="Copy fixture view link">
+                            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 8h10v12H8zM6 16H4V4h10v2"/></svg>
+                        </button>
                         <button id="refresh-fixtures" class="icon-button refresh-fixtures" type="button" aria-label="Refresh fixtures">
                             <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>
                         </button>
@@ -225,4 +266,5 @@
 <link rel="modulepreload" href="{{ url_for('static', filename='js/time-zone.js', v=build.assetVersion) }}">
 <link rel="modulepreload" href="{{ url_for('static', filename='js/timezone-control.js', v=build.assetVersion) }}">
 <script type="module" src="{{ url_for('static', filename='js/fixtures.js', v=build.assetVersion) }}"></script>
+{% if search_enabled %}<script type="module" src="{{ url_for('static', filename='js/global-search.js', v=build.assetVersion) }}"></script>{% endif %}
 {% endblock %}

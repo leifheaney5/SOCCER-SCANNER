@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}Operations | Soccer Scanner{% endblock %}
+{% block robots_meta %}<meta name="robots" content="noindex,nofollow">{% endblock %}
+{% block content %}
+<div id="operations-dashboard" class="operations-shell">
+    <header class="operations-heading">
+        <p class="eyebrow">Restricted workspace</p>
+        <h1>Operations</h1>
+        <p>Read-only health, provider, cache, and build signals. No fixture scores or credentials are displayed.</p>
+    </header>
+    <form id="operations-auth" class="operations-auth">
+        <label for="operations-token">Operations token</label>
+        <input id="operations-token" type="password" autocomplete="off">
+        <button class="control-button" type="submit">Load status</button>
+    </form>
+    <p id="operations-status" role="status" aria-live="polite">Enter an operations token to load live status.</p>
+    <div id="operations-values" class="operations-values" hidden></div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script type="module" src="{{ url_for('static', filename='js/operations.js', v=build.assetVersion) }}"></script>
+{% endblock %}

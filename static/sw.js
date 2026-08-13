@@ -6,6 +6,7 @@ const fixtureCacheName = `soccer-scanner-fixtures-${version}`;
 const shellUrls = [
     '/',
     '/offline',
+    '/data-sources',
     '/static/manifest.webmanifest',
     '/static/favicon.svg',
     '/static/icons/favicon-32.png',

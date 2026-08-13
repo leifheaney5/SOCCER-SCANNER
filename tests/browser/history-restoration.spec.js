@@ -311,3 +311,17 @@ test('a control outside the fixture stream keeps focus after a history navigatio
     await expect(page.locator('#dashboard-status')).toContainText('fixtures shown');
     await expect(page.locator('#next-date')).toBeFocused();
 });
+
+test('a selected panel action keeps focus when the fixture list rerenders', async ({page}) => {
+    await page.locator('.fixture-card[data-fixture-id="fx-arsenal"] .details-button').click();
+    const copyLink = page.locator('#match-context .context-actions button').first();
+    await copyLink.focus();
+
+    await page.evaluate(() => {
+        const filter = document.getElementById('competition-filter');
+        filter.value = 'Premier League';
+        filter.dispatchEvent(new Event('change', {bubbles: true}));
+    });
+
+    await expect(page.locator('#match-context .context-actions button').first()).toBeFocused();
+});

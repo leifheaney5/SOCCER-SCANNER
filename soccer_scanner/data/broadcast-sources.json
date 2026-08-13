@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "sources": [
+    {
+      "id": "espn-broadcasts",
+      "name": "ESPN fixture broadcasts",
+      "provider": "espn",
+      "url": "https://www.espn.com/soccer/",
+      "scope": ["fixture-level", "provider-reported"],
+      "status": "active",
+      "lastVerified": "2026-08-13"
+    },
+    {
+      "id": "official-competition-listings",
+      "name": "Official competition listings",
+      "provider": "manual-inventory",
+      "url": "https://www.fifa.com/",
+      "scope": ["fixture-level", "official-source", "region-aware"],
+      "status": "inventory",
+      "lastVerified": "2026-08-13"
+    },
+    {
+      "id": "uefa-where-to-watch",
+      "name": "UEFA match calendar and where-to-watch listings",
+      "provider": "uefa",
+      "url": "https://www.uefa.com/match-calendar/",
+      "allowedDomains": ["uefa.com"],
+      "scope": ["competition-level", "official-source", "region-aware"],
+      "status": "inventory",
+      "lastVerified": "2026-08-13"
+    },
+    {
+      "id": "fifa-plus-live",
+      "name": "FIFA+ live football",
+      "provider": "fifa-plus",
+      "url": "https://www.fifa.com/en/watch/live",
+      "allowedDomains": ["fifa.com"],
+      "scope": ["competition-level", "official-source", "free-availability-may-vary"],
+      "status": "inventory",
+      "lastVerified": "2026-08-13"
+    },
+    {
+      "id": "concacaf-where-to-watch",
+      "name": "Concacaf where-to-watch listings",
+      "provider": "concacaf",
+      "url": "https://www.concacaf.com/where-to-watch",
+      "allowedDomains": ["concacaf.com"],
+      "scope": ["competition-level", "official-source", "region-aware"],
+      "status": "inventory",
+      "lastVerified": "2026-08-13"
+    }
+  ]
+}

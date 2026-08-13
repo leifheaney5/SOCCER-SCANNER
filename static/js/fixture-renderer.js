@@ -130,10 +130,38 @@ function createTeamRows(match) {
     const teams = node('div', 'fixture-teams');
     const home = node('div', 'team-row team-row--home');
     const away = node('div', 'team-row team-row--away');
-    home.append(createTeamIdentity(match?.homeTeam));
-    away.append(createTeamIdentity(match?.awayTeam));
+    home.append(createTeamIdentity(match?.homeTeam), createPinButton('team', match?.homeTeam?.canonicalId || match?.homeTeam?.name));
+    away.append(createTeamIdentity(match?.awayTeam), createPinButton('team', match?.awayTeam?.canonicalId || match?.awayTeam?.name));
     teams.append(home, away);
     return teams;
+}
+
+function pinKey(kind, value) {
+    return `${kind}:${String(value || '').trim().toLocaleLowerCase()}`;
+}
+
+function readPins() {
+    try {
+        return new Set(JSON.parse(sessionStorage.getItem('soccer-scanner:pins') || '[]'));
+    } catch {
+        return new Set();
+    }
+}
+
+function createPinButton(kind, value) {
+    const button = node('button', 'pin-button');
+    const key = pinKey(kind, value);
+    const pinned = Boolean(value) && readPins().has(key);
+    button.type = 'button';
+    button.dataset.action = 'toggle-pin';
+    button.dataset.pinKind = kind;
+    button.dataset.pinValue = String(value || '');
+    button.dataset.pinned = String(pinned);
+    button.setAttribute('aria-pressed', String(pinned));
+    button.setAttribute('aria-label', `${pinned ? 'Unpin' : 'Pin'} ${kind}`);
+    button.textContent = pinned ? 'Pinned' : 'Pin';
+    button.disabled = !value;
+    return button;
 }
 
 function fixtureId(match) {
@@ -341,6 +369,7 @@ function createCompetitionGroup(group, options) {
     const meta = node('div', 'competition-meta');
     const count = group.matches.length;
     meta.append(node('span', 'competition-count', `${count} ${count === 1 ? 'match' : 'matches'}`));
+    meta.append(createPinButton('competition', group.competition?.canonicalId || group.competition?.name));
     const expandable = count > GROUP_PREVIEW_LIMIT;
     const expanded = expandedGroups.has(group.key);
     if (expandable) {
@@ -380,11 +409,17 @@ export function renderLoading(container, count = 6) {
 
 export function renderSummary(container, matches, payload) {
     const summary = summarizeMatches(matches);
+    const streamingCount = (Array.isArray(matches) ? matches : [])
+        .filter(match => Array.isArray(match?.streaming) && match.streaming.length > 0).length;
+    const sourcedCount = (Array.isArray(matches) ? matches : [])
+        .filter(match => Array.isArray(match?.sources) && match.sources.length > 0).length;
     const items = [
         ['summary-primary', `${summary.total} ${summary.total === 1 ? 'match' : 'matches'}`],
         ['summary-live', `${summary.live} live`],
         ['summary-upcoming', `${summary.upcoming} upcoming`],
         ['summary-finished', `${summary.finished} finished`],
+        ['summary-streaming', `${streamingCount} with streaming`],
+        ['summary-sourced', `${sourcedCount} sourced`],
     ].map(([className, text]) => node('span', className, text));
     const lastUpdated = payload?.lastUpdated || payload?.last_updated;
     if (lastUpdated) {

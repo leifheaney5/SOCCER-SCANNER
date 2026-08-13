@@ -18,6 +18,9 @@ class StreamingRegistryTest(unittest.TestCase):
         self.assertEqual(service['id'], 'peacock')
         self.assertEqual(service['displayName'], 'Peacock')
 
+    def test_reports_registered_service_count(self):
+        self.assertEqual(self.registry.service_count(), 8)
+
     def test_resolution_is_case_and_whitespace_insensitive(self):
         for raw in ('peacock', '  PEACOCK  ', 'Peacock Premium'):
             with self.subTest(raw=raw):
@@ -74,6 +77,7 @@ class StreamingRegistryTest(unittest.TestCase):
         })
 
         self.assertEqual(described['source'], 'espn')
+        self.assertEqual(described['sourceId'], 'espn-broadcasts')
 
     def test_every_official_url_is_https_and_matches_a_declared_domain(self):
         for service in json.loads(REGISTRY_PATH.read_text())['services']:

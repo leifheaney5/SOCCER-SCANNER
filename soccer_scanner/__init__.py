@@ -33,6 +33,8 @@ from .services.provider_health import build_provider_health
 from .services.rate_limit import RATE_LIMIT_POLICIES, build_rate_limiter
 from .services.standings import StandingsSeasons
 from .services.streaming import StreamingRegistry
+from .services.search import SearchService
+from .services.broadcast_sources import BroadcastSourceRegistry
 from .services.teams import TeamAnalysisService
 from .services.team_identity import TeamIdentityResolver
 
@@ -114,6 +116,7 @@ def create_app(config=None):
         'api.fixtures_by_date': 'fixtures',
         'api.fixtures_v2': 'fixtures',
         'api.fixture_v2': 'fixtures',
+        'api.search_v2': 'search',
         'api.identity_report': 'operations',
     }
 
@@ -186,6 +189,9 @@ def create_app(config=None):
     app.extensions['streaming_registry'] = StreamingRegistry.from_file(
         Path(__file__).parent / 'data' / 'streaming-services.json',
     )
+    app.extensions['broadcast_sources'] = BroadcastSourceRegistry.from_file(
+        Path(__file__).parent / 'data' / 'broadcast-sources.json',
+    )
     app.extensions['competition_registry'] = CompetitionRegistry.from_file(
         Path(__file__).parent / 'data' / 'competition-countries.json',
     )
@@ -231,6 +237,7 @@ def create_app(config=None):
         streaming_registry=app.extensions['streaming_registry'],
         competition_registry=app.extensions['competition_registry'],
     )
+    app.extensions['search_service'] = SearchService(app.extensions['fixture_service'])
     app.register_blueprint(pages)
     app.register_blueprint(api)
     app.register_blueprint(health)

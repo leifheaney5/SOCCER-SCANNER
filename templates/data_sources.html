@@ -14,5 +14,12 @@
     <p>The Tables page can load a SofaScore standings embed only after the user visits that workspace. Soccer Scanner does not merge those standings into fixture records.</p>
     <h2>Coverage policy</h2>
     <p>Unavailable values remain unavailable. Estimates are labeled, provider failures are shown separately from genuinely empty schedules, and each fixture retains source and freshness evidence.</p>
+    <h2>Broadcast source inventory</h2>
+    <p>Only active sources enrich fixtures. Inventory sources are being evaluated for fixture-level matching and are not presented as confirmed coverage.</p>
+    <ul>
+        {% for source in broadcast_sources %}
+        <li><strong>{{ source.name }}</strong> — {{ source.status|capitalize }}; {{ source.scope|join(', ') }}</li>
+        {% endfor %}
+    </ul>
 </article>
 {% endblock %}

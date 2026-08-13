@@ -9,14 +9,14 @@ python -m compileall -q app.py wsgi.py soccer_scanner
 Get-ChildItem static,tests -Recurse -File -Include *.js,*.mjs | ForEach-Object { node --check $_.FullName }
 npm run test:smoke-invariants
 npm audit --audit-level=high
-pip-audit -r requirements.txt
+python -m pip_audit -r requirements.txt --progress-spinner off
 npx playwright test --project=chromium --project=webkit
 git diff --check
 ```
 
 Python coverage includes provider transport bounds, ESPN status fixtures, Football-Data.org adaptation, canonical identity and merge behavior, truthful orchestration states, fresh/stale/expired caches, Redis distributed single-flight and fallback, rate-limit bursts, concurrent timezone reuse, team services, build identity, headers, routes, and API contracts.
 
-Browser coverage includes URL/history state, score non-leakage in DOM and accessibility content, fixture states and filters, refresh behavior, desktop/mobile dialogs, calendar day-level failures and retries, timezone-preserving deep links, PWA/offline sanitization, 320 px reflow, immutable assets, and axe scans. Synthetic screenshots cover default, revealed, filtered, context, partial, stale, empty, error, and mobile-sheet states. Team Intelligence and persistent favorites are intentionally not active surfaces.
+Browser coverage includes URL/history state, score non-leakage in DOM and accessibility content, fixture states and filters, refresh behavior, desktop/mobile dialogs, calendar day-level failures and retries, timezone-preserving deep links, PWA/offline sanitization, bounded global search, protected operations status rendering, 320 px reflow, immutable assets, and axe scans. Synthetic screenshots cover default, revealed, filtered, context, partial, stale, empty, error, and mobile-sheet states. Team Intelligence and persistent favorites are intentionally not active surfaces.
 
 The concurrency/load suite is deterministic and does not call external providers. Existing cache tests cover multi-worker Redis coordination, TTL expiration, and Redis fallback; browser team-drawer tests prove per-team request caching; HTTP tests exercise slow-provider budget and retry behavior.
 

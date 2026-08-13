@@ -69,7 +69,7 @@ let filterDialogManager = null;
 let filterDraft = null;
 let filterMediaQuery = null;
 
-const advancedFilterFields = ['competition', 'country', 'timeWindow', 'sort', 'hideFinished', 'timezone'];
+const advancedFilterFields = ['competition', 'country', 'timeWindow', 'sort', 'hideFinished', 'availability', 'timezone'];
 
 function setState(patch, metadata = {}) {
     return store.dispatch(patch, metadata);
@@ -79,6 +79,31 @@ function syncUrl(mode = 'replace') {
     const query = state.toSearchParams().toString();
     const method = mode === 'push' ? 'pushState' : 'replaceState';
     history[method]({dashboard: true}, '', `${location.pathname}?${query}`);
+}
+
+async function copyFixtureLink() {
+    const button = byId('copy-fixture-link');
+    const url = new URL(window.location.href);
+    url.search = state.toSearchParams().toString();
+    try {
+        await navigator.clipboard.writeText(url.toString());
+    } catch {
+        const input = document.createElement('textarea');
+        input.value = url.toString();
+        input.setAttribute('readonly', 'true');
+        input.style.position = 'fixed';
+        input.style.opacity = '0';
+        document.body.append(input);
+        input.select();
+        document.execCommand('copy');
+        input.remove();
+    }
+    button.setAttribute('aria-label', 'Fixture view link copied');
+    button.dataset.copied = 'true';
+    window.setTimeout(() => {
+        button.removeAttribute('data-copied');
+        button.setAttribute('aria-label', 'Copy fixture view link');
+    }, 1800);
 }
 
 function filterValues(source = state) {
@@ -92,7 +117,8 @@ function activeFilterCount(source = state) {
         + Number(Boolean(source.query))
         + Number(source.timeWindow !== 'all')
         + Number(source.sort !== 'kickoff')
-        + Number(source.hideFinished);
+        + Number(source.hideFinished)
+        + Number(source.availability !== 'all');
 }
 
 function advancedFilterHasValues(source = state, baseline = state) {
@@ -101,6 +127,7 @@ function advancedFilterHasValues(source = state, baseline = state) {
         || source.timeWindow !== 'all'
         || source.sort !== 'kickoff'
         || Boolean(source.hideFinished)
+        || source.availability !== 'all'
         || source.timezone !== baseline.timezone;
 }
 
@@ -118,6 +145,7 @@ function syncControls({filterState = filterDraft || state} = {}) {
     byId('time-filter').value = filterState.timeWindow;
     byId('sort-filter').value = filterState.sort;
     byId('hide-finished').checked = filterState.hideFinished;
+    byId('availability-filter').value = filterState.availability;
     byId('fixture-search').value = state.query;
     byId('clear-search').hidden = !state.query;
     const competition = byId('competition-filter');
@@ -204,6 +232,10 @@ function populateCompetitions(matches) {
 
 function reflectCurrentResults() {
     if (!payload) return;
+    const activeElement = document.activeElement;
+    const contextFocusKey = activeElement?.closest('#match-context')?.dataset.focusKey
+        || activeElement?.dataset.focusKey
+        || null;
     // Every date and time rendered below must use the selected zone.
     setRenderTimeZone(state.timezone);
     const filteredMatches = filterMatches(payload.matches, state);
@@ -248,6 +280,9 @@ function reflectCurrentResults() {
             `.details-button[data-fixture-id="${CSS.escape(selectedFixtureId)}"]`,
         );
         if (match && trigger) matchContext.open(match, trigger);
+    }
+    if (contextFocusKey && selectedMatch) {
+        byId('match-context').querySelector(`[data-focus-key="${CSS.escape(contextFocusKey)}"]`)?.focus();
     }
 }
 
@@ -492,6 +527,10 @@ function bindEvents() {
         if (filterDialog?.open) updateFilterDraft({hideFinished: event.target.checked});
         else applyFilter({hideFinished: event.target.checked});
     });
+    byId('availability-filter').addEventListener('change', event => {
+        if (filterDialog?.open) updateFilterDraft({availability: event.target.value});
+        else applyFilter({availability: event.target.value});
+    });
     document.querySelector('.status-filters').addEventListener('click', event => {
         const button = event.target.closest('[data-status]');
         if (!button) return;
@@ -516,6 +555,7 @@ function bindEvents() {
             country: '',
             timeWindow: 'all',
             hideFinished: false,
+            availability: 'all',
             sort: 'kickoff',
             timezone: state.timezone,
         };
@@ -531,7 +571,15 @@ function bindEvents() {
     const fixtureAction = event => {
         const action = event.target.closest('[data-action]');
         if (!action) return;
-        if (action.dataset.action === 'toggle-group') {
+        if (action.dataset.action === 'toggle-pin') {
+            const key = `${action.dataset.pinKind}:${action.dataset.pinValue.trim().toLocaleLowerCase()}`;
+            let pins = [];
+            try { pins = JSON.parse(sessionStorage.getItem('soccer-scanner:pins') || '[]'); } catch { pins = []; }
+            const next = new Set(pins);
+            next.has(key) ? next.delete(key) : next.add(key);
+            sessionStorage.setItem('soccer-scanner:pins', JSON.stringify([...next]));
+            reflectCurrentResults();
+        } else if (action.dataset.action === 'toggle-group') {
             const key = action.dataset.group;
             expandedGroups.has(key) ? expandedGroups.delete(key) : expandedGroups.add(key);
             reflectCurrentResults();
@@ -581,6 +629,7 @@ function bindEvents() {
         }
     });
     byId('refresh-fixtures').addEventListener('click', () => refreshController?.refresh('manual'));
+    byId('copy-fixture-link').addEventListener('click', copyFixtureLink);
 }
 
 renderDateStrip();

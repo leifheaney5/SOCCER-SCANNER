@@ -105,6 +105,16 @@ function createStreamingSection(match) {
         if (service.region) {
             item.append(node('span', 'context-streaming-region', service.region));
         }
+        if (service.observedAt) {
+            const observed = new Date(service.observedAt);
+            if (!Number.isNaN(observed.getTime())) {
+                item.append(node(
+                    'span',
+                    'context-streaming-observed',
+                    `Observed ${observed.toLocaleString([], {dateStyle: 'medium', timeStyle: 'short'})}`,
+                ));
+            }
+        }
         list.append(item);
     }
     section.append(list);
@@ -164,6 +174,7 @@ function createContextContent(match, revealed, headingId, timeZone) {
     if (fixtureId) {
         const copy = node('button', 'control-button', 'Copy fixture link');
         copy.type = 'button';
+        copy.dataset.focusKey = 'copy-fixture-link';
         copy.addEventListener('click', async () => {
             const link = `${location.origin}/fixtures/${encodeURIComponent(fixtureId)}?timezone=${encodeURIComponent(timeZone)}`;
             try {

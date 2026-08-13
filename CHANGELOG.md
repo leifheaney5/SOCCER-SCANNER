@@ -2,11 +2,26 @@
 
 ## Unreleased
 
+### Added
+
+- Feature-gated global search across bounded upcoming/recent fixtures, teams,
+  and competitions with score-free results, keyboard navigation, and a
+  mobile full-screen surface.
+- Read-only operations dashboard and token-protected operations summary API
+  for build, readiness, provider, rate-limit, and metrics signals.
+- Official broadcast-source inventory for UEFA, FIFA+, and Concacaf, plus a
+  fixture-level observation adapter with exact matching, HTTPS domain checks,
+  ambiguity handling, and coverage metrics.
+
 ### Changed
 
 - Tightened fixture-row spacing and kept venue text on the same desktop row as the match result.
 - Moved verified streaming information beside fixture scores and removed the separate On TV filter.
 - Improved fixture presentation with compact date browsing, stronger live-state hierarchy, optional venue/stage metadata, and verified on-TV filtering.
+- Added crawl-safe WebSite and BreadcrumbList structured data without exposing
+  spoiler-sensitive scores.
+- Added an evidence-led marketing workspace with explicit prohibited claims
+  for coverage, rights, accuracy, and real-time behavior.
 
 ## Unreleased
 
