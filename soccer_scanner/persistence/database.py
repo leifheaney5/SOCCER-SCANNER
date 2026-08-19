@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
-from sqlalchemy.pool import StaticPool
+from sqlalchemy.pool import NullPool, StaticPool
 
 
 SCHEMA_VERSION = '20260804_01'
@@ -122,12 +122,11 @@ class DatabaseRuntime:
             if database_url in {'sqlite://', 'sqlite:///:memory:'}:
                 options['poolclass'] = StaticPool
         else:
-            options.update({
-                'pool_size': max(1, int(config.get('DATABASE_POOL_SIZE', 5))),
-                'max_overflow': max(0, int(config.get('DATABASE_MAX_OVERFLOW', 5))),
-                'pool_timeout': max(1, int(config.get('DATABASE_POOL_TIMEOUT', 5))),
-                'pool_recycle': max(30, int(config.get('DATABASE_POOL_RECYCLE', 300))),
-            })
+            # Soccer Scanner is a low-traffic, single-worker service. Retaining a
+            # Postgres QueuePool is unnecessary and can keep Railway Serverless
+            # from observing a truly idle process. Request-scoped sessions close
+            # their connection when finished instead.
+            options['poolclass'] = NullPool
         return cls(create_engine(database_url, **options))
 
     @contextmanager
