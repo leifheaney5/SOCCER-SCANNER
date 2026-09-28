@@ -300,15 +300,17 @@ function classifyRequestFailure(response, body, error = null) {
 }
 
 async function loadFixtures({preserve = false} = {}) {
+    const preserveResults = preserve && Boolean(payload);
     activeRequestController?.abort();
     activeRequestController = new AbortController();
     const requestId = ++requestSequence;
-    byId('dashboard-status').textContent = preserve ? 'Updating fixtures' : 'Loading fixtures';
-    byId('refresh-fixtures').classList.toggle('is-updating', preserve);
-    byId('refresh-fixtures').setAttribute('aria-busy', String(preserve));
-    if (!preserve) {
+    byId('dashboard-status').textContent = preserveResults ? 'Updating fixtures' : 'Loading fixtures';
+    byId('refresh-fixtures').classList.toggle('is-updating', preserveResults);
+    byId('refresh-fixtures').setAttribute('aria-busy', String(preserveResults));
+    if (!preserveResults) {
         renderLoading(byId('fixture-stream'));
         byId('fixture-result-count').textContent = 'Loading';
+        byId('daily-summary').querySelector('.summary-primary').textContent = 'Loading matches';
         byId('featured-match').hidden = true;
         byId('featured-match').replaceChildren();
         byId('data-notice').hidden = true;
@@ -341,9 +343,12 @@ async function loadFixtures({preserve = false} = {}) {
     } catch (error) {
         if (error?.name === 'AbortError' || requestId !== requestSequence) return {ok: false, aborted: true};
         const failure = error.failure || classifyRequestFailure(error.response, error.body, error);
-        byId('dashboard-status').textContent = preserve ? 'Live update delayed; showing previous fixtures' : 'Football data is temporarily unavailable';
-        if (preserve && payload) renderUpdateFailure(byId('data-notice'), failure);
-        else renderRequestError(byId('fixture-stream'), () => loadFixtures(), failure);
+        byId('dashboard-status').textContent = preserveResults ? 'Live update delayed; showing previous fixtures' : 'Football data is temporarily unavailable';
+        if (preserveResults) renderUpdateFailure(byId('data-notice'), failure);
+        else {
+            byId('daily-summary').querySelector('.summary-primary').textContent = 'Matches unavailable';
+            renderRequestError(byId('fixture-stream'), () => refreshController?.refresh('manual') ?? loadFixtures(), failure);
+        }
         return {ok: false, ...failure};
     } finally {
         if (requestId === requestSequence) {
@@ -678,7 +683,7 @@ function init() {
             timezone: state.timezone,
         }),
     });
-    loadFixtures().finally(() => refreshController.start());
+    refreshController.start({loadImmediately: true});
 }
 
 init();

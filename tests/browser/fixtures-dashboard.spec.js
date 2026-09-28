@@ -437,6 +437,43 @@ test('empty date, filtered empty, provider error retry, partial, and stale state
     await expect(page.locator('#data-notice')).toContainText('Some fixture sources are delayed');
 });
 
+test('initial fixture failure retries automatically and loads fixtures without a page refresh', async ({page}) => {
+    let attempts = 0;
+    await page.route('**/api/v2/fixtures**', route => {
+        attempts += 1;
+        if (attempts === 1) {
+            return route.fulfill({
+                status: 503,
+                headers: {'Retry-After': '1'},
+                contentType: 'application/json',
+                body: JSON.stringify({error: {code: 'provider_unavailable', retryAfterSeconds: 1}}),
+            });
+        }
+        return route.fulfill({contentType: 'application/json', body: JSON.stringify(fixturePayload)});
+    });
+
+    await page.goto('/');
+
+    await expect(page.getByRole('heading', {name: 'Football data is temporarily unavailable'})).toBeVisible();
+    await expect(page.locator('#fixture-result-count')).toContainText('13 matches', {timeout: 5_000});
+    await expect(page.locator('.fixture-card')).toHaveCount(10);
+    await expect(page.locator('.summary-primary')).toHaveText('13 matches');
+    expect(attempts).toBe(2);
+});
+
+test('initial fixture failure replaces the loading summary with an unavailable summary', async ({page}) => {
+    await page.route('**/api/v2/fixtures**', route => route.fulfill({
+        status: 503,
+        contentType: 'application/json',
+        body: JSON.stringify({error: {code: 'provider_unavailable'}}),
+    }));
+
+    await page.goto('/');
+
+    await expect(page.getByRole('heading', {name: 'Football data is temporarily unavailable'})).toBeVisible();
+    await expect(page.locator('.summary-primary')).toHaveText('Matches unavailable');
+});
+
 test('a superseded slow date response cannot replace the latest date', async ({page}) => {
     let markInitialRequestStarted;
     const initialRequestStarted = new Promise(resolve => {
