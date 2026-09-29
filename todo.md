@@ -25,4 +25,6 @@
   - Ledger gate: no checkbox changes until the repository's required task-specific `check.sh` command is available and exits 0.
 - [ ] T007: Add provider-reported TV and streaming “Where to watch” listings to every web and iOS fixture, with verified links and truthful missing-listing state; verify with focused provider, API, browser, and iOS source checks.
   - Plan: `docs/superpowers/plans/2026-09-28-soccer-radar-rebrand.md`, Task 5.
+  - Evidence: `python -m pytest tests/test_espn_provider.py tests/test_streaming_registry.py tests/test_fixture_service_v2.py tests/test_streaming_enrichment.py tests/test_ios_release_assets.py -q` → 66 passed; `npx playwright test tests/browser/streaming.spec.js tests/browser/pwa.spec.js --project=chromium --project=webkit` → 20 passed. Full release matrix: 292 Python tests, 222 Chromium/WebKit checks, both audits clean, `RESULT: PASS`, exit status 0.
+  - Captured output: `C:\Users\lphea\AppData\Local\Temp\soccer-radar-where-to-watch-release-final-20260929.log`.
   - Ledger gate: no checkbox changes until the repository's required task-specific `check.sh` command is available and exits 0.
