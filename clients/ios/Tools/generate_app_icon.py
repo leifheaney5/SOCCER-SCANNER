@@ -1,10 +1,10 @@
 #!/usr/bin/env python
-"""Render the Soccer Scanner app icon from the brand geometry.
+"""Render the Soccer Radar app icons from the shared radar geometry.
 
-The mark is defined in `static/favicon.svg` on a 64x64 grid. No SVG rasteriser
-is available in this toolchain, so the same geometry is reproduced with PIL and
-scaled up. Keeping this as a script means the icon is reproducible rather than
-an unexplained binary in the tree.
+The mark is defined in `static/favicon.svg` on a 360x360 grid. No SVG
+rasteriser is available in this toolchain, so the geometry is reproduced with
+PIL and scaled up. Keeping this as a script makes the generated icons
+reproducible rather than unexplained binaries in the tree.
 
 App Store icons must be fully opaque with no alpha channel and no rounded
 corners of their own (iOS applies the mask), so the output is a flat RGB square.
@@ -20,9 +20,9 @@ import argparse
 import math
 from pathlib import Path
 
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 
-GRID = 64          # brand co-ordinate space
+GRID = 360         # brand co-ordinate space
 TARGET = 1024      # App Store icon size
 SUPERSAMPLE = 4    # draw large, downsample for clean edges
 
@@ -42,43 +42,69 @@ def arc_points(centre, radius, start_degrees, end_degrees, steps=24):
     return points
 
 
-def scanner_s():
-    """The blocky 'S', matching the favicon path exactly."""
-    points = [(17, 16), (47, 16), (47, 24), (25, 24), (25, 30), (42, 30)]
-    # (42,30) -> (49,37), centre (42,37): from straight up round to the right.
-    points += arc_points((42, 37), 7, -90, 0)
-    points += [(49, 41)]
-    # (49,41) -> (42,48), centre (42,41): from the right round to straight down.
-    points += arc_points((42, 41), 7, 0, 90)
-    points += [(15, 48), (15, 40), (41, 40), (41, 34), (24, 34)]
-    # (24,34) -> (17,27), centre (24,27): from straight down round to the left.
-    points += arc_points((24, 27), 7, 90, 180)
-    return points
-
-
-def corner_brackets():
-    """Four scanner corners, as in the favicon."""
-    return [
-        # top-left
-        (11, 11, 21, 14), (11, 11, 14, 21),
-        # top-right
-        (43, 11, 53, 14), (50, 11, 53, 21),
-        # bottom-left
-        (11, 50, 21, 53), (11, 43, 14, 53),
-        # bottom-right
-        (43, 50, 53, 53), (50, 43, 53, 53),
-    ]
-
-
 def render(size=TARGET):
     canvas = size * SUPERSAMPLE
     scale = canvas / GRID
     image = Image.new("RGB", (canvas, canvas), BACKGROUND)
     draw = ImageDraw.Draw(image)
 
-    draw.polygon([(x * scale, y * scale) for x, y in scanner_s()], fill=GREEN)
-    for x0, y0, x1, y1 in corner_brackets():
-        draw.rectangle([x0 * scale, y0 * scale, x1 * scale, y1 * scale], fill=BRACKET)
+    def box(centre, radius):
+        cx, cy = centre
+        return tuple(round(value * scale) for value in (
+            cx - radius, cy - radius, cx + radius, cy + radius,
+        ))
+
+    def arc(radius, start, end, color, width):
+        draw.arc(box((180, 180), radius), start, end, fill=color, width=round(width * scale))
+
+    def circle(centre, radius, color):
+        cx, cy = centre
+        draw.ellipse(box((cx, cy), radius), fill=color)
+
+    def line(points, color, width):
+        draw.line(
+            [(round(x * scale), round(y * scale)) for x, y in points],
+            fill=color,
+            width=round(width * scale),
+        )
+
+    # A restrained sweep sector recalls the live scanner without obscuring the
+    # target rings at app-icon sizes.
+    sweep = [(180, 180)] + arc_points((180, 180), 138, -90, -26)
+    draw.polygon([(round(x * scale), round(y * scale)) for x, y in sweep], fill=(39, 83, 0))
+    sweep_core = [(180, 180)] + arc_points((180, 180), 124, -90, -26)
+    draw.polygon([(round(x * scale), round(y * scale)) for x, y in sweep_core], fill=(53, 111, 0))
+
+    # Black under-strokes preserve separation between the rings and outer frame
+    # at icon sizes.
+    for start, end in ((184, 266), (274, 356), (4, 86), (94, 176)):
+        arc(156, start, end, BACKGROUND, 16)
+    arc(156, 184, 266, BRACKET, 8)
+    arc(156, 274, 356, BRACKET, 8)
+    arc(156, 4, 86, GREEN, 8)
+    arc(156, 94, 176, GREEN, 8)
+
+    draw.ellipse(box((180, 180), 116), outline=BACKGROUND, width=round(12 * scale))
+    draw.ellipse(box((180, 180), 116), outline=(89, 190, 0), width=round(6 * scale))
+    for start, end in ((202, 253), (278, 329), (22, 77), (102, 154)):
+        arc(78, start, end, BACKGROUND, 12)
+    arc(78, 202, 253, GREEN, 6)
+    arc(78, 278, 329, GREEN, 6)
+    arc(78, 22, 77, GREEN, 6)
+    arc(78, 102, 154, GREEN, 6)
+
+    # Crosshairs sit above the rings; the bullseye is drawn last to stay crisp.
+    line([(180, 18), (180, 342)], BACKGROUND, 18)
+    line([(18, 180), (342, 180)], BACKGROUND, 15)
+    line([(180, 18), (180, 342)], BRACKET, 10)
+    line([(18, 180), (342, 180)], GREEN, 7)
+
+    for centre in ((102, 136), (238, 82), (242, 240)):
+        circle(centre, 16, BACKGROUND)
+        circle(centre, 12, GREEN)
+
+    draw.ellipse(box((180, 180), 42), fill=BACKGROUND, outline=BRACKET, width=round(10 * scale))
+    circle((180, 180), 12, BRACKET)
 
     return image.resize((size, size), Image.LANCZOS)
 
@@ -100,17 +126,47 @@ def render_maskable(size, inset_fraction=0.8):
 
 
 def render_social_card(width=1200, height=630):
-    """The Open Graph / Twitter card: the mark centred on the brand black.
-
-    No text is rendered here — several platforms crop or scale card images
-    unpredictably, and the mark alone reads at any crop.
-    """
+    """Render the horizontal radar-and-wordmark social card."""
 
     canvas = Image.new("RGB", (width, height), BACKGROUND)
-    mark_size = min(width, height) - 210
-    mark = render(mark_size)
-    offset = ((width - mark_size) // 2, (height - mark_size) // 2)
-    canvas.paste(mark, offset)
+    draw = ImageDraw.Draw(canvas)
+    mark_size = 320
+    gap = 40
+    tracking = 5
+    font = ImageFont.truetype(
+        str(Path(__file__).parent / "fonts" / "Orbitron-Variable.ttf"),
+        72,
+    )
+    font.set_variation_by_axes([700])
+
+    def text_width(text):
+        return sum(draw.textlength(character, font=font) for character in text) + tracking * max(0, len(text) - 1)
+
+    soccer_width = text_width("SOCCER")
+    radar_width = text_width("RADAR")
+    text_gap = 28
+    lockup_width = mark_size + gap + soccer_width + text_gap + radar_width
+    lockup_x = round((width - lockup_width) / 2)
+    mark_y = (height - mark_size) // 2
+    canvas.paste(render(mark_size), (lockup_x, mark_y))
+
+    text_y = (height - font.getbbox("SOCCER")[3]) // 2 - font.getbbox("SOCCER")[1]
+
+    def draw_word(text, start_x, color):
+        for character in text:
+            draw.text(
+                (round(start_x), text_y),
+                character,
+                font=font,
+                fill=color,
+                stroke_width=2,
+                stroke_fill=BACKGROUND,
+            )
+            start_x += draw.textlength(character, font=font) + tracking
+
+    text_x = lockup_x + mark_size + gap
+    draw_word("SOCCER", text_x, BRACKET)
+    draw_word("RADAR", text_x + soccer_width + text_gap, GREEN)
     return canvas
 
 

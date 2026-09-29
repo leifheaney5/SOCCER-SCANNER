@@ -165,8 +165,8 @@ svg {
 }
 
 .app-title-mark {
-    width: 26px;
-    height: 26px;
+    width: 34px;
+    height: 34px;
     flex-shrink: 0;
 }
 
@@ -181,9 +181,7 @@ svg {
 }
 
 @media (max-width: 480px) {
-    .app-title-wordmark {
-        display: none;
-    }
+    .app-title { gap: 7px; }
 }
 
 .nav-links {
@@ -402,11 +400,20 @@ svg {
 }
 
 @media (max-width: 430px) {
+    .nav-container { gap: 10px; }
+
     .app-title {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 2px;
-        font-size: 11px;
+        gap: 6px;
+        font-size: 10px;
+    }
+
+    .app-title-mark {
+        width: 30px;
+        height: 30px;
+    }
+
+    .app-title-wordmark {
+        gap: 4px;
     }
 
     .nav-link {

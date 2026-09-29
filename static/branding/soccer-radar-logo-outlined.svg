@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 280" role="img" aria-labelledby="title description">
+  <title id="title">Soccer Radar outlined logo</title>
+  <desc id="description">Outlined white and lime radar mark beside the outlined Soccer Radar wordmark.</desc>
+  <g transform="translate(20 20) scale(.666667)">
+    <path d="M180 180V44A136 136 0 0 1 296 109Z" fill="#7cff00" fill-opacity=".12"/>
+    <circle cx="180" cy="180" r="116" fill="none" stroke="#59be00" stroke-width="6"/>
+    <circle cx="180" cy="180" r="78" fill="none" stroke="#68df00" stroke-width="6" stroke-dasharray="162 22 45 22 132 22" transform="rotate(-90 180 180)"/>
+    <path d="M26 172A154 154 0 0 1 172 26M188 26A154 154 0 0 1 334 172" fill="none" stroke="#f2f2f2" stroke-width="8" stroke-linecap="round"/>
+    <path d="M334 188A154 154 0 0 1 188 334M172 334A154 154 0 0 1 26 188" fill="none" stroke="#7cff00" stroke-width="8" stroke-linecap="round"/>
+    <path d="M180 18V342" fill="none" stroke="#f2f2f2" stroke-width="10"/>
+    <path d="M18 180H342" fill="none" stroke="#7cff00" stroke-width="7"/>
+    <circle cx="102" cy="136" r="12" fill="#7cff00"/>
+    <circle cx="238" cy="82" r="12" fill="#7cff00"/>
+    <circle cx="242" cy="240" r="12" fill="#7cff00"/>
+    <circle cx="180" cy="180" r="42" fill="#000" stroke="#f2f2f2" stroke-width="10"/>
+    <circle cx="180" cy="180" r="12" fill="#f2f2f2"/>
+  </g>
+  <text x="300" y="174" fill="none" stroke="#f2f2f2" stroke-width="1.5" paint-order="stroke" font-family="Orbitron, sans-serif" font-size="78" font-weight="700" letter-spacing="5">SOCCER</text>
+  <text x="300" y="254" fill="none" stroke="#7cff00" stroke-width="1.5" paint-order="stroke" font-family="Orbitron, sans-serif" font-size="78" font-weight="700" letter-spacing="5">RADAR</text>
+</svg>
