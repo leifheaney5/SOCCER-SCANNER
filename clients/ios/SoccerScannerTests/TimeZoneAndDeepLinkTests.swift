@@ -124,6 +124,21 @@ final class DeepLinkTests: XCTestCase {
         )
     }
 
+    func testFixtureLinksAcceptBothAssociatedDomains() {
+        let fixtureId = "fx_" + String(repeating: "c", count: 24)
+        let expected = DeepLink.fixture(id: fixtureId, timeZoneIdentifier: nil, calendarDay: nil)
+
+        for host in ["soccerscanner.pro", "soccer-radar.com"] {
+            XCTAssertEqual(
+                DeepLink.parse(URL(string: "https://\(host)/fixtures/\(fixtureId)")!),
+                expected,
+                host
+            )
+        }
+
+        XCTAssertNil(DeepLink.parse(URL(string: "https://untrusted.example/fixtures/\(fixtureId)")!))
+    }
+
     func testPreservesAValidTimezoneAndDropsAnInvalidOne() {
         let fixtureId = "fx_" + String(repeating: "b", count: 24)
         XCTAssertEqual(

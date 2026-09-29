@@ -21,7 +21,10 @@ public enum DeepLink: Hashable, Sendable {
         return regex.firstMatch(in: value, range: range) != nil
     }
 
-    public static func parse(_ url: URL, allowedHosts: Set<String> = ["soccerscanner.pro"]) -> DeepLink? {
+    public static func parse(
+        _ url: URL,
+        allowedHosts: Set<String> = ["soccerscanner.pro", "soccer-radar.com"]
+    ) -> DeepLink? {
         guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
             return nil
         }

@@ -5,6 +5,7 @@
     <key>com.apple.developer.associated-domains</key>
     <array>
         <string>applinks:soccerscanner.pro</string>
+        <string>applinks:soccer-radar.com</string>
     </array>
 </dict>
 </plist>

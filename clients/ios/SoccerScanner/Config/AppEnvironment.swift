@@ -12,7 +12,7 @@ public struct AppEnvironment: Sendable, Equatable {
 
     public static let production = AppEnvironment(
         name: "production",
-        baseURL: URL(string: "https://soccerscanner.pro")!
+        baseURL: URL(string: "https://soccer-radar.com")!
     )
 
     public static let staging = AppEnvironment(

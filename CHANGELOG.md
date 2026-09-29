@@ -15,6 +15,10 @@
 
 ### Changed
 
+- Rebranded the web and native client as Soccer Radar, made
+  `soccer-radar.com` canonical, and preserved old-domain routes and Universal
+  Links.
+- Retried failed initial fixture loads and showed an explicit unavailable state with automatic recovery.
 - Centered and aligned the shared footer, adding copyright and version metadata
   across the responsive application shell.
 - Tightened fixture-row spacing and kept venue text on the same desktop row as the match result.

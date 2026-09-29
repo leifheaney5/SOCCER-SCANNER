@@ -19,6 +19,16 @@
 
 Readiness performs cheap internal checks and must not contact ESPN or Football-Data.org.
 
+## Soccer Radar domain cutover
+
+Before switching the canonical origin, attach `soccer-radar.com` to the
+production `web` service, publish Railway's exact routing and ownership DNS
+records, and confirm ownership and TLS are active. Keep `soccerscanner.pro`
+attached. After deployment, verify a legacy content URL redirects to the
+matching new-domain path and query, both AASA endpoints return directly, and
+`/health/live` and `/health/ready` remain directly reachable on their probe
+hosts.
+
 ## Fixture identity incident
 
 Symptoms include duplicate public IDs, deep links resolving to the wrong match, or a uniqueness-invariant error.

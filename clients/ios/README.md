@@ -1,6 +1,6 @@
-# Soccer Scanner — iOS client
+# Soccer Radar — iOS client
 
-A native SwiftUI client for the Soccer Scanner v2 API. It is not a web-view wrapper.
+A native SwiftUI client for the Soccer Radar v2 API. It is not a web-view wrapper.
 
 ## Current scope
 
@@ -34,9 +34,10 @@ Windows cannot run Xcode, `xcodebuild`, iOS Simulator tests, or compile this tar
 
 Historical evidence recorded on 2026-08-05 shows an earlier `iOS` workflow run passed 36 unit tests and 5 UI tests. It does not verify the current release candidate. A fresh macOS workflow run for the candidate commit is required before calling this client compiled or its UI tests passing.
 
-The native client points production configuration at `https://soccerscanner.pro`.
-The audited committed HEAD was read-only smoke-verified there on 2026-08-07, but
-that does not prove the current uncommitted native changes are deployed or that
+The native client points production configuration at `https://soccer-radar.com`.
+The audited committed HEAD was read-only smoke-verified at
+`https://soccerscanner.pro` on 2026-08-07, but that does not prove the current
+native changes are deployed or that
 Universal Links are activated; a future release SHA needs its own production and
 device verification.
 
@@ -85,9 +86,10 @@ it still validates repository assets, signing inputs, and App Store Connect
 credentials before building. Final screenshots remain portal-managed and are
 not fabricated from browser or simulator captures by Fastlane.
 
-The associated-domains entitlement names `applinks:soccerscanner.pro`. The server
-intentionally returns no Apple App Site Association file until the required Apple
-configuration is supplied. When enabled, it advertises only `/fixtures/*`, the
+The associated-domains entitlement names both `applinks:soccer-radar.com` and
+`applinks:soccerscanner.pro`. The server intentionally returns no Apple App Site
+Association file until the required Apple configuration is supplied. When
+enabled, it advertises only `/fixtures/*`, the
 native route currently implemented by the client; team, competition, and calendar
 web routes remain web-only until native destinations exist.
 

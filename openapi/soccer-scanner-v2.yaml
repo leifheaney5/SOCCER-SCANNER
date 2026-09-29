@@ -1,13 +1,13 @@
 openapi: 3.1.0
 info:
-  title: Soccer Scanner API
+  title: Soccer Radar API
   version: 2.0.0
   description: >-
     Public, spoiler-safe fixture and operational APIs. Scores are omitted from
     search and operations responses and are hidden by the web client until the
     visitor explicitly reveals them.
 servers:
-  - url: https://soccerscanner.pro
+  - url: https://soccer-radar.com
     description: Production
   - url: http://127.0.0.1:5000
     description: Local development

@@ -18,6 +18,10 @@ export function evaluateChecks(checks) {
     return {ok: failures.length === 0, failures};
 }
 
+export function resolveMonitorBaseUrl(environment = process.env) {
+    return environment.MONITOR_BASE_URL || 'https://soccer-radar.com';
+}
+
 async function probe(name, url, fetchImpl, validate) {
     try {
         const response = await fetchImpl(url);
@@ -79,7 +83,7 @@ export async function runMonitor(baseUrl, fetchImpl = fetch) {
 // Entry point when run directly. Compare resolved file URLs rather than
 // string-matching paths, which breaks on Windows separators.
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-    const target = process.env.MONITOR_BASE_URL || 'https://soccerscanner.pro';
+    const target = resolveMonitorBaseUrl();
     const result = await runMonitor(target);
     for (const check of result.checks) {
         console.log(`${check.ok ? 'PASS' : 'FAIL'} ${check.name} — ${check.detail}`);

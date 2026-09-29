@@ -10,7 +10,7 @@ on:
       target:
         description: 'Base URL to probe'
         required: false
-        default: 'https://soccerscanner.pro'
+        default: 'https://soccer-radar.com'
 
 concurrency:
   group: synthetic-monitor
@@ -27,4 +27,4 @@ jobs:
       - name: Probe the deployment
         run: node tests/synthetic-monitor.mjs
         env:
-          MONITOR_BASE_URL: ${{ inputs.target || 'https://soccerscanner.pro' }}
+          MONITOR_BASE_URL: ${{ inputs.target || 'https://soccer-radar.com' }}

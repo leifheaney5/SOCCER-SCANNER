@@ -38,4 +38,5 @@ class Config:
     ESPN_LEAGUE_METADATA_TTL = 86_400
     SEND_FILE_MAX_AGE_DEFAULT = 3600
     TRUSTED_PROXY_HOPS = int(os.getenv('TRUSTED_PROXY_HOPS', '1'))
-    PUBLIC_BASE_URL = os.getenv('PUBLIC_BASE_URL', 'https://soccerscanner.pro').rstrip('/')
+    LEGACY_PUBLIC_HOSTS = ('soccerscanner.pro',)
+    PUBLIC_BASE_URL = os.getenv('PUBLIC_BASE_URL', 'https://soccer-radar.com').rstrip('/')

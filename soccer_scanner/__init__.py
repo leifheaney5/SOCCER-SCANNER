@@ -3,8 +3,9 @@ from pathlib import Path
 import re
 from time import monotonic
 from uuid import uuid4
+from urllib.parse import quote
 
-from flask import Flask, g, jsonify, render_template, request
+from flask import Flask, g, jsonify, redirect, render_template, request
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 from .build_info import load_build_info
@@ -104,6 +105,28 @@ def create_app(config=None):
             else str(uuid4())
         )
         g.request_started = monotonic()
+
+    @app.before_request
+    def redirect_legacy_public_host():
+        host = request.host.partition(':')[0].rstrip('.').lower()
+        if (
+            host not in app.config['LEGACY_PUBLIC_HOSTS']
+            or request.path == '/.well-known/apple-app-site-association'
+            or request.path == '/health'
+            or request.path.startswith('/health/')
+            or request.method not in ('GET', 'HEAD')
+        ):
+            return None
+
+        raw_uri = request.environ.get('RAW_URI') or request.environ.get('REQUEST_URI')
+        if raw_uri:
+            raw_path = raw_uri.partition('?')[0]
+        else:
+            raw_path = quote(request.path, safe='/%:@')
+        location = f"{app.config['PUBLIC_BASE_URL']}{raw_path}"
+        if request.query_string:
+            location = f"{location}?{request.query_string.decode('latin-1')}"
+        return redirect(location, code=301)
 
     # Each protected surface draws on its own budget so an expensive endpoint
     # cannot exhaust plain fixture reads, and vice versa.

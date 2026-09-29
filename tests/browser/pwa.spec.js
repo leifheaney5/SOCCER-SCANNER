@@ -7,7 +7,8 @@ test.use({serviceWorkers: 'allow'});
 test('manifest is installable and the worker controls the application scope', async ({page}) => {
     await page.goto('/offline');
     const manifest = await page.evaluate(async () => fetch('/static/manifest.webmanifest').then(response => response.json()));
-    expect(manifest.name).toBe('Soccer Scanner');
+    expect(manifest.name).toBe('Soccer Radar');
+    expect(manifest.short_name).toBe('Soccer Radar');
     expect(manifest.start_url).toBe('/');
     expect(manifest.scope).toBe('/');
     expect(manifest.display).toBe('standalone');

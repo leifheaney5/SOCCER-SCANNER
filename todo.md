@@ -4,3 +4,22 @@
   - Evidence: full documented release matrix passed, including 218 Chromium/WebKit browser checks, Python tests, syntax checks, dependency audits, and `git diff --check`.
   - Captured output: `C:\Users\lphea\AppData\Local\Temp\soccer-scanner-T001-matrix-20260928-171917.log` (`RESULT: PASS`, exit status 0).
   - Ledger gate: left unchecked because this checkout has no `check.sh`, and the supplied instructions require that command to exit 0 before changing a task checkbox.
+- [ ] T002: Set the Soccer Radar canonical origin and redirect `soccerscanner.pro` paths and queries; verify with `python -m pytest tests/test_public_routes.py tests/test_app.py -q`.
+  - Evidence: `python -m pytest tests/test_public_routes.py tests/test_app.py -q` → 62 passed; `RESULT: PASS`, exit status 0.
+  - Captured output: `C:\Users\lphea\AppData\Local\Temp\soccer-radar-T002-routes-20260928.log`.
+  - Ledger gate: left unchecked because this checkout has no `check.sh`.
+- [ ] T003: Rebrand current web templates, page metadata, favicon label, and PWA identity while preserving layout and storage keys; verify with `npx playwright test tests/browser/branding.spec.js tests/browser/pwa.spec.js --project=chromium --project=webkit`.
+  - Evidence: Chromium/WebKit browser checks → 22 passed; route/app tests → 62 passed; `RESULT: PASS`, exit status 0.
+  - Captured output: `C:\Users\lphea\AppData\Local\Temp\soccer-radar-T003-web-20260928.log`.
+  - Ledger gate: left unchecked because this checkout has no `check.sh`.
+- [ ] T004: Rebrand iOS display/store metadata and support Universal Links on both domains without changing the bundle ID; verify with `python -m pytest tests/test_ios_release_assets.py -q` and the candidate's GitHub Actions iOS workflow.
+  - Evidence: local source gate `python -m pytest tests/test_ios_release_assets.py -q` → 14 passed; `RESULT: PASS`, exit status 0. Candidate macOS workflow remains pending.
+  - Captured output: `C:\Users\lphea\AppData\Local\Temp\soccer-radar-T004-ios-source-20260928.log`.
+  - Ledger gate: left unchecked because this checkout has no `check.sh`.
+- [ ] T005: Update current monitor, OpenAPI, release documentation, and changelog to the Soccer Radar origin; verify with `node --test tests/synthetic-monitor.test.mjs`.
+  - Evidence: `node --test tests/synthetic-monitor.test.mjs` → 12 passed; Python routes/native checks → 38 passed; `RESULT: PASS`, exit status 0.
+  - Captured output: `C:\Users\lphea\AppData\Local\Temp\soccer-radar-T005-docs-monitor-20260928.log`.
+  - Ledger gate: left unchecked because this checkout has no `check.sh`.
+- [ ] T006: Release the combined fixture fix and rebrand after DNS/TLS, full repository checks, hosted CI/iOS, exact Railway deployment, redirect, readiness, and production smoke gates pass; verify with the documented release matrix and `npm run smoke:production` against the exact merged SHA.
+  - Plan: `docs/superpowers/plans/2026-09-28-soccer-radar-rebrand.md`.
+  - Ledger gate: no checkbox changes until the repository's required task-specific `check.sh` command is available and exits 0.

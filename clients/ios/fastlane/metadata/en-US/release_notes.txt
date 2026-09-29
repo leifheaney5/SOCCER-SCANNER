@@ -1,4 +1,4 @@
-Navigate football fixtures with less friction in this native Soccer Scanner preview.
+Navigate football fixtures with less friction in this native Soccer Radar preview.
 
 - Move between previous, current, and next fixture days, or choose a date directly.
 - Use your timezone for both kickoff times and fixture-day membership.

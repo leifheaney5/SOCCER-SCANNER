@@ -1,7 +1,9 @@
 import {strict as assert} from 'node:assert';
 import test from 'node:test';
 
-import {evaluateChecks, runMonitor} from './synthetic-monitor.mjs';
+import * as monitor from './synthetic-monitor.mjs';
+
+const {evaluateChecks, runMonitor} = monitor;
 
 const jsonResponse = (body, status = 200) => ({
     ok: status >= 200 && status < 300,
@@ -24,6 +26,14 @@ const healthy = {
     '/health/providers': jsonResponse({status: 'ok', singleProvider: false}),
     '/api/v2/fixtures': jsonResponse({matches: [{canonicalFixtureId: 'fx_a'}]}),
 };
+
+test('the monitor defaults to the Soccer Radar canonical origin and keeps explicit overrides', () => {
+    assert.equal(monitor.resolveMonitorBaseUrl({}), 'https://soccer-radar.com');
+    assert.equal(
+        monitor.resolveMonitorBaseUrl({MONITOR_BASE_URL: 'https://monitor.example'}),
+        'https://monitor.example',
+    );
+});
 
 test('a healthy deployment passes every check', async () => {
     const result = await runMonitor('https://example.test', stubFetch(healthy));

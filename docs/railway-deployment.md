@@ -12,9 +12,22 @@ Production requires:
 - `DATABASE_URL` referencing `${{Postgres.DATABASE_URL}}` using the exact PostgreSQL service name;
 - `REDIS_URL` referencing `${{Redis.REDIS_URL}}` using the exact Redis service name;
 - sealed `OPS_ADMIN_TOKEN` and any provider credentials;
-- `APP_ENVIRONMENT=production`, `PUBLIC_BASE_URL=https://soccerscanner.pro`, `TRUSTED_PROXY_HOPS=1`, and `RAILPACK_PYTHON_VERSION=3.13.14`.
+- `APP_ENVIRONMENT=production`, `PUBLIC_BASE_URL=https://soccer-radar.com`, `TRUSTED_PROXY_HOPS=1`, and `RAILPACK_PYTHON_VERSION=3.13.14`.
 
 Railway injects `PORT`, deployment metadata, and the Git commit SHA. Never replace those with guessed values.
+
+## Soccer Radar domain cutover
+
+1. Add `soccer-radar.com` to the existing production `web` service on port
+   `8080` and record Railway's required routing and ownership DNS values.
+2. Configure those exact values at the DNS provider. Keep `soccerscanner.pro`
+   attached while Railway verifies ownership and issues TLS.
+3. Confirm `railway domain status` reports the new host as verified with an
+   active certificate before setting `PUBLIC_BASE_URL` to
+   `https://soccer-radar.com`.
+4. Deploy the reviewed application change. The legacy host redirects public
+   GET/HEAD routes with their query strings; health endpoints remain directly
+   reachable, and both hosts serve AASA directly for Universal Links.
 
 ## Staging gate
 

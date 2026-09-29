@@ -1,4 +1,4 @@
-# Soccer Scanner release checklist
+# Soccer Radar release checklist
 
 This checklist is the release gate for the native iOS client and its supporting
 web/API surfaces. It records repository-controlled evidence separately from
@@ -33,7 +33,7 @@ Complete these checks against the exact release commit. Attach CI logs or local
 command output where applicable.
 
 - [x] `clients/ios/SoccerScanner/Info.plist` exists, is valid XML plist data,
-  and matches the XcodeGen properties: display name `Soccer Scanner`, version
+  and matches the XcodeGen properties: display name `Soccer Radar`, version
   `1.0.0`, build `1`, launch-screen dictionary, non-exempt encryption flag,
   and portrait/landscape orientations. The bundle identifier remains a build
   setting; no Apple Team ID is stored here.
@@ -52,10 +52,10 @@ command output where applicable.
   source tree and declares the current no-tracking/no-collected-data posture.
   A macOS/App Store review must still confirm that it matches actual native
   behavior and App Store Connect questionnaire answers.
-- [x] The associated-domains entitlement is source-controlled as
-  `applinks:soccerscanner.pro`; the AASA server route has guarded logic and
-  tests. It is not marked live until the identifiers and endpoint checks in
-  the human section pass.
+- [x] The associated-domains entitlement supports both
+  `applinks:soccerscanner.pro` and `applinks:soccer-radar.com`; the AASA server
+  route has guarded logic and tests. It is not marked live until the
+  identifiers and endpoint checks in the human section pass.
 - [x] Fastlane metadata templates exist for the app name, subtitle,
   description, keywords, category, marketing URL, privacy URL, terms URL, and
   these release notes. The metadata is still subject to human content/legal
@@ -126,12 +126,13 @@ the values below when they are credentials or environment-specific secrets.
 - [ ] App Store Connect API-key credentials and signing/provisioning values are
   configured in the approved secret store. No `.p8`, password, certificate,
   or provisioning profile belongs in this repository.
-- [ ] The AASA endpoint at
-  `https://soccerscanner.pro/.well-known/apple-app-site-association` returns
-  the final `TEAM_ID.BUNDLE_ID` app identifier, correct paths/components,
-  `200`, JSON content type, HTTPS, and no redirect. Verify both the device
-  Universal Link behavior and the server response. The endpoint is expected to
-  remain disabled until the identifiers are configured.
+- [ ] The AASA endpoints at
+  `https://soccer-radar.com/.well-known/apple-app-site-association` and
+  `https://soccerscanner.pro/.well-known/apple-app-site-association` return the
+  final `TEAM_ID.BUNDLE_ID` app identifier, correct paths/components, `200`,
+  JSON content type, HTTPS, and no redirect. Verify both device Universal Link
+  behavior and server responses. The endpoints are expected to remain disabled
+  until the identifiers are configured.
 - [ ] The website Terms page has completed legal review. Its current draft
   placeholders for operating entity, effective date, registered address,
   governing law, venue, liability cap, and contact information must be

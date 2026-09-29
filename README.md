@@ -1,6 +1,9 @@
-# Soccer Scanner
+# Soccer Radar
 
-Soccer Scanner 2.0 is a spoiler-safe football fixture workspace built with Flask and vanilla JavaScript. The production site is [soccerscanner.pro](https://soccerscanner.pro).
+Soccer Radar 2.0 is a spoiler-safe football fixture workspace built with Flask
+and vanilla JavaScript. The production site is
+[soccer-radar.com](https://soccer-radar.com); `soccerscanner.pro` remains active
+for old links and redirects content to the matching new-domain route.
 
 ## What it does
 
@@ -47,7 +50,7 @@ Open `http://127.0.0.1:5000`. ESPN fixture coverage works without a credential. 
 | `APP_ENVIRONMENT` | Build/runtime environment; production requires a commit SHA | Railway environment or `development` |
 | `APP_VERSION` | Semantic application version override | package version |
 | `GIT_COMMIT_SHA` | Exact deployed Git revision | Railway commit SHA fallback |
-| `PUBLIC_BASE_URL` | Canonical public origin | `https://soccerscanner.pro` |
+| `PUBLIC_BASE_URL` | Canonical public origin | `https://soccer-radar.com` |
 | `TRUSTED_PROXY_HOPS` | Number of trusted reverse-proxy hops | `1` |
 | `PORT` | HTTP port | `5000` |
 | `WEB_CONCURRENCY` | Gunicorn workers | `2` |
@@ -72,7 +75,7 @@ CI also checks every JavaScript file, serious/critical axe violations, dependenc
 After Railway reports terminal `SUCCESS`, verify the exact revision rather than inferring deployment from Git:
 
 ```powershell
-$env:BASE_URL='https://soccerscanner.pro'
+$env:BASE_URL='https://soccer-radar.com'
 $env:EXPECTED_SHA=(git rev-parse HEAD)
 npm run smoke:production
 ```

@@ -1,7 +1,7 @@
 {
-  "name": "Soccer Scanner",
-  "short_name": "Scanner",
-  "description": "Fast, spoiler-safe soccer fixture intelligence.",
+  "name": "Soccer Radar",
+  "short_name": "Soccer Radar",
+  "description": "Fast, spoiler-safe soccer fixture intelligence from Soccer Radar.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

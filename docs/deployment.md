@@ -12,10 +12,10 @@ Do not use Flask's development server in production.
 
 ## Railway
 
-Production is connected to the GitHub `main` branch and served at `https://soccerscanner.pro`. Configure:
+Production is connected to the GitHub `main` branch and served at `https://soccer-radar.com`. Configure:
 
 - `APP_ENVIRONMENT=production`
-- `PUBLIC_BASE_URL=https://soccerscanner.pro`
+- `PUBLIC_BASE_URL=https://soccer-radar.com`
 - `TRUSTED_PROXY_HOPS=1`
 - `DATABASE_URL=${{Postgres.DATABASE_URL}}` from a private Railway PostgreSQL service
 - `REDIS_URL=${{Redis.REDIS_URL}}` from a private Railway Redis service
@@ -25,6 +25,14 @@ Production is connected to the GitHub `main` branch and served at `https://socce
 - optional `WEB_CONCURRENCY`, normally `2`
 
 Railway supplies `PORT`, `RAILWAY_GIT_COMMIT_SHA`, `RAILWAY_ENVIRONMENT_NAME`, and deployment timestamp metadata. Production startup intentionally fails if neither the explicit nor Railway commit SHA is valid.
+
+For the Soccer Radar domain cutover, attach `soccer-radar.com` to the existing
+production web service first. Add the exact routing and ownership DNS records
+Railway returns, then verify domain ownership and active TLS before setting
+`PUBLIC_BASE_URL=https://soccer-radar.com`. Keep `soccerscanner.pro` attached:
+public GET/HEAD routes redirect to the matching path and query on the new
+domain, health endpoints remain directly reachable, and both domains serve
+the Apple App Site Association endpoint without a redirect.
 
 The checked-in `railway.json` runs `alembic upgrade head` in Railway's pre-deploy container, starts Gunicorn explicitly, and gates activation on `/health/ready`. Do not run migrations inside each web replica.
 
@@ -43,7 +51,7 @@ provider cache remains eligible for fallback.
 6. Run:
 
    ```powershell
-   $env:BASE_URL='https://soccerscanner.pro'
+   $env:BASE_URL='https://soccer-radar.com'
    $env:EXPECTED_SHA=(git rev-parse HEAD)
    npm run smoke:production
    ```

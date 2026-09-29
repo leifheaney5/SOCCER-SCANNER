@@ -43,7 +43,7 @@ public struct SettingsView: View {
             }
 
             Section(String(localized: "Website and legal")) {
-                Link(String(localized: "Soccer Scanner website"), destination: publicBaseURL)
+                Link(String(localized: "Soccer Radar website"), destination: publicBaseURL)
                     .accessibilityIdentifier("settings-website-link")
                 Link(String(localized: "Privacy"), destination: pageURL("privacy"))
                     .accessibilityIdentifier("settings-privacy-link")

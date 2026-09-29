@@ -31,7 +31,7 @@ targets:
     info:
       path: SoccerScanner/Info.plist
       properties:
-        CFBundleDisplayName: Soccer Scanner
+        CFBundleDisplayName: Soccer Radar
         CFBundleShortVersionString: "1.0.0"
         CFBundleVersion: "1"
         UILaunchScreen: {}
@@ -48,12 +48,13 @@ targets:
         # if the registered bundle ID differs.
         PRODUCT_BUNDLE_IDENTIFIER: pro.soccerscanner.app
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-        INFOPLIST_KEY_CFBundleDisplayName: Soccer Scanner
+        INFOPLIST_KEY_CFBundleDisplayName: Soccer Radar
     entitlements:
       path: SoccerScanner/SoccerScanner.entitlements
       properties:
         com.apple.developer.associated-domains:
           - applinks:soccerscanner.pro
+          - applinks:soccer-radar.com
 
   SoccerScannerTests:
     type: bundle.unit-test

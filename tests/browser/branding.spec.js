@@ -8,7 +8,7 @@ test('the header exposes the accessible home link with an inline mark', async ({
     }));
     await page.goto('/?date=2026-08-03');
 
-    const homeLink = page.getByRole('link', {name: 'Soccer Scanner home'});
+    const homeLink = page.getByRole('link', {name: 'Soccer Radar home'});
     await expect(homeLink).toBeVisible();
     await expect(homeLink.locator('svg')).toHaveCount(1);
     await expect(homeLink.locator('svg')).toHaveAttribute('aria-hidden', 'true');
@@ -20,7 +20,7 @@ test('the footer is centered and identifies the copyright and app version', asyn
     const footer = page.locator('.app-footer');
     const container = footer.locator('.footer-container');
     await expect(container).toHaveCSS('justify-content', 'center');
-    await expect(container).toContainText('© 2026 Soccer Scanner');
+    await expect(container).toContainText('© 2026 Soccer Radar');
     await expect(container).toContainText('Version 2.0.0');
 });
 
@@ -33,13 +33,27 @@ test('the header mark stays proportionate to the wordmark on legacy team and tab
     for (const path of ['/teams', '/league-tables']) {
         await page.goto(path);
 
-        const homeLink = page.getByRole('link', {name: 'Soccer Scanner home'});
+        const homeLink = page.getByRole('link', {name: 'Soccer Radar home'});
         await expect(homeLink).toBeVisible();
         await expect(homeLink.locator('.app-title-mark')).toHaveCount(1);
 
         const fontSize = await page.locator('.app-title').evaluate(el => getComputedStyle(el).fontSize);
         expect(fontSize, path).toBe('15px');
     }
+});
+
+test('page metadata and the favicon use the Soccer Radar identity and canonical origin', async ({page}) => {
+    await page.goto('/?date=2026-08-03');
+
+    await expect(page).toHaveTitle('Fixtures | Soccer Radar');
+    await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', 'https://soccer-radar.com/');
+    await expect(page.locator('meta[property="og:url"]')).toHaveAttribute('content', 'https://soccer-radar.com/');
+
+    const websiteJsonLd = await page.locator('script[type="application/ld+json"]').textContent();
+    expect(JSON.parse(websiteJsonLd)['@graph'][0].name).toBe('Soccer Radar');
+
+    const favicon = await page.request.get('/static/favicon.svg');
+    expect(await favicon.text()).toContain('aria-label="Soccer Radar"');
 });
 
 test('every declared icon resolves with an image content type', async ({page}) => {

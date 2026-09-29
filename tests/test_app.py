@@ -352,7 +352,7 @@ class SoccerScannerRoutesTest(unittest.TestCase):
         html = page.get_data(as_text=True)
 
         self.assertEqual(api_response.headers['Cache-Control'], 'no-store')
-        self.assertIn('<link rel="canonical" href="https://soccerscanner.pro/">', html)
+        self.assertIn('<link rel="canonical" href="https://soccer-radar.com/">', html)
         self.assertIn('property="og:title"', html)
         self.assertIn('name="twitter:card"', html)
         self.assertIn('"@type": "WebSite"', html)

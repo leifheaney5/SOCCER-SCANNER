@@ -71,7 +71,7 @@ class RobotsAndSitemapTest(unittest.TestCase):
         }, clear=False):
             self.app = create_app({
                 'TESTING': True,
-                'PUBLIC_BASE_URL': 'https://soccerscanner.pro',
+                'PUBLIC_BASE_URL': 'https://soccer-radar.com',
             })
         self.client = self.app.test_client()
 
@@ -82,7 +82,7 @@ class RobotsAndSitemapTest(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.mimetype.startswith('text/plain'))
         self.assertIn('User-agent: *', body)
-        self.assertIn('Sitemap: https://soccerscanner.pro/sitemap.xml', body)
+        self.assertIn('Sitemap: https://soccer-radar.com/sitemap.xml', body)
 
     def test_robots_keeps_operational_surfaces_out_of_the_index(self):
         body = self.client.get('/robots.txt').get_data(as_text=True)
@@ -107,14 +107,85 @@ class RobotsAndSitemapTest(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn('application/xml', response.mimetype)
         self.assertIn('<urlset', body)
-        self.assertIn('<loc>https://soccerscanner.pro/</loc>', body)
-        self.assertIn('<loc>https://soccerscanner.pro/privacy</loc>', body)
+        self.assertIn('<loc>https://soccer-radar.com/</loc>', body)
+        self.assertIn('<loc>https://soccer-radar.com/privacy</loc>', body)
         # /terms is a labelled draft (noindex) and must never be advertised
         # to crawlers via the sitemap, though the route itself stays live.
-        self.assertNotIn('<loc>https://soccerscanner.pro/terms</loc>', body)
+        self.assertNotIn('<loc>https://soccer-radar.com/terms</loc>', body)
         # Never advertise non-indexable surfaces.
         self.assertNotIn('/api/', body)
         self.assertNotIn('/health/', body)
+
+
+class CanonicalHostTest(unittest.TestCase):
+    def test_default_public_origin_is_soccer_radar(self):
+        app = create_app({'TESTING': True})
+
+        self.assertEqual(app.config['PUBLIC_BASE_URL'], 'https://soccer-radar.com')
+
+    def test_legacy_host_redirect_preserves_path_and_query(self):
+        app = create_app({'TESTING': True, 'PUBLIC_BASE_URL': 'https://soccer-radar.com'})
+        response = app.test_client().get(
+            '/fixtures/fx_0123456789abcdef01234567?date=2026-08-05&timezone=UTC',
+            headers={'Host': 'soccerscanner.pro'},
+            follow_redirects=False,
+        )
+
+        self.assertEqual(response.status_code, 301)
+        self.assertEqual(
+            response.headers['Location'],
+            'https://soccer-radar.com/fixtures/fx_0123456789abcdef01234567?date=2026-08-05&timezone=UTC',
+        )
+
+    def test_legacy_host_redirect_preserves_percent_encoding(self):
+        app = create_app({'TESTING': True, 'PUBLIC_BASE_URL': 'https://soccer-radar.com'})
+        response = app.test_client().get(
+            '/fixtures/fx%2F012345?filter=home%2Faway',
+            headers={'Host': 'soccerscanner.pro'},
+            environ_overrides={'RAW_URI': '/fixtures/fx%2F012345?filter=home%2Faway'},
+            follow_redirects=False,
+        )
+
+        self.assertEqual(response.status_code, 301)
+        self.assertEqual(
+            response.headers['Location'],
+            'https://soccer-radar.com/fixtures/fx%2F012345?filter=home%2Faway',
+        )
+
+    def test_legacy_host_matching_normalizes_case_trailing_dot_and_port(self):
+        app = create_app({'TESTING': True, 'PUBLIC_BASE_URL': 'https://soccer-radar.com'})
+        client = app.test_client()
+
+        for host in ('SOCCERSCANNER.PRO', 'soccerscanner.pro.', 'soccerscanner.pro:8080'):
+            with self.subTest(host=host):
+                response = client.get('/', headers={'Host': host}, follow_redirects=False)
+                self.assertEqual(response.status_code, 301)
+                self.assertEqual(response.headers['Location'], 'https://soccer-radar.com/')
+
+    def test_canonical_host_is_not_redirected(self):
+        app = create_app({'TESTING': True, 'PUBLIC_BASE_URL': 'https://soccer-radar.com'})
+        response = app.test_client().get('/', headers={'Host': 'soccer-radar.com'}, follow_redirects=False)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.headers.get('Location'))
+
+    def test_unknown_host_does_not_redirect(self):
+        app = create_app({'TESTING': True, 'PUBLIC_BASE_URL': 'https://soccer-radar.com'})
+        response = app.test_client().get('/', headers={'Host': 'attacker.example'}, follow_redirects=False)
+
+        self.assertNotEqual(response.status_code, 301)
+        self.assertIsNone(response.headers.get('Location'))
+
+    def test_legacy_host_does_not_redirect_health_probes(self):
+        app = create_app({'TESTING': True, 'PUBLIC_BASE_URL': 'https://soccer-radar.com'})
+        response = app.test_client().get(
+            '/health/live',
+            headers={'Host': 'soccerscanner.pro'},
+            follow_redirects=False,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.headers.get('Location'))
 
 
 class AppleAppSiteAssociationTest(unittest.TestCase):
@@ -145,6 +216,25 @@ class AppleAppSiteAssociationTest(unittest.TestCase):
         self.assertTrue(components[0]['exclude'])
         self.assertEqual(components[1]['/'], '/fixtures/*')
         self.assertFalse(components[1].get('exclude', False))
+
+    def test_aasa_is_served_directly_on_both_public_hosts(self):
+        app = create_app({
+            'TESTING': True,
+            'APPLE_TEAM_ID': 'ABCDE12345',
+            'APPLE_BUNDLE_ID': 'pro.soccerscanner.app',
+        })
+        client = app.test_client()
+
+        for host in ('soccerscanner.pro', 'soccer-radar.com'):
+            with self.subTest(host=host):
+                response = client.get(
+                    '/.well-known/apple-app-site-association',
+                    headers={'Host': host},
+                    follow_redirects=False,
+                )
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.mimetype, 'application/json')
+                json.loads(response.get_data(as_text=True))
 
 
 class AppConfigTest(unittest.TestCase):

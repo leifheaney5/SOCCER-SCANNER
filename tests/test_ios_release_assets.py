@@ -27,7 +27,7 @@ def _plist_value(path, key):
 def test_native_info_plist_matches_release_contract():
     path = IOS_ROOT / 'SoccerScanner' / 'Info.plist'
 
-    assert _plist_value(path, 'CFBundleDisplayName') == 'Soccer Scanner'
+    assert _plist_value(path, 'CFBundleDisplayName') == 'Soccer Radar'
     assert _plist_value(path, 'CFBundleShortVersionString') == '1.0.0'
     assert _plist_value(path, 'CFBundleVersion') == '1'
     assert _plist_value(path, 'ITSAppUsesNonExemptEncryption') is False
@@ -51,6 +51,38 @@ def test_native_project_and_entitlements_expose_only_verified_defaults():
     assert 'ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon' in project
     assert 'APPLE_TEAM_ID' not in entitlements
     assert '<string>applinks:soccerscanner.pro</string>' in entitlements
+    assert '<string>applinks:soccer-radar.com</string>' in entitlements
+    assert 'applinks:soccerscanner.pro' in project
+    assert 'applinks:soccer-radar.com' in project
+    assert 'CFBundleDisplayName: Soccer Radar' in project
+    assert 'INFOPLIST_KEY_CFBundleDisplayName: Soccer Radar' in project
+
+
+def test_native_brand_and_production_links_use_soccer_radar_without_renaming_bundle_id():
+    project = (IOS_ROOT / 'project.yml').read_text(encoding='utf-8')
+    environment = (IOS_ROOT / 'SoccerScanner' / 'Config' / 'AppEnvironment.swift').read_text(
+        encoding='utf-8'
+    )
+    settings = (IOS_ROOT / 'SoccerScanner' / 'Features' / 'Settings' / 'SettingsView.swift').read_text(
+        encoding='utf-8'
+    )
+    deep_links = (IOS_ROOT / 'SoccerScanner' / 'Support' / 'DeepLink.swift').read_text(
+        encoding='utf-8'
+    )
+    store_name = (IOS_ROOT / 'fastlane' / 'metadata' / 'en-US' / 'name.txt').read_text(
+        encoding='utf-8'
+    ).strip()
+    marketing_url = (IOS_ROOT / 'fastlane' / 'metadata' / 'en-US' / 'marketing_url.txt').read_text(
+        encoding='utf-8'
+    ).strip()
+
+    assert 'PRODUCT_BUNDLE_IDENTIFIER: pro.soccerscanner.app' in project
+    assert 'https://soccer-radar.com' in environment
+    assert 'Soccer Radar website' in settings
+    assert '"soccer-radar.com"' in deep_links
+    assert '"soccerscanner.pro"' in deep_links
+    assert store_name == 'Soccer Radar'
+    assert marketing_url == 'https://soccer-radar.com/'
 
 
 def test_generated_xcode_artifacts_are_ignored():

@@ -5,7 +5,7 @@ function showUpdateNotice() {
     const notice = document.createElement('div');
     notice.className = 'pwa-update-notice';
     notice.setAttribute('role', 'status');
-    notice.textContent = 'Soccer Scanner updated. Refresh when convenient.';
+    notice.textContent = 'Soccer Radar updated. Refresh when convenient.';
     document.body.append(notice);
 }
 
