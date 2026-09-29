@@ -196,6 +196,20 @@ final class FixtureFlowUITests: XCTestCase {
         return formatter.string(from: date)
     }
 
+    private func calendarMonthLabel(for isoDay: String) -> String {
+        let parser = DateFormatter()
+        parser.locale = Locale(identifier: "en_US_POSIX")
+        parser.timeZone = TimeZone(identifier: "UTC")
+        parser.dateFormat = "yyyy-MM-dd"
+        let date = try! XCTUnwrap(parser.date(from: isoDay))
+
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US")
+        formatter.timeZone = TimeZone(identifier: "UTC")
+        formatter.dateFormat = "MMMM yyyy"
+        return formatter.string(from: date)
+    }
+
     private func scrollToElement(_ target: XCUIElement, in app: XCUIApplication) {
         for _ in 0..<8 {
             if target.isHittable {
@@ -253,6 +267,9 @@ final class FixtureFlowUITests: XCTestCase {
         let datePicker = app.datePickers["date-picker"]
         let pickerTargetDay = nextDay(after: initialDay)
         datePicker.tap()
+        if calendarMonthLabel(for: pickerTargetDay) != calendarMonthLabel(for: initialDay) {
+            app.buttons["DatePicker.NextMonth"].tap()
+        }
         let targetDay = app.buttons[calendarButtonLabel(for: pickerTargetDay)]
         XCTAssertTrue(targetDay.waitForExistence(timeout: 10))
         targetDay.tap()
@@ -416,8 +433,8 @@ final class FixtureFlowUITests: XCTestCase {
         XCTAssertTrue(nationalSports.exists)
         let region = app.staticTexts["GB"]
         XCTAssertTrue(region.exists)
-        let broadcast = app.staticTexts["Broadcast"]
-        XCTAssertTrue(broadcast.exists)
+        let television = app.staticTexts["TV"]
+        XCTAssertTrue(television.exists)
         let availability = app.staticTexts["Availability varies by region and subscription. Listings may be incomplete or out of date."]
         XCTAssertTrue(availability.exists)
     }
@@ -601,6 +618,9 @@ final class FixtureFlowUITests: XCTestCase {
         let datePickerTargetDay = nextDay(after: shiftedDay)
         XCTAssertNotEqual(datePickerTargetDay, shiftedDay)
         datePicker.tap()
+        if calendarMonthLabel(for: datePickerTargetDay) != calendarMonthLabel(for: shiftedDay) {
+            app.buttons["DatePicker.NextMonth"].tap()
+        }
         let targetDate = app.buttons[calendarButtonLabel(for: datePickerTargetDay)]
         XCTAssertTrue(targetDate.waitForExistence(timeout: 10))
         targetDate.tap()
