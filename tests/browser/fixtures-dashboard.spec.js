@@ -9,8 +9,10 @@ async function mockFixtures(page, payload = fixturePayload) {
 }
 
 test('semantic shell shows spoiler control and fixture-shaped loading rows', async ({page}) => {
+    let releaseResponse;
+    const responseGate = new Promise(resolve => { releaseResponse = resolve; });
     await page.route('**/api/v2/fixtures**', async route => {
-        await new Promise(resolve => setTimeout(resolve, 1_000));
+        await responseGate;
         await route.fulfill({
             contentType: 'application/json',
             body: JSON.stringify({matches: [], total_matches: 0, date: '2026-08-03'}),
@@ -23,6 +25,7 @@ test('semantic shell shows spoiler control and fixture-shaped loading rows', asy
     await expect(page.getByRole('region', {name: 'Fixture filters'})).toBeVisible();
     await expect(page.getByRole('button', {name: 'Reveal scores'})).toHaveAttribute('aria-pressed', 'false');
     await expect(page.locator('[data-skeleton="fixture"]')).toHaveCount(6);
+    releaseResponse();
 });
 
 test('URL state initializes controls and filter changes replace the URL', async ({page}) => {
@@ -280,8 +283,9 @@ test('fixtures render paired identities, crest fallbacks, groups, and live-first
     await expect(page.locator('[data-fixture-id="postponed"] .score-display')).toHaveText('Postponed');
     await expect(page.locator('.fixture-card').first()).not.toContainText(' vs ');
     await expect(page.locator('.fixture-card[data-fixture-id="live-secret"] .fixture-freshness')).toContainText('Updated');
-    await expect(page.locator('[data-fixture-id="live-secret"] .fixture-broadcast')).toHaveText('Streaming: Apple TV');
-    await expect(page.locator('[data-fixture-id="upcoming"] .fixture-broadcast')).toHaveCount(0);
+    await expect(page.locator('.fixture-card[data-fixture-id="live-secret"] .fixture-broadcast')).toHaveText('Apple TV (us)');
+    await expect(page.locator('.fixture-card[data-fixture-id="upcoming"] .fixture-broadcast'))
+        .toHaveText('Broadcast listing not provided');
 });
 
 test('fixture rows keep metadata on one compact desktop row', async ({page}) => {

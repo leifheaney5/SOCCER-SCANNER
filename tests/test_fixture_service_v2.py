@@ -134,6 +134,13 @@ def streaming_registry():
             'domains': ['peacocktv.com'],
             'officialUrl': 'https://www.peacocktv.com/',
         },
+        {
+            'id': 'espn',
+            'displayName': 'ESPN',
+            'aliases': ['espn'],
+            'domains': ['espn.com'],
+            'officialUrl': 'https://www.espn.com/soccer/',
+        },
     ])
 
 
@@ -375,7 +382,10 @@ def test_deep_link_recovers_after_cache_loss_and_kickoff_correction(tmp_path):
 
 def test_composed_fixtures_are_enriched_with_streaming_and_keep_raw_broadcasts():
     match = fixture('espn', '1')
-    match['broadcasts'] = [{'name': 'Peacock', 'type': 'STREAMING', 'region': 'US'}]
+    match['broadcasts'] = [
+        {'name': 'Peacock', 'type': 'STREAMING', 'region': 'US'},
+        {'name': 'ESPN', 'type': 'TV', 'region': 'US'},
+    ]
     scanner, _, _ = service(
         outcome('espn', ProviderStatus.SUCCESS, [match]),
         outcome('football-data', ProviderStatus.DISABLED, completed=()),
@@ -398,6 +408,21 @@ def test_composed_fixtures_are_enriched_with_streaming_and_keep_raw_broadcasts()
         'sourceId': 'espn-broadcasts',
         'observedAt': '2026-08-03T12:00:00Z',
     }]
+    assert composed['whereToWatch'] == [
+        {**composed['streaming'][0], 'type': 'STREAMING'},
+        {
+            'id': 'espn',
+            'displayName': 'ESPN',
+            'officialUrl': 'https://www.espn.com/soccer/',
+            'region': 'US',
+            'regionKnown': True,
+            'type': 'TV',
+            'source': 'espn',
+            'sourceId': 'espn-broadcasts',
+            'observedAt': '2026-08-03T12:00:00Z',
+        },
+    ]
+    assert len(composed['streaming']) == 1
 
 
 def test_an_unverified_broadcast_composes_with_no_link():
@@ -453,6 +478,7 @@ def test_a_service_without_a_streaming_registry_composes_without_a_streaming_key
     composed = result['matches'][0]
 
     assert 'streaming' not in composed
+    assert 'whereToWatch' not in composed
     assert composed['broadcasts'] == match['broadcasts']
 
 

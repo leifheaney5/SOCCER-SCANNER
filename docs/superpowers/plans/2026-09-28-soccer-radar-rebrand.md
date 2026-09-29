@@ -15,7 +15,7 @@
 - Product name: `Soccer Radar`; canonical website origin: `https://soccer-radar.com`.
 - Keep `soccerscanner.pro` active, redirect its public content routes and query strings to the corresponding new-host URL, and retain it in Universal Link configuration.
 - Serve `/.well-known/apple-app-site-association` directly on both hosts; Apple Universal Links cannot use a redirected AASA file.
-- Preserve the existing layout, colors, app icon geometry, API contract, bundle ID, repo/package/service identifiers, cache keys, and browser-storage keys.
+- Preserve the existing layout, colors, app icon geometry, bundle ID, repo/package/service identifiers, cache keys, and browser-storage keys. Keep the existing `streaming` API field compatible; add `whereToWatch` for TV plus streaming options.
 - Do not submit an App Store/TestFlight build; a macOS iOS workflow must verify source changes.
 - Do not change production domain or variables until Railway's required DNS target and TLS are verified.
 - Keep dated audits, release evidence, and historical plans unchanged; update current docs and metadata.
@@ -246,7 +246,44 @@ Expected: default monitor and API documentation use Soccer Radar; explicit targe
 
 ---
 
-### Task 5: Candidate release, domain cutover, and production proof
+### Task 5: Provider-backed “Where to watch” on every fixture
+
+**Files:**
+- Modify: `soccer_scanner/providers/espn.py`
+- Modify: `soccer_scanner/services/streaming.py`, `soccer_scanner/services/fixture_service.py`, `soccer_scanner/data/streaming-services.json`
+- Modify: `static/js/fixture-renderer.js`, `static/js/match-context.js`, and matching styles
+- Modify: `clients/ios/SoccerScanner/Models/Fixture.swift`, `clients/ios/SoccerScanner/Features/FixtureDetail/FixtureDetailView.swift`
+- Modify: `docs/api.md`, `tests/test_espn_provider.py`, streaming service tests, web browser tests, and iOS source-contract tests
+
+**Interfaces:**
+- Consumes: ESPN’s reported broadcast name, type, and region; the existing verified service registry; existing raw `broadcasts` and `streaming` response fields.
+- Produces: additive `whereToWatch` entries for `TV` and `STREAMING`, retaining each source-provided type and region plus a verified official URL and local logo path where available. Unknown providers remain unlinked. `streaming` continues to contain only streaming options.
+
+- [ ] **Step 1: Add failing provider, API, and presentation checks**
+
+Cover ESPN `TV` entries and duplicate handling; verified `ESPN`, `Paramount+`, and `USA Network` official destinations; unknown provider link suppression; additive API output while preserving the existing streaming field; web card/detail rendering for all options and a per-fixture no-listing state; and iOS details with safe provider links and a no-listing state.
+
+Run: `python -m pytest tests/test_espn_provider.py tests/test_streaming_registry.py tests/test_fixture_service_v2.py -q`
+
+Run: `npx playwright test tests/browser/streaming.spec.js --project=chromium --project=webkit`
+
+Expected: new tests fail because ESPN TV entries are filtered out and clients only consume streaming entries.
+
+- [ ] **Step 2: Preserve TV and streaming options and enrich only verified services**
+
+Normalize named ESPN `TV` entries alongside `STREAMING`; make the registry describe both types without guessing names, regions, links, or logos. Build the additive `whereToWatch` list from provider broadcasts while preserving legacy `broadcasts` and streaming-only behavior. Register only independently verified official provider URLs; use logos already present in the repository and show the provider name when no local logo exists. Keep web external links HTTPS-only and `noopener noreferrer`; decode the additive field optionally on iOS and fall back to raw broadcasts for older payloads.
+
+- [ ] **Step 3: Render every fixture honestly on web and iOS**
+
+Show each reported option, type, and supplied region on fixture cards and the web detail panel. Show the appropriate provider name as a link when the official URL is verified. If the provider reports no broadcasts, show “Broadcast listing not provided” in the fixture watch area. Add equivalent iOS fixture detail rendering with native `Link`; do not create a logo asset without a trusted source asset.
+
+- [ ] **Step 4: Document and verify the additive contract**
+
+Update the API example and focused tests; run the task checks above and iOS source checks. Then run the documented local release matrix. iOS compilation remains pending the candidate’s macOS workflow.
+
+---
+
+### Task 6: Candidate release, domain cutover, and production proof
 
 **Files:**
 - Review: all changes from Tasks 1–4 plus fixture fix commit `1fa66f5`
@@ -258,7 +295,7 @@ Expected: default monitor and API documentation use Soccer Radar; explicit targe
 
 - [ ] **Step 1: Run focused and full repository checks**
 
-Run the Task 1–4 focused checks, then the exact local release matrix in `docs/testing.md` from a clean worktree. Push the complete candidate branch and require both GitHub `CI` and `iOS` workflows for the exact head SHA to pass. Keep ledger tasks unchecked until their associated commands exit 0.
+Run the Task 1–5 focused checks, then the exact local release matrix in `docs/testing.md` from a clean worktree. Push the complete candidate branch and require both GitHub `CI` and `iOS` workflows for the exact head SHA to pass. Keep ledger tasks unchecked until their associated commands exit 0.
 
 - [ ] **Step 2: Add and verify the production domain before canonical cutover**
 

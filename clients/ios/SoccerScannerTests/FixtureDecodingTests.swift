@@ -39,6 +39,7 @@ final class FixtureDecodingTests: XCTestCase {
           "competition":{"area":{"name":"England"},"canonicalId":"premier-league","name":"Premier League"},
           "score":{"fullTime":{"away":0,"home":1}},
           "broadcasts":[{"name":"Peacock","region":"US","type":"STREAMING"}],
+          "whereToWatch":[{"displayName":"USA Network","type":"TV","region":"US","officialUrl":"https://www.usanetwork.com/"}],
           "interestEstimate":0.8,"sourceUpdatedAt":"2026-08-05T19:30:00Z","venue":"Emirates"}]}
         """
         let day = try decodeDay(json)
@@ -52,6 +53,9 @@ final class FixtureDecodingTests: XCTestCase {
         XCTAssertEqual(fixture.competition?.countryName, "England")
         XCTAssertEqual(fixture.score?.fullTime?.home, 1)
         XCTAssertEqual(fixture.streamingServices.first?.regionLabel, "US")
+        XCTAssertEqual(fixture.whereToWatch.first?.displayName, "USA Network")
+        XCTAssertEqual(fixture.whereToWatch.first?.categoryLabel, "TV")
+        XCTAssertEqual(fixture.whereToWatch.first?.officialLinkURL?.host, "www.usanetwork.com")
         XCTAssertFalse(day.isPartial)
     }
 
@@ -74,6 +78,7 @@ final class FixtureDecodingTests: XCTestCase {
         XCTAssertEqual(fixture.status, .scheduled)
         XCTAssertNil(fixture.utcDate)
         XCTAssertTrue(fixture.broadcasts.isEmpty)
+        XCTAssertTrue(fixture.whereToWatch.isEmpty)
     }
 
     func testBroadcastEntriesPreserveTypeAndHonestRegionLabels() throws {
@@ -88,6 +93,8 @@ final class FixtureDecodingTests: XCTestCase {
 
         XCTAssertEqual(fixture.broadcasts.map(\.categoryLabel), ["Broadcast", "Streaming"])
         XCTAssertEqual(fixture.broadcasts.map(\.regionLabel), ["GB", "Region unknown"])
+        XCTAssertEqual(fixture.whereToWatch.count, 2)
+        XCTAssertNil(fixture.whereToWatch.first?.officialLinkURL)
     }
 
     func testAMalformedCrestUrlDoesNotFailTheFixture() throws {

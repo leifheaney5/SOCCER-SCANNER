@@ -68,6 +68,42 @@ public struct Broadcast: Decodable, Hashable, Sendable {
     }
 }
 
+public struct WatchOption: Decodable, Hashable, Sendable {
+    public let id: String?
+    public let displayName: String
+    public let type: String?
+    public let region: String?
+    public let officialUrl: String?
+    public let logoPath: String?
+
+    public init(broadcast: Broadcast) {
+        id = nil
+        displayName = broadcast.name ?? String(localized: "Unknown service")
+        type = broadcast.type
+        region = broadcast.region
+        officialUrl = nil
+        logoPath = nil
+    }
+
+    public var categoryLabel: String {
+        type?.uppercased() == "TV" ? String(localized: "TV") : String(localized: "Streaming")
+    }
+
+    public var regionLabel: String {
+        guard let region, !region.isEmpty else { return String(localized: "Region unknown") }
+        return region
+    }
+
+    public var officialLinkURL: URL? {
+        guard let officialUrl, let url = URL(string: officialUrl),
+              url.scheme == "https", url.host != nil,
+              url.user == nil, url.password == nil else {
+            return nil
+        }
+        return url
+    }
+}
+
 public struct Fixture: Decodable, Identifiable, Hashable, Sendable {
     public let canonicalFixtureId: String?
     public let providerId: String?
@@ -79,6 +115,7 @@ public struct Fixture: Decodable, Identifiable, Hashable, Sendable {
     public let competition: Competition?
     public let score: Score?
     public let broadcasts: [Broadcast]
+    public let whereToWatch: [WatchOption]
     public let venue: String?
     public let interestEstimate: Double?
 
@@ -93,7 +130,7 @@ public struct Fixture: Decodable, Identifiable, Hashable, Sendable {
 
     private enum CodingKeys: String, CodingKey {
         case canonicalFixtureId, id, utcDate, localDate, status
-        case homeTeam, awayTeam, competition, score, broadcasts, venue, interestEstimate
+        case homeTeam, awayTeam, competition, score, broadcasts, whereToWatch, venue, interestEstimate
     }
 
     private struct StatusObject: Decodable { let code: String? }
@@ -128,6 +165,15 @@ public struct Fixture: Decodable, Identifiable, Hashable, Sendable {
         competition = try container.decodeIfPresent(Competition.self, forKey: .competition)
         score = try container.decodeIfPresent(Score.self, forKey: .score)
         broadcasts = try container.decodeIfPresent([Broadcast].self, forKey: .broadcasts) ?? []
+        let decodedWatchOptions = try container.decodeIfPresent(
+            [WatchOption].self,
+            forKey: .whereToWatch
+        )
+        if let decodedWatchOptions, !decodedWatchOptions.isEmpty {
+            whereToWatch = decodedWatchOptions
+        } else {
+            whereToWatch = broadcasts.map { WatchOption(broadcast: $0) }
+        }
         venue = try container.decodeIfPresent(String.self, forKey: .venue)
         interestEstimate = try container.decodeIfPresent(Double.self, forKey: .interestEstimate)
     }

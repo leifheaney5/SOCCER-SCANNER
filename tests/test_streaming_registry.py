@@ -19,7 +19,7 @@ class StreamingRegistryTest(unittest.TestCase):
         self.assertEqual(service['displayName'], 'Peacock')
 
     def test_reports_registered_service_count(self):
-        self.assertEqual(self.registry.service_count(), 8)
+        self.assertEqual(self.registry.service_count(), 10)
 
     def test_resolution_is_case_and_whitespace_insensitive(self):
         for raw in ('peacock', '  PEACOCK  ', 'Peacock Premium'):
@@ -56,8 +56,16 @@ class StreamingRegistryTest(unittest.TestCase):
         self.assertIsNone(described['officialUrl'])
         self.assertEqual(described['region'], 'BR')
 
-    def test_non_streaming_broadcasts_are_not_described(self):
-        self.assertIsNone(self.registry.describe({'type': 'TV', 'name': 'Peacock'}))
+    def test_tv_broadcasts_are_described_with_verified_official_urls(self):
+        espn = self.registry.describe({'type': 'TV', 'name': 'ESPN'})
+        usa = self.registry.describe({'type': 'TV', 'name': 'USA Network'})
+        paramount = self.registry.describe({'type': 'STREAMING', 'name': 'Paramount+'})
+
+        self.assertEqual(espn['officialUrl'], 'https://www.espn.com/soccer/')
+        self.assertEqual(usa['officialUrl'], 'https://www.usanetwork.com/')
+        self.assertEqual(paramount['officialUrl'], 'https://www.paramountplus.com/')
+        self.assertEqual(usa['type'], 'TV')
+        self.assertEqual(paramount['type'], 'STREAMING')
 
     def test_removed_alias_falls_through_to_unknown_service(self):
         # CBS Sports Network was removed from paramount-plus aliases to preserve
@@ -78,6 +86,7 @@ class StreamingRegistryTest(unittest.TestCase):
 
         self.assertEqual(described['source'], 'espn')
         self.assertEqual(described['sourceId'], 'espn-broadcasts')
+        self.assertEqual(described['type'], 'STREAMING')
 
     def test_every_official_url_is_https_and_matches_a_declared_domain(self):
         for service in json.loads(REGISTRY_PATH.read_text())['services']:

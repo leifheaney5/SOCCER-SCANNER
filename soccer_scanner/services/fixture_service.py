@@ -447,9 +447,15 @@ class CanonicalFixtureService:
                     self.streaming_registry.describe(item)
                     for item in (enriched.get('broadcasts') or [])
                 ]
-                enriched['streaming'] = [
+                where_to_watch = [
                     {**item, 'observedAt': enriched.get('sourceUpdatedAt')}
                     for item in described if item
+                ]
+                if where_to_watch:
+                    enriched['whereToWatch'] = where_to_watch
+                enriched['streaming'] = [
+                    {key: value for key, value in item.items() if key != 'type'}
+                    for item in where_to_watch if item['type'] == 'STREAMING'
                 ]
             if self.competition_registry is not None:
                 area = self.competition_registry.describe_area(enriched.get('competition') or {})

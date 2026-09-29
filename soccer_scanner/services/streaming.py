@@ -1,4 +1,4 @@
-"""Verified streaming-service registry.
+"""Verified TV and streaming service registry.
 
 Providers report free-text service names. This maps them onto a small set of
 verified services with official URLs, so the UI can link somewhere real instead
@@ -50,10 +50,11 @@ class StreamingRegistry:
         return len(self._services)
 
     def describe(self, broadcast):
-        """Render-ready description, or None if this is not a streaming entry."""
+        """Describe named TV/streaming options, or ignore unsupported entries."""
         if not isinstance(broadcast, dict):
             return None
-        if str(broadcast.get('type') or '').upper() != 'STREAMING':
+        broadcast_type = str(broadcast.get('type') or '').upper()
+        if broadcast_type not in {'TV', 'STREAMING'}:
             return None
         raw_name = str(broadcast.get('name') or '').strip()
         if not raw_name:
@@ -67,6 +68,7 @@ class StreamingRegistry:
             'officialUrl': service['officialUrl'] if service else None,
             'region': region or REGION_UNKNOWN,
             'regionKnown': bool(region),
+            'type': broadcast_type,
             'source': 'espn',
             'sourceId': 'espn-broadcasts',
         }

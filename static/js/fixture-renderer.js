@@ -192,10 +192,8 @@ function createDetailsButton(match, featured = false) {
     return button;
 }
 
-// Older cached payloads (from before the streaming registry existed) carry
-// only the raw provider-reported broadcast names, with no verified service
-// or region attached. Those names are shown as plain, unlinked text so the
-// section does not disappear for a visitor with a warm cache.
+// Older cached payloads may carry only raw broadcast names. They can be shown
+// with source-supplied regions, but never receive a guessed link or logo.
 function legacyStreamingServiceNames(match) {
     const seen = new Set();
     const names = [];
@@ -266,25 +264,55 @@ export function resolveStreamingServices(match) {
     }));
 }
 
-function createStreamingNode(match) {
-    const services = resolveStreamingServices(match);
-    if (!services.length) return null;
-    if (Array.isArray(match?.streaming)) {
-        const [first, ...rest] = services;
-        const label = `${first.displayName} · ${first.region}`;
-        const summary = node('span', 'fixture-broadcast');
-        summary.append(
-            createStreamingIcon(first),
-            node('span', '', rest.length ? `${label} +${rest.length}` : label),
+export function resolveWatchOptions(match) {
+    if (Array.isArray(match?.whereToWatch)) {
+        const options = match.whereToWatch.filter(
+            item => item && typeof item.displayName === 'string' && item.displayName.trim(),
         );
-        const watchWhere = services.map(service => `${service.displayName} (${service.region})`).join(', ');
-        summary.setAttribute('aria-label', `Watch on ${watchWhere}`);
+        if (options.length) return options;
+    }
+    const streaming = Array.isArray(match?.streaming)
+        ? resolveStreamingServices(match).map(service => ({...service, type: 'STREAMING'}))
+        : [];
+    const rawBroadcasts = (Array.isArray(match?.broadcasts) ? match.broadcasts : [])
+        .filter(item => ['TV', 'STREAMING'].includes(item?.type));
+    const legacy = rawBroadcasts
+        .filter(item => item.type === 'TV' || !Array.isArray(match?.streaming))
+        .map(item => ({
+            id: null,
+            displayName: typeof item.name === 'string' ? item.name.trim() : '',
+            type: item.type,
+            region: typeof item.region === 'string' && item.region.trim() ? item.region.trim() : null,
+            officialUrl: null,
+            source: null,
+        }))
+        .filter(item => item.displayName);
+    const seen = new Set();
+    return [...streaming, ...legacy].filter(item => {
+        const key = `${item.type}:${item.displayName.toLocaleLowerCase()}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    });
+}
+
+function createStreamingNode(match) {
+    const services = resolveWatchOptions(match);
+    const summary = node('span', 'fixture-broadcast');
+    if (!services.length) {
+        summary.classList.add('fixture-broadcast--unknown');
+        summary.textContent = 'Broadcast listing not provided';
+        summary.setAttribute('aria-label', 'Where to watch: broadcast listing not provided');
         return summary;
     }
-    const text = `Streaming: ${services.map(service => service.displayName).join(', ')}`;
-    const summary = node('span', 'fixture-broadcast');
+    const text = services.map(service => {
+        const region = service.region && service.region !== 'Region unknown'
+            ? ` (${service.region})`
+            : '';
+        return `${service.displayName}${region}`;
+    }).join(' · ');
     summary.append(createStreamingIcon(services[0]), node('span', '', text));
-    summary.setAttribute('aria-label', text);
+    summary.setAttribute('aria-label', `Where to watch: ${text}`);
     return summary;
 }
 

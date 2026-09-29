@@ -31,7 +31,7 @@ test('offline fixture snapshots remove scores and exclude live matches', () => {
     expect(cached.matches.every(match => match.score === undefined)).toBe(true);
 });
 
-test('offline snapshots preserve verified streaming metadata while removing scores', () => {
+test('offline snapshots preserve verified watch listings while removing scores', () => {
     const payload = structuredClone(fixturePayload);
     payload.matches.find(match => match.id === 'upcoming').streaming = [{
         displayName: 'Peacock',
@@ -39,11 +39,18 @@ test('offline snapshots preserve verified streaming metadata while removing scor
         officialUrl: 'https://www.peacocktv.com/',
         observedAt: '2026-08-03T18:00:00Z',
     }];
+    payload.matches.find(match => match.id === 'upcoming').whereToWatch = [{
+        displayName: 'USA Network',
+        type: 'TV',
+        region: 'US',
+        officialUrl: 'https://www.usanetwork.com/',
+    }];
     const cached = sanitizeFixturePayload(payload, '2026-08-04T00:00:00Z');
     const stored = cached.matches.find(match => match.id === 'upcoming');
 
     expect(stored.streaming[0].displayName).toBe('Peacock');
     expect(stored.streaming[0].observedAt).toBe('2026-08-03T18:00:00Z');
+    expect(stored.whereToWatch[0].displayName).toBe('USA Network');
     expect(stored.score).toBeUndefined();
 });
 

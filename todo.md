@@ -23,3 +23,6 @@
 - [ ] T006: Release the combined fixture fix and rebrand after DNS/TLS, full repository checks, hosted CI/iOS, exact Railway deployment, redirect, readiness, and production smoke gates pass; verify with the documented release matrix and `npm run smoke:production` against the exact merged SHA.
   - Plan: `docs/superpowers/plans/2026-09-28-soccer-radar-rebrand.md`.
   - Ledger gate: no checkbox changes until the repository's required task-specific `check.sh` command is available and exits 0.
+- [ ] T007: Add provider-reported TV and streaming “Where to watch” listings to every web and iOS fixture, with verified links and truthful missing-listing state; verify with focused provider, API, browser, and iOS source checks.
+  - Plan: `docs/superpowers/plans/2026-09-28-soccer-radar-rebrand.md`, Task 5.
+  - Ledger gate: no checkbox changes until the repository's required task-specific `check.sh` command is available and exits 0.

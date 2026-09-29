@@ -133,8 +133,12 @@ def test_native_state_fixtures_and_broadcast_detail_wiring_are_present():
         assert flag in app
         assert flag in ui_tests
     assert 'case stale' in preview
-    assert 'ForEach(Array(fixture.broadcasts.enumerated())' in detail
-    assert 'broadcast.categoryLabel' in detail
+    assert 'ForEach(Array(fixture.whereToWatch.enumerated())' in detail
+    assert 'fixture.whereToWatch' in detail
+    assert 'officialLinkURL' in detail
+    assert 'Link(' in detail
+    assert 'Broadcast listing not provided.' in detail
+    assert 'option.categoryLabel' in detail
     assert 'app.open(URL(string:' in ui_tests
     assert '-UIAccessibilityDifferentiateWithoutColorEnabled' in ui_tests
 

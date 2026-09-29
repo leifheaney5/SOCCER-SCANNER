@@ -38,7 +38,7 @@ async function mockFixturesWithStreaming(page) {
     }));
 }
 
-test('fixture card shows the first streaming service with its region and a +N count', async ({page}) => {
+test('fixture card shows provider names and supplied regions for streaming services', async ({page}) => {
     await mockFixturesWithStreaming(page);
     await page.goto('/?date=2026-08-03');
     await expect(page.locator('#fixture-result-count')).toContainText('13 matches');
@@ -46,8 +46,8 @@ test('fixture card shows the first streaming service with its region and a +N co
 
     const broadcast = page.locator('[data-fixture-id="live-secret"] .fixture-broadcast');
     await expect(broadcast.locator('xpath=..')).toHaveClass(/fixture-result/);
-    await expect(broadcast).toHaveText('Peacock · US +2');
-    await expect(broadcast).toHaveAttribute('aria-label', /Peacock \(US\)/);
+    await expect(broadcast).toHaveText('Peacock (US) · DAZN · Unverified Stream');
+    await expect(broadcast).toHaveAttribute('aria-label', /Where to watch: Peacock \(US\)/);
     await expect(broadcast.locator('img')).toHaveAttribute('width', '18');
     await expect(broadcast.locator('img')).toHaveAttribute('height', '18');
 });
@@ -127,6 +127,36 @@ test('older cached payloads without a streaming array still show unlinked broadc
     await expect(page.locator('#fixture-result-count')).toContainText('13 matches');
 
     const broadcast = page.locator('[data-fixture-id="live-secret"] .fixture-broadcast');
-    await expect(broadcast).toHaveText('Streaming: Apple TV');
+    await expect(broadcast).toHaveText('Apple TV (us)');
     await expect(broadcast.locator('a')).toHaveCount(0);
+});
+
+test('fixture cards and details show every TV and streaming option plus honest gaps', async ({page}) => {
+    const payload = structuredClone(fixturePayload);
+    payload.matches[0].whereToWatch = [
+        {...KNOWN_WITH_REGION, type: 'STREAMING'},
+        {displayName: 'ESPN', type: 'TV', region: 'US', officialUrl: 'https://www.espn.com/soccer/'},
+        {displayName: 'USA Network', type: 'TV', region: 'US', officialUrl: 'https://www.usanetwork.com/'},
+    ];
+    await page.route('**/api/v2/fixtures**', route => route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify(payload),
+    }));
+    await page.goto('/?date=2026-08-03');
+
+    const listedCard = page.locator('[data-fixture-id="live-secret"] .fixture-broadcast');
+    await expect(listedCard).toContainText('Peacock');
+    await expect(listedCard).toContainText('ESPN');
+    await expect(listedCard).toContainText('USA Network');
+    await expect(listedCard).toHaveAttribute('aria-label', /Where to watch/);
+
+    const unlistedCard = page.locator('.fixture-card[data-fixture-id="upcoming"]');
+    await expect(unlistedCard).toContainText('Broadcast listing not provided');
+
+    await page.setViewportSize({width: 1280, height: 900});
+    await page.locator('[data-fixture-id="live-secret"] .details-button').click();
+    const details = page.locator('#match-context');
+    await expect(details.locator('.context-streaming-item')).toHaveCount(3);
+    await expect(details).toContainText('USA Network');
+    await expect(details.locator('.context-streaming-link[href="https://www.usanetwork.com/"]')).toHaveCount(1);
 });

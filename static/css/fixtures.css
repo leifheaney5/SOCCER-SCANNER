@@ -904,13 +904,19 @@ body {
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    overflow: hidden;
+    min-width: 0;
     color: var(--accent-secondary);
     font-size: 10px;
     font-weight: 600;
     line-height: 1.25;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.fixture-broadcast--unknown,
+.context-streaming-empty {
+    color: var(--text-muted);
+    font-weight: 400;
 }
 
 .streaming-service-icon {
@@ -1104,6 +1110,10 @@ body {
 .fixture-result .fixture-broadcast {
     max-width: 100%;
     font-size: 10px;
+}
+
+.fixture-result .fixture-broadcast > span:last-child {
+    min-width: 0;
 }
 
 .fixture-action {

@@ -152,7 +152,7 @@ def test_normalizes_espn_default_team_logo_when_provider_has_no_crest():
     )
 
 
-def test_normalizes_only_named_espn_streaming_services():
+def test_normalizes_named_espn_tv_and_streaming_broadcasts():
     normalized = normalize_event(
         event(competition={
             'broadcasts': [
@@ -165,10 +165,9 @@ def test_normalizes_only_named_espn_streaming_services():
                     'type': {'shortName': 'STREAMING'},
                     'media': {'shortName': 'Apple TV'},
                 },
-                {
-                    'type': {'shortName': 'TV'},
-                    'media': {'shortName': 'ESPN'},
-                },
+                {'type': {'shortName': 'TV'}, 'media': {'shortName': 'ESPN'}},
+                {'type': {'shortName': 'TV'}, 'media': {'shortName': 'USA Network'}},
+                {'type': {'shortName': 'TV'}, 'media': {'shortName': 'Apple TV'}},
                 {'type': {'shortName': 'STREAMING'}, 'media': {}},
             ],
         }),
@@ -178,6 +177,9 @@ def test_normalizes_only_named_espn_streaming_services():
 
     assert normalized['broadcasts'] == [
         {'name': 'Apple TV', 'type': 'STREAMING', 'region': 'us'},
+        {'name': 'ESPN', 'type': 'TV', 'region': None},
+        {'name': 'USA Network', 'type': 'TV', 'region': None},
+        {'name': 'Apple TV', 'type': 'TV', 'region': None},
     ]
 
 

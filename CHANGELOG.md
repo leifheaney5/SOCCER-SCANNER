@@ -12,6 +12,8 @@
 - Official broadcast-source inventory for UEFA, FIFA+, and Concacaf, plus a
   fixture-level observation adapter with exact matching, HTTPS domain checks,
   ambiguity handling, and coverage metrics.
+- Per-fixture TV and streaming listings with provider names, verified official
+  links, reported regions, and a clear state when no listing was supplied.
 
 ### Changed
 

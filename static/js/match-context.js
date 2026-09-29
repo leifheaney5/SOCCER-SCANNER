@@ -10,7 +10,7 @@ const [crestModule, fixtureRendererModule, fixtureStateModule] = await Promise.a
 const timeZoneModule = await import(versionedModule('./time-zone.js'));
 const statusModule = await import(versionedModule('./match-status.js'));
 const {createCrest} = crestModule;
-const {createScoreNode, formatFreshness, resolveStreamingServices} = fixtureRendererModule;
+const {createScoreNode, formatFreshness, resolveWatchOptions} = fixtureRendererModule;
 const {statusKind} = fixtureStateModule;
 const {formatDateTime, formatFixtureDate, formatKickoff} = timeZoneModule;
 const {statusLabel: canonicalStatusLabel} = statusModule;
@@ -69,11 +69,14 @@ function sourceLabel(value) {
 // `region` is rendered exactly as supplied (including "Region unknown")
 // rather than guessed.
 function createStreamingSection(match) {
-    const services = resolveStreamingServices(match);
-    if (!services.length) return null;
+    const services = resolveWatchOptions(match);
     const section = node('div', 'context-streaming');
     section.setAttribute('aria-label', 'Where to watch');
     section.append(node('h3', 'context-streaming-heading', 'Where to watch'));
+    if (!services.length) {
+        section.append(node('p', 'context-streaming-empty', 'Broadcast listing not provided.'));
+        return section;
+    }
     const list = node('ul', 'context-streaming-list');
     for (const service of services) {
         const item = node('li', 'context-streaming-item');
@@ -93,15 +96,24 @@ function createStreamingSection(match) {
             });
         }
         item.append(icon);
-        if (service.officialUrl) {
+        let officialUrl = null;
+        try {
+            const candidate = new URL(service.officialUrl);
+            if (candidate.protocol === 'https:' && candidate.hostname
+                && !candidate.username && !candidate.password) officialUrl = candidate.href;
+        } catch {
+            officialUrl = null;
+        }
+        if (officialUrl) {
             const link = node('a', 'context-streaming-link', service.displayName);
-            link.href = service.officialUrl;
+            link.href = officialUrl;
             link.target = '_blank';
             link.rel = 'noopener noreferrer';
             item.append(link);
         } else {
             item.append(node('span', 'context-streaming-name', service.displayName));
         }
+        item.append(node('span', 'context-streaming-type', service.type === 'TV' ? 'TV' : 'Streaming'));
         if (service.region) {
             item.append(node('span', 'context-streaming-region', service.region));
         }

@@ -112,7 +112,7 @@ def _first_logo(payload):
     return None
 
 
-def _streaming_services(competition_event):
+def _broadcast_services(competition_event):
     broadcasts = competition_event.get('broadcasts')
     if not isinstance(broadcasts, list):
         return []
@@ -125,15 +125,16 @@ def _streaming_services(competition_event):
         kind = _nullable_text(
             broadcast_type.get('shortName') if isinstance(broadcast_type, dict) else None
         )
-        if kind != 'STREAMING':
+        if kind not in {'TV', 'STREAMING'}:
             continue
         media = broadcast.get('media')
         name = _nullable_text(
             (media.get('shortName') or media.get('name')) if isinstance(media, dict) else None
         )
-        if not name or name.casefold() in seen:
+        key = (kind, name.casefold()) if name else None
+        if not name or key in seen:
             continue
-        seen.add(name.casefold())
+        seen.add(key)
         services.append({
             'name': name,
             'type': kind,
@@ -300,7 +301,7 @@ def normalize_event(
         'venue': venue,
         'referees': None,
         'aggregate': None,
-        'broadcasts': _streaming_services(competition_event),
+        'broadcasts': _broadcast_services(competition_event),
         'sourceUpdatedAt': source_updated_at,
         'sources': ['espn'],
         'dataQuality': {'missingFields': []},

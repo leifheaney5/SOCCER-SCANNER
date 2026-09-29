@@ -86,25 +86,28 @@ public struct FixtureDetailView: View {
             }
 
             Section(String(localized: "Where to watch")) {
-                if fixture.broadcasts.isEmpty {
-                    Text(String(localized: "No broadcast listing was provided."))
+                if fixture.whereToWatch.isEmpty {
+                    Text(String(localized: "Broadcast listing not provided."))
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 } else {
-                    ForEach(Array(fixture.broadcasts.enumerated()), id: \.offset) { index, broadcast in
+                    ForEach(Array(fixture.whereToWatch.enumerated()), id: \.offset) { index, option in
                         VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-                            Text(broadcast.name ?? String(localized: "Unknown service"))
+                            if let url = option.officialLinkURL {
+                                Link(option.displayName, destination: url)
+                            } else {
+                                Text(option.displayName)
+                            }
                             HStack {
-                                Text(broadcast.categoryLabel)
+                                Text(option.categoryLabel)
                                 Spacer()
                                 // Region is always shown, and labelled honestly when
                                 // the provider did not supply one.
-                                Text(broadcast.regionLabel)
+                                Text(option.regionLabel)
                             }
                             .font(.caption)
                             .foregroundStyle(.secondary)
                         }
-                        .accessibilityElement(children: .combine)
                         .accessibilityIdentifier("detail-broadcast-\(fixture.id)-\(index)")
                     }
                 }

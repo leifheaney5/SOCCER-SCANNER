@@ -336,6 +336,8 @@ components:
         competition: {$ref: '#/components/schemas/Competition'}
         status: {type: object, additionalProperties: true}
         score: {type: object, nullable: true, additionalProperties: true}
+        broadcasts: {type: array, items: {type: object, additionalProperties: true}}
+        whereToWatch: {type: array, items: {type: object, additionalProperties: true}}
         streaming: {type: array, items: {type: object, additionalProperties: true}}
     Team:
       type: object
