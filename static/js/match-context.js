@@ -15,6 +15,31 @@ const {statusKind} = fixtureStateModule;
 const {formatDateTime, formatFixtureDate, formatKickoff} = timeZoneModule;
 const {statusLabel: canonicalStatusLabel} = statusModule;
 
+const WATCH_PROVIDER_DOMAINS = Object.freeze({
+    espn: ['espn.com'],
+    'usa-network': ['usanetwork.com'],
+    peacock: ['peacocktv.com'],
+    'espn-plus': ['plus.espn.com', 'espn.com'],
+    'paramount-plus': ['paramountplus.com'],
+    'apple-tv': ['tv.apple.com'],
+    'amazon-prime-video': ['primevideo.com', 'amazon.com'],
+    dazn: ['dazn.com'],
+    fubo: ['fubo.tv'],
+    max: ['max.com'],
+});
+
+function isVerifiedWatchUrl(service, candidate) {
+    const domains = WATCH_PROVIDER_DOMAINS[service.id];
+    if (!domains) return false;
+    try {
+        const url = new URL(candidate);
+        return url.protocol === 'https:' && !url.username && !url.password
+            && domains.some(domain => url.hostname === domain || url.hostname.endsWith(`.${domain}`));
+    } catch {
+        return false;
+    }
+}
+
 function node(tag, className = '', text = '') {
     const element = document.createElement(tag);
     if (className) element.className = className;
@@ -96,14 +121,9 @@ function createStreamingSection(match) {
             });
         }
         item.append(icon);
-        let officialUrl = null;
-        try {
-            const candidate = new URL(service.officialUrl);
-            if (candidate.protocol === 'https:' && candidate.hostname
-                && !candidate.username && !candidate.password) officialUrl = candidate.href;
-        } catch {
-            officialUrl = null;
-        }
+        const officialUrl = isVerifiedWatchUrl(service, service.officialUrl)
+            ? new URL(service.officialUrl).href
+            : null;
         if (officialUrl) {
             const link = node('a', 'context-streaming-link', service.displayName);
             link.href = officialUrl;

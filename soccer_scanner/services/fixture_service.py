@@ -451,8 +451,7 @@ class CanonicalFixtureService:
                     {**item, 'observedAt': enriched.get('sourceUpdatedAt')}
                     for item in described if item
                 ]
-                if where_to_watch:
-                    enriched['whereToWatch'] = where_to_watch
+                enriched['whereToWatch'] = where_to_watch
                 enriched['streaming'] = [
                     {key: value for key, value in item.items() if key != 'type'}
                     for item in where_to_watch if item['type'] == 'STREAMING'

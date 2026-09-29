@@ -39,7 +39,7 @@ final class FixtureDecodingTests: XCTestCase {
           "competition":{"area":{"name":"England"},"canonicalId":"premier-league","name":"Premier League"},
           "score":{"fullTime":{"away":0,"home":1}},
           "broadcasts":[{"name":"Peacock","region":"US","type":"STREAMING"}],
-          "whereToWatch":[{"displayName":"USA Network","type":"TV","region":"US","officialUrl":"https://www.usanetwork.com/"}],
+          "whereToWatch":[{"id":"usa-network","displayName":"USA Network","type":"TV","region":"US","officialUrl":"https://www.usanetwork.com/"}],
           "interestEstimate":0.8,"sourceUpdatedAt":"2026-08-05T19:30:00Z","venue":"Emirates"}]}
         """
         let day = try decodeDay(json)
@@ -95,6 +95,13 @@ final class FixtureDecodingTests: XCTestCase {
         XCTAssertEqual(fixture.broadcasts.map(\.regionLabel), ["GB", "Region unknown"])
         XCTAssertEqual(fixture.whereToWatch.count, 2)
         XCTAssertNil(fixture.whereToWatch.first?.officialLinkURL)
+    }
+
+    func testWatchOptionRejectsAnHttpsUrlOutsideTheVerifiedProviderDomain() throws {
+        let json = #"{"id":"peacock","displayName":"Peacock","type":"STREAMING","officialUrl":"https://unrelated.example/watch"}"#
+        let option = try JSONDecoder().decode(WatchOption.self, from: Data(json.utf8))
+
+        XCTAssertNil(option.officialLinkURL)
     }
 
     func testAMalformedCrestUrlDoesNotFailTheFixture() throws {

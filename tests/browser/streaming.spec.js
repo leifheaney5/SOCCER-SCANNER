@@ -46,8 +46,8 @@ test('fixture card shows provider names and supplied regions for streaming servi
 
     const broadcast = page.locator('[data-fixture-id="live-secret"] .fixture-broadcast');
     await expect(broadcast.locator('xpath=..')).toHaveClass(/fixture-result/);
-    await expect(broadcast).toHaveText('Peacock (US) · DAZN · Unverified Stream');
-    await expect(broadcast).toHaveAttribute('aria-label', /Where to watch: Peacock \(US\)/);
+    await expect(broadcast).toHaveText('Peacock (Streaming) (US) · DAZN (Streaming) · Unverified Stream (Streaming)');
+    await expect(broadcast).toHaveAttribute('aria-label', /Where to watch: Peacock \(Streaming\) \(US\)/);
     await expect(broadcast.locator('img')).toHaveAttribute('width', '18');
     await expect(broadcast.locator('img')).toHaveAttribute('height', '18');
 });
@@ -127,7 +127,7 @@ test('older cached payloads without a streaming array still show unlinked broadc
     await expect(page.locator('#fixture-result-count')).toContainText('13 matches');
 
     const broadcast = page.locator('[data-fixture-id="live-secret"] .fixture-broadcast');
-    await expect(broadcast).toHaveText('Apple TV (us)');
+    await expect(broadcast).toHaveText('Apple TV (Streaming) (us)');
     await expect(broadcast.locator('a')).toHaveCount(0);
 });
 
@@ -135,8 +135,9 @@ test('fixture cards and details show every TV and streaming option plus honest g
     const payload = structuredClone(fixturePayload);
     payload.matches[0].whereToWatch = [
         {...KNOWN_WITH_REGION, type: 'STREAMING'},
-        {displayName: 'ESPN', type: 'TV', region: 'US', officialUrl: 'https://www.espn.com/soccer/'},
-        {displayName: 'USA Network', type: 'TV', region: 'US', officialUrl: 'https://www.usanetwork.com/'},
+        {id: 'espn', displayName: 'ESPN', type: 'TV', region: 'US', officialUrl: 'https://www.espn.com/soccer/'},
+        {id: 'espn', displayName: 'ESPN', type: 'STREAMING', region: 'US', officialUrl: 'https://www.espn.com/soccer/'},
+        {id: 'usa-network', displayName: 'USA Network', type: 'TV', region: 'US', officialUrl: 'https://www.usanetwork.com/'},
     ];
     await page.route('**/api/v2/fixtures**', route => route.fulfill({
         contentType: 'application/json',
@@ -148,6 +149,9 @@ test('fixture cards and details show every TV and streaming option plus honest g
     await expect(listedCard).toContainText('Peacock');
     await expect(listedCard).toContainText('ESPN');
     await expect(listedCard).toContainText('USA Network');
+    await expect(listedCard).toContainText('ESPN (TV)');
+    await expect(listedCard).toContainText('ESPN (Streaming)');
+    await expect(listedCard).toHaveAttribute('aria-label', /ESPN \(TV\).*ESPN \(Streaming\)/);
     await expect(listedCard).toHaveAttribute('aria-label', /Where to watch/);
 
     const unlistedCard = page.locator('.fixture-card[data-fixture-id="upcoming"]');
@@ -156,7 +160,29 @@ test('fixture cards and details show every TV and streaming option plus honest g
     await page.setViewportSize({width: 1280, height: 900});
     await page.locator('[data-fixture-id="live-secret"] .details-button').click();
     const details = page.locator('#match-context');
-    await expect(details.locator('.context-streaming-item')).toHaveCount(3);
+    await expect(details.locator('.context-streaming-item')).toHaveCount(4);
     await expect(details).toContainText('USA Network');
     await expect(details.locator('.context-streaming-link[href="https://www.usanetwork.com/"]')).toHaveCount(1);
+    await expect(details.locator('.context-streaming-item').filter({hasText: 'ESPN'}).nth(0)).toContainText('TV');
+    await expect(details.locator('.context-streaming-item').filter({hasText: 'ESPN'}).nth(1)).toContainText('Streaming');
+});
+
+test('detail panel rejects HTTPS links that do not match the verified provider', async ({page}) => {
+    const payload = structuredClone(fixturePayload);
+    payload.matches[0].whereToWatch = [{
+        id: 'peacock',
+        displayName: 'Peacock',
+        type: 'STREAMING',
+        officialUrl: 'https://unrelated.example/watch',
+    }];
+    await page.route('**/api/v2/fixtures**', route => route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify(payload),
+    }));
+    await page.goto('/?date=2026-08-03');
+    await page.locator('[data-fixture-id="live-secret"] .details-button').click();
+
+    const item = page.locator('.context-streaming-item', {hasText: 'Peacock'});
+    await expect(item.locator('a')).toHaveCount(0);
+    await expect(item.locator('.context-streaming-name')).toHaveText('Peacock');
 });

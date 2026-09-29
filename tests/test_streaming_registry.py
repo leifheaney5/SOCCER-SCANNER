@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+import re
 import unittest
 from urllib.parse import urlparse
 
@@ -99,6 +100,38 @@ class StreamingRegistryTest(unittest.TestCase):
                         for domain in service['domains']),
                     f"{service['officialUrl']} is not on a declared domain",
                 )
+
+    def test_client_watch_provider_allowlists_match_the_verified_registry(self):
+        expected = {
+            service['id']: service['domains']
+            for service in json.loads(REGISTRY_PATH.read_text())['services']
+        }
+        ios_source = Path('clients/ios/SoccerScanner/Models/Fixture.swift').read_text()
+        ios_mapping = {
+            service_id: re.findall(r'"([^"]+)"', domains)
+            for service_id, domains in re.findall(
+                r'case \.some\("([^"]+)"\): verifiedDomains = (\[[^\]]*\])',
+                ios_source,
+            )
+        }
+        web_source = Path('static/js/match-context.js').read_text()
+        block = re.search(
+            r'const WATCH_PROVIDER_DOMAINS = Object\.freeze\((\{.*?\})\);',
+            web_source,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(block, 'web provider domain allowlist is missing')
+        web_mapping = {}
+        for service_id, bare_id, domains in re.findall(
+            r"^\s*(?:'([^']+)'|([\w-]+)): (\[[^\]]*\]),?$",
+            block.group(1),
+            re.MULTILINE,
+        ):
+            key = service_id or bare_id
+            web_mapping[key] = re.findall(r"'([^']+)'", domains)
+
+        self.assertEqual(web_mapping, expected)
+        self.assertEqual(ios_mapping, expected)
 
     def test_service_ids_and_aliases_are_unique(self):
         services = json.loads(REGISTRY_PATH.read_text())['services']

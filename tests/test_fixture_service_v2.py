@@ -425,6 +425,18 @@ def test_composed_fixtures_are_enriched_with_streaming_and_keep_raw_broadcasts()
     assert len(composed['streaming']) == 1
 
 
+def test_fixture_without_broadcasts_emits_an_empty_where_to_watch_list():
+    scanner, _, _ = service(
+        outcome('espn', ProviderStatus.SUCCESS, [fixture('espn', 'without-broadcasts')]),
+        outcome('football-data', ProviderStatus.DISABLED, completed=()),
+        streaming_registry=streaming_registry(),
+    )
+
+    composed = scanner.fixtures_for_date(date(2026, 8, 3), 'UTC')['matches'][0]
+
+    assert composed['whereToWatch'] == []
+
+
 def test_an_unverified_broadcast_composes_with_no_link():
     match = fixture('espn', '1')
     match['broadcasts'] = [

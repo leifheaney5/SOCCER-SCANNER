@@ -283,7 +283,8 @@ test('fixtures render paired identities, crest fallbacks, groups, and live-first
     await expect(page.locator('[data-fixture-id="postponed"] .score-display')).toHaveText('Postponed');
     await expect(page.locator('.fixture-card').first()).not.toContainText(' vs ');
     await expect(page.locator('.fixture-card[data-fixture-id="live-secret"] .fixture-freshness')).toContainText('Updated');
-    await expect(page.locator('.fixture-card[data-fixture-id="live-secret"] .fixture-broadcast')).toHaveText('Apple TV (us)');
+    await expect(page.locator('.fixture-card[data-fixture-id="live-secret"] .fixture-broadcast'))
+        .toHaveText('Apple TV (Streaming) (us)');
     await expect(page.locator('.fixture-card[data-fixture-id="upcoming"] .fixture-broadcast'))
         .toHaveText('Broadcast listing not provided');
 });

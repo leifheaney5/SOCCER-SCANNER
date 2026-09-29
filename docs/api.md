@@ -52,10 +52,12 @@ and streaming options. `type` is `TV` or `STREAMING`; provider names and
 regions come from the source. `officialUrl` and `logoPath` are present only
 when the provider name matches the verified local service registry. Unknown
 providers remain visible by name without a guessed link. The legacy `streaming`
-array remains streaming-only. An absent/empty `whereToWatch` array means the
-source did not provide a broadcast listing; it does not assert that the fixture
-is unavailable on TV or online. Official links open the provider's website;
-the ESPN broadcast feed does not supply a match-specific viewing URL.
+array remains streaming-only. When registry enrichment is enabled, every
+fixture includes `whereToWatch`; an empty list means the source did not provide
+a broadcast listing. Older payloads may omit the field. Neither state asserts
+that the fixture is unavailable on TV or online. Official links open the
+provider's website; the ESPN broadcast feed does not supply a match-specific
+viewing URL.
 
 Valid states are `success`, `empty_confirmed`, `partial`, and `stale`. Total provider failure returns `503 provider_unavailable`; a provider-limited total failure or application burst limit returns `429 rate_limited` with `Retry-After`.
 

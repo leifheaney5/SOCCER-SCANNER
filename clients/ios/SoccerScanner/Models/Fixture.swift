@@ -95,8 +95,23 @@ public struct WatchOption: Decodable, Hashable, Sendable {
     }
 
     public var officialLinkURL: URL? {
+        let verifiedDomains: [String]
+        switch id {
+        case .some("espn"): verifiedDomains = ["espn.com"]
+        case .some("usa-network"): verifiedDomains = ["usanetwork.com"]
+        case .some("peacock"): verifiedDomains = ["peacocktv.com"]
+        case .some("espn-plus"): verifiedDomains = ["plus.espn.com", "espn.com"]
+        case .some("paramount-plus"): verifiedDomains = ["paramountplus.com"]
+        case .some("apple-tv"): verifiedDomains = ["tv.apple.com"]
+        case .some("amazon-prime-video"): verifiedDomains = ["primevideo.com", "amazon.com"]
+        case .some("dazn"): verifiedDomains = ["dazn.com"]
+        case .some("fubo"): verifiedDomains = ["fubo.tv"]
+        case .some("max"): verifiedDomains = ["max.com"]
+        default: return nil
+        }
         guard let officialUrl, let url = URL(string: officialUrl),
-              url.scheme == "https", url.host != nil,
+              url.scheme?.lowercased() == "https", let host = url.host?.lowercased(),
+              verifiedDomains.contains(where: { host == $0 || host.hasSuffix("." + $0) }),
               url.user == nil, url.password == nil else {
             return nil
         }

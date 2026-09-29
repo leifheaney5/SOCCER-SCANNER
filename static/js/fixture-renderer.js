@@ -306,10 +306,11 @@ function createStreamingNode(match) {
         return summary;
     }
     const text = services.map(service => {
+        const type = service.type === 'TV' ? 'TV' : 'Streaming';
         const region = service.region && service.region !== 'Region unknown'
             ? ` (${service.region})`
             : '';
-        return `${service.displayName}${region}`;
+        return `${service.displayName} (${type})${region}`;
     }).join(' · ');
     summary.append(createStreamingIcon(services[0]), node('span', '', text));
     summary.setAttribute('aria-label', `Where to watch: ${text}`);
