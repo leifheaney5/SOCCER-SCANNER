@@ -14,6 +14,19 @@
   ambiguity handling, and coverage metrics.
 - Per-fixture TV and streaming listings with provider names, verified official
   links, reported regions, and a clear state when no listing was supplied.
+- Native SwiftUI fixture navigation, local filtering, spoiler-safe detail/settings
+  surfaces, route-driven fixture Universal Links, adaptive accessibility-size
+  rows, and TestFlight release metadata.
+- App Store submission lanes now stop before building when legal Terms
+  placeholders or a verified support URL are still missing.
+- Submission preflight also runs the shared repository release-asset validator,
+  preventing manual lanes from bypassing metadata and CI-contract checks.
+- Signed archive lanes now fail before building when Apple identifiers, App
+  Store Connect credentials, or the numeric build number are missing; simulator
+  tests remain explicitly signing-free.
+- Mobile fixture filter sheets, safe-area handling, focus management, 200%/400%
+  reflow coverage, release asset/CI validation, beta-note lane wiring, and
+  stable WebKit match-sheet focus restoration.
 
 ### Changed
 
@@ -30,28 +43,6 @@
   spoiler-sensitive scores.
 - Added an evidence-led marketing workspace with explicit prohibited claims
   for coverage, rights, accuracy, and real-time behavior.
-
-## Unreleased
-
-### Added
-
-- Native SwiftUI fixture navigation, local filtering, spoiler-safe detail/settings
-  surfaces, route-driven fixture
-  Universal Links, adaptive accessibility-size rows, and TestFlight release
-  metadata.
-- App Store submission lanes now stop before building when legal Terms
-  placeholders or a verified support URL are still missing.
-- Submission preflight also runs the shared repository release-asset validator,
-  preventing manual lanes from bypassing metadata and CI-contract checks.
-- Signed archive lanes now fail before building when Apple identifiers, App
-  Store Connect credentials, or the numeric build number are missing; simulator
-  tests remain explicitly signing-free.
-- Mobile fixture filter sheets, safe-area handling, focus management, 200%/400%
-  reflow coverage, release asset/CI validation, beta-note lane wiring, and
-  stable WebKit match-sheet focus restoration.
-
-### Changed
-
 - Fixture cards, featured fixtures, match details, source freshness, summaries,
   calendar days, and fixture deep links now use the explicitly selected IANA
   timezone. Selected fixtures remain open when a timezone change crosses a

@@ -28,7 +28,10 @@ web (only public service)
 
 `staging` and `production` use separate PostgreSQL, Redis, variables, secrets, and data. Staging is the migration and smoke-test gate; it must never reference mutable production persistence. Local development uses disposable SQLite and memory cache unless the developer explicitly supplies local services.
 
-Only production serves `soccerscanner.pro`. Staging uses a separate Railway domain or staging subdomain and is not a canonical public origin.
+Production serves `soccer-radar.com`; `soccerscanner.pro` remains active for
+legacy URLs and redirects them to the matching canonical route. Staging uses a
+separate Railway domain or staging subdomain and is not a canonical public
+origin.
 
 ## Deployment lifecycle
 

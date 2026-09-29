@@ -48,13 +48,17 @@ macOS workflow for the intended release commit proves those gates.
 ## Production smoke
 
 ```powershell
-$env:BASE_URL='https://soccerscanner.pro'
+$env:BASE_URL='https://soccer-radar.com'
 $env:EXPECTED_SHA=(git rev-parse HEAD)
 $env:EXPECTED_ENVIRONMENT='production'
 npm run smoke:production
 ```
 
 The smoke requires a full 40-character SHA and fails on SHA/environment/asset mismatch, non-durable or schema-incompatible persistence, unshared Redis, missing/malformed/duplicate fixture IDs, invalid fixture contracts, static or console errors, revealed-by-default scores, or horizontal overflow at 320 px.
+
+Legacy-domain compatibility is checked separately: a representative path and
+query on `https://soccerscanner.pro` must redirect to the same path and query
+on `https://soccer-radar.com`.
 
 For staging, set its public `BASE_URL` and `EXPECTED_ENVIRONMENT=staging`; all other dependency, identity, browser, and exact-SHA checks remain identical.
 

@@ -1,6 +1,6 @@
 # Privacy-safe analytics
 
-Soccer Scanner currently does not require product analytics. The guest-mode
+Soccer Radar currently does not require product analytics. The guest-mode
 contract and spoiler boundary take precedence over instrumentation.
 
 If measurement is introduced later, it must be consent-aware, documented before

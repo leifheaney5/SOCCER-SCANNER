@@ -337,8 +337,25 @@ components:
         status: {type: object, additionalProperties: true}
         score: {type: object, nullable: true, additionalProperties: true}
         broadcasts: {type: array, items: {type: object, additionalProperties: true}}
-        whereToWatch: {type: array, items: {type: object, additionalProperties: true}}
+        whereToWatch:
+          type: array
+          description: Additive provider-reported TV and streaming options. Omitted by older payloads or when registry enrichment is disabled.
+          items: {$ref: '#/components/schemas/WatchOption'}
         streaming: {type: array, items: {type: object, additionalProperties: true}}
+    WatchOption:
+      type: object
+      required: [id, displayName, officialUrl, region, regionKnown, type, source, sourceId, observedAt]
+      properties:
+        id: {type: string, nullable: true, description: Verified service ID; null for unrecognized provider names.}
+        displayName: {type: string}
+        officialUrl: {type: string, format: uri, nullable: true, description: Verified provider homepage; null when no registry match exists.}
+        logoPath: {type: string, description: Optional local icon path for a verified service.}
+        region: {type: string, description: Provider-reported region or `Region unknown`.}
+        regionKnown: {type: boolean}
+        type: {type: string, enum: [TV, STREAMING]}
+        source: {type: string, enum: [espn]}
+        sourceId: {type: string, enum: [espn-broadcasts]}
+        observedAt: {type: string, format: date-time, nullable: true}
     Team:
       type: object
       properties:

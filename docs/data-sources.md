@@ -27,6 +27,6 @@ can enrich the public API.
 
 ## Provenance rules
 
-Every canonical fixture retains provider IDs, a `sources` list, source update time, and explicit missing verified fields. Provider failures are categorized without exposing raw exception data. Unknown fields remain absent or null; Soccer Scanner does not infer events, lineups, statistics, broadcasts, or outcomes.
+Every canonical fixture retains provider IDs, a `sources` list, source update time, and explicit missing verified fields. Provider failures are categorized without exposing raw exception data. Unknown fields remain absent or null; Soccer Radar does not infer events, lineups, statistics, broadcasts, or outcomes.
 
 Provider terms, rate limits, geographic coverage, and schemas can change. Review provider agreements before expanding collection, caching, redistribution, or notification use.

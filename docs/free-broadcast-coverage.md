@@ -1,6 +1,6 @@
 # Free broadcast coverage
 
-Soccer Scanner uses only free, lawful, and verifiable broadcast information.
+Soccer Radar uses only free, lawful, and verifiable broadcast information.
 The application does not host streams, bypass regional restrictions, or infer a
 broadcaster from a competition-wide rights deal.
 

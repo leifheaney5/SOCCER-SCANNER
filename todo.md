@@ -1,31 +1,47 @@
 # Work ledger
 
-- [ ] T001: Route first fixture request through adaptive refresh; display an unavailable summary after failure; add an automatic recovery regression. Verify with `npx playwright test --project=chromium --project=webkit`.
+- [x] T001: Route first fixture request through adaptive refresh; display an unavailable summary after failure; add an automatic recovery regression.
+  - Verify: `./check.sh T001`
   - Evidence: full documented release matrix passed, including 218 Chromium/WebKit browser checks, Python tests, syntax checks, dependency audits, and `git diff --check`.
   - Captured output: `C:\Users\lphea\AppData\Local\Temp\soccer-scanner-T001-matrix-20260928-171917.log` (`RESULT: PASS`, exit status 0).
-  - Ledger gate: left unchecked because this checkout has no `check.sh`, and the supplied instructions require that command to exit 0 before changing a task checkbox.
-- [ ] T002: Set the Soccer Radar canonical origin and redirect `soccerscanner.pro` paths and queries; verify with `python -m pytest tests/test_public_routes.py tests/test_app.py -q`.
+  - Latest evidence: Chromium/WebKit suite: 226 passed; `RESULT: PASS`, exit 0; log: `.checks/logs/T001-20260929-192821.log`.
+- [x] T002: Set the Soccer Radar canonical origin and redirect `soccerscanner.pro` paths and queries.
+  - Verify: `./check.sh T002`
   - Evidence: `python -m pytest tests/test_public_routes.py tests/test_app.py -q` → 62 passed; `RESULT: PASS`, exit status 0.
   - Captured output: `C:\Users\lphea\AppData\Local\Temp\soccer-radar-T002-routes-20260928.log`.
-  - Ledger gate: left unchecked because this checkout has no `check.sh`.
-- [ ] T003: Rebrand current web templates, page metadata, favicon label, and PWA identity while preserving layout and storage keys; verify with `npx playwright test tests/browser/branding.spec.js tests/browser/pwa.spec.js --project=chromium --project=webkit`.
+  - Latest evidence: route/app tests: 62 passed; `RESULT: PASS`, exit 0; log: `.checks/logs/T002-20260929-192708.log`.
+- [x] T003: Rebrand current web templates, page metadata, favicon label, and PWA identity while preserving layout and storage keys.
+  - Verify: `./check.sh T003`
   - Evidence: Chromium/WebKit browser checks → 22 passed; route/app tests → 62 passed; `RESULT: PASS`, exit status 0.
   - Captured output: `C:\Users\lphea\AppData\Local\Temp\soccer-radar-T003-web-20260928.log`.
-  - Ledger gate: left unchecked because this checkout has no `check.sh`.
-- [ ] T004: Rebrand iOS display/store metadata and support Universal Links on both domains without changing the bundle ID; verify with `python -m pytest tests/test_ios_release_assets.py -q` and the candidate's GitHub Actions iOS workflow.
-  - Evidence: local source gate `python -m pytest tests/test_ios_release_assets.py -q` → 14 passed; `RESULT: PASS`, exit status 0. Candidate macOS workflow remains pending.
+  - Latest evidence: Chromium/WebKit branding/PWA checks: 24 passed; `RESULT: PASS`, exit 0; log: `.checks/logs/T003-20260929-192357.log`.
+- [x] T004: Rebrand iOS display/store metadata and support Universal Links on both domains without changing the bundle ID; verify source assets and the candidate hosted iOS workflow.
+  - Verify: `./check.sh T004`
+  - Evidence: local iOS source checks: 14 passed; the hosted iOS workflow passed for the candidate SHA, recorded below.
   - Captured output: `C:\Users\lphea\AppData\Local\Temp\soccer-radar-T004-ios-source-20260928.log`.
-  - Ledger gate: left unchecked because this checkout has no `check.sh`.
-- [ ] T005: Update current monitor, OpenAPI, release documentation, and changelog to the Soccer Radar origin; verify with `node --test tests/synthetic-monitor.test.mjs`.
+  - Latest evidence: iOS source checks: 14 passed; CI and iOS workflows succeeded for `c7116a5eeb0f9a39f9859ff873e754b6e6eab1bf`; `RESULT: PASS`, exit 0; log: `.checks/logs/T004-20260929-192340.log`.
+- [x] T005: Update current monitor, OpenAPI, release documentation, and changelog to the Soccer Radar origin.
+  - Verify: `./check.sh T005`
   - Evidence: `node --test tests/synthetic-monitor.test.mjs` → 12 passed; Python routes/native checks → 38 passed; `RESULT: PASS`, exit status 0.
   - Captured output: `C:\Users\lphea\AppData\Local\Temp\soccer-radar-T005-docs-monitor-20260928.log`.
-  - Ledger gate: left unchecked because this checkout has no `check.sh`.
-- [ ] T006: Release the combined fixture fix and rebrand after DNS/TLS, full repository checks, hosted CI/iOS, exact Railway deployment, redirect, readiness, and production smoke gates pass; verify with the documented release matrix and `npm run smoke:production` against the exact merged SHA.
+  - Latest evidence: synthetic monitor tests: 12 passed; `RESULT: PASS`, exit 0; log: `.checks/logs/T005-20260929-192408.log`.
+- [x] T006: Release the combined fixture fix and rebrand after DNS/TLS, full repository checks, hosted CI/iOS, exact Railway deployment, redirect, readiness, and production smoke gates pass.
+  - Verify: `./check.sh T006`
   - Plan: `docs/superpowers/plans/2026-09-28-soccer-radar-rebrand.md`.
-  - Ledger gate: no checkbox changes until the repository's required task-specific `check.sh` command is available and exits 0.
-- [ ] T007: Add provider-reported TV and streaming “Where to watch” listings to every web and iOS fixture, with verified links and truthful missing-listing state; verify with focused provider, API, browser, and iOS source checks.
+  - Latest evidence: exact-SHA production smoke passed with 81 unique fixtures; legacy redirect preserved path/query (301); CI and iOS workflows succeeded; `RESULT: PASS`, exit 0; log: `.checks/logs/T006-20260929-192804.log`.
+- [x] T007: Add provider-reported TV and streaming “Where to watch” listings to every web and iOS fixture, with verified links and truthful missing-listing state.
+  - Verify: `./check.sh T007`
   - Plan: `docs/superpowers/plans/2026-09-28-soccer-radar-rebrand.md`, Task 5.
   - Evidence: `python -m pytest tests/test_espn_provider.py tests/test_streaming_registry.py tests/test_fixture_service_v2.py tests/test_streaming_enrichment.py tests/test_ios_release_assets.py -q` → 66 passed; `npx playwright test tests/browser/streaming.spec.js tests/browser/pwa.spec.js --project=chromium --project=webkit` → 20 passed. Review fixes: cards label TV/Streaming accessibly; enabled enrichment always emits `whereToWatch`, including `[]`; clients validate link host against provider ID; client allowlists match the verified registry. Focused checks: 48 Python checks and 96 browser checks passed. Full release matrix rerun: 294 Python tests, 224 Chromium/WebKit checks, syntax/compile/Node checks passed, both dependency audits clean, `RESULTS pytest=0 compile=0 js=0 node=0 npmAudit=0 pipAudit=0 browser=0 diff=0`, exit status 0. Log: `C:\Users\lphea\AppData\Local\Temp\soccer-radar-where-to-watch-release-matrix-rerun-20260929.log`.
-  - Review: P2 allowlist drift finding addressed with a registry-to-web/iOS mapping regression. P3 OpenAPI `WatchOption` schema detail deferred. iOS Swift test awaits hosted macOS workflow.
+  - Review: P2 allowlist drift finding addressed with a registry-to-web/iOS mapping regression. The OpenAPI `WatchOption` schema is now documented and its contract test passes. Hosted iOS workflow succeeded.
   - Captured output: `C:\Users\lphea\AppData\Local\Temp\soccer-radar-where-to-watch-release-matrix-rerun-20260929.log` (`RESULTS pytest=0 compile=0 js=0 node=0 npmAudit=0 pipAudit=0 browser=0 diff=0`; shell exited 0).
-  - Ledger gate: no checkbox changes until the repository's required task-specific `check.sh` command is available and exits 0.
+  - Latest evidence: provider/iOS source tests: 68 passed; Chromium/WebKit checks: 22 passed; iOS workflow succeeded; `RESULT: PASS`, exit 0; log: `.checks/logs/T007-20260929-192729.log`.
+
+- [x] T008: Correct current product, canonical-host, changelog, API, and OpenAPI documentation, and add a task-aware verification runner with readable per-task logs.
+  - Verify: `./check.sh T008`
+  - Evidence: documentation contract tests: 4 passed; shell syntax and `git diff --check` passed; `RESULT: PASS`, exit 0; log: `.checks/logs/T008-20260929-194651.log`.
+- [ ] T009: Add the approved proprietary root license after confirming the exact copyright-holder name, and verify third-party license notices remain intact.
+  - Verify: `./check.sh T009`
+  - Inventory: Orbitron is the only bundled font found; its SIL Open Font License 1.1 notice is present and will be checked unchanged.
+  - Latest check: no root `LICENSE` can be written without the exact holder name; `RESULT: FAIL`, exit 1; log: `.checks/logs/T009-20260929-194002.log`.
+  - Blocked on owner input: exact copyright-holder name.
