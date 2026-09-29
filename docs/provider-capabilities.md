@@ -1,6 +1,6 @@
 # Provider capability boundaries
 
-Soccer Scanner treats every data surface as a declared provider capability. A feature is never populated from inference, scraped presentation markup, placeholder values, or an unrelated provider field.
+Soccer Radar treats every data surface as a declared provider capability. A feature is never populated from inference, scraped presentation markup, placeholder values, or an unrelated provider field.
 
 The live manifest is available from `GET /api/v2/capabilities`. Each capability has one of three states:
 
@@ -20,7 +20,7 @@ The live manifest is available from `GET /api/v2/capabilities`. Each capability 
 | Standings | `unavailable` without key | Configured Football-Data.org credential |
 | Notifications | `not_supported` | Delivery service, consent records, preferences, and verified event source |
 
-The existing tables page gates a third-party SofaScore embed behind an explicit user action. That embed is not reported as a Soccer Scanner standings-provider capability and is not ingested into the canonical API.
+The existing tables page gates a third-party SofaScore embed behind an explicit user action. That embed is not reported as a Soccer Radar standings-provider capability and is not ingested into the canonical API.
 
 ## Notification architecture prerequisite
 
@@ -34,7 +34,7 @@ Notifications remain intentionally deferred. Enabling them requires all of the f
 6. Idempotent delivery keyed by canonical fixture and provider event IDs, with corrections and cancellations supported.
 7. A legitimate, contractually permitted live-event source with freshness and outage metadata.
 
-Until those conditions are met, `notifications` stays `not_supported`. Soccer Scanner has no persistent favorite profile; client-side session and URL state are not interpreted as notification consent.
+Until those conditions are met, `notifications` stays `not_supported`. Soccer Radar has no persistent favorite profile; client-side session and URL state are not interpreted as notification consent.
 
 ## Extension rule
 

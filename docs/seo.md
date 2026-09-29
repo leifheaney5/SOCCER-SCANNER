@@ -1,6 +1,6 @@
 # SEO and structured data
 
-Soccer Scanner publishes crawl-safe discovery metadata without exposing
+Soccer Radar publishes crawl-safe discovery metadata without exposing
 spoiler-sensitive fixture results.
 
 ## Current implementation

@@ -70,6 +70,11 @@ npm test
 
 CI also checks every JavaScript file, serious/critical axe violations, dependency audits, committed secrets, concurrent cache/provider behavior, and synthetic visual-state artifacts. See [testing](docs/testing.md).
 
+The task ledger in `todo.md` maps each task to `check.sh`. Run a focused check
+with `bash ./check.sh T###` (or `bash ./check.sh all` for the full ledger);
+each run records command output and its result in `.checks/logs/`. Use
+`bash ./check.sh T### --mark` only to mark a task whose check passes.
+
 ## Production verification
 
 After Railway reports terminal `SUCCESS`, verify the exact revision rather than inferring deployment from Git:
