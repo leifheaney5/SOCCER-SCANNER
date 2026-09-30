@@ -37,13 +37,16 @@ Successful response shape:
       {"id": "usa-network", "displayName": "USA Network", "type": "TV", "region": "US", "regionKnown": true, "officialUrl": "https://www.usanetwork.com/", "source": "espn", "observedAt": "2026-08-03T18:59:00Z"},
       {"id": "peacock", "displayName": "Peacock", "type": "STREAMING", "region": "US", "regionKnown": true, "officialUrl": "https://www.peacocktv.com/", "observedAt": "2026-08-03T18:59:00Z"}
     ],
+    "broadcastCoverage": {"status": "available", "regions": [{"region": "US", "status": "available"}], "sourceUpdatedAt": "2026-08-03T18:59:00Z"},
     "streaming": [{"displayName": "Peacock", "region": "US", "regionKnown": true, "officialUrl": "https://www.peacocktv.com/", "observedAt": "2026-08-03T18:59:00Z"}],
     "dataQuality": {"missingFields": ["referees", "aggregate"]}
   }],
   "providers": {},
   "coverage": {},
   "cache": {"status": "filled", "providers": {"espn": "filled"}},
-  "lastUpdated": "2026-08-03T18:59:00Z"
+  "lastUpdated": "2026-08-03T18:59:00Z",
+  "broadcastSourceFreshness": {"status": "fresh", "updatedAt": "2026-08-03T18:59:00Z"},
+  "broadcastCoverageReport": {"windowDays": 30, "thresholdPercent": 90, "regions": ["US"], "competitions": []}
 }
 ```
 
@@ -53,11 +56,26 @@ regions come from the source. `officialUrl` and `logoPath` are present only
 when the provider name matches the verified local service registry. Unknown
 providers remain visible by name without a guessed link. The legacy `streaming`
 array remains streaming-only. When registry enrichment is enabled, every
-fixture includes `whereToWatch`; an empty list means the source did not provide
-a broadcast listing. Older payloads may omit the field. Neither state asserts
-that the fixture is unavailable on TV or online. Official links open the
-provider's website; the ESPN broadcast feed does not supply a match-specific
-viewing URL.
+fixture includes `whereToWatch`; an empty list means no provider row is present,
+not that the fixture is unavailable on TV or online. Older payloads may omit
+the field. `broadcastCoverage.status` is `available`, `confirmed_none`,
+`unverified`, or `stale`; `regions` carries the same state for each known
+region. `confirmed_none` is reserved for an eligible source that confirms
+complete coverage. The response-level report measures source freshness and
+30-day competition/region coverage; “covered” requires complete-source
+evidence for at least 90% of fixtures. Official links open the provider's
+website; the ESPN broadcast feed does not supply a match-specific viewing URL.
+Clients may persist a region preference locally; the default is all reported
+regions.
+
+### `POST /api/internal/broadcast-refresh`
+
+Hourly GitHub Actions refresh. Requires `Authorization: Bearer <OPS_ADMIN_TOKEN>`.
+It uses the existing operations token and shared Redis cache, and returns
+refresh status, source metrics, and the last observation timestamp. Provider
+failure preserves the previous snapshot and reports it stale; public fixture
+requests do not invoke this route. Stale/unavailable refreshes return `503`
+so the scheduled workflow can report upstream refresh failures.
 
 Valid states are `success`, `empty_confirmed`, `partial`, and `stale`. Total provider failure returns `503 provider_unavailable`; a provider-limited total failure or application burst limit returns `429 rate_limited` with `Retry-After`.
 

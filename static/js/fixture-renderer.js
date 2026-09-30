@@ -301,8 +301,17 @@ function createStreamingNode(match) {
     const summary = node('span', 'fixture-broadcast');
     if (!services.length) {
         summary.classList.add('fixture-broadcast--unknown');
-        summary.textContent = 'Broadcast listing not provided';
-        summary.setAttribute('aria-label', 'Where to watch: broadcast listing not provided');
+        const status = match?.broadcastCoverage?.status;
+        const region = match?.broadcastCoverage?.selectedRegion;
+        const fallback = status === 'confirmed_none'
+            ? `No listing confirmed${region ? ` for ${region}` : ''}`
+            : status === 'stale'
+                ? 'Broadcast listing may be out of date'
+                : status === 'unverified'
+                    ? `Not verified yet${region ? ` for ${region}` : ''}`
+                    : 'Broadcast listing not provided';
+        summary.textContent = fallback;
+        summary.setAttribute('aria-label', `Where to watch: ${fallback}`);
         return summary;
     }
     const text = services.map(service => {
@@ -313,7 +322,14 @@ function createStreamingNode(match) {
         return `${service.displayName} (${type})${region}`;
     }).join(' · ');
     summary.append(createStreamingIcon(services[0]), node('span', '', text));
-    summary.setAttribute('aria-label', `Where to watch: ${text}`);
+    const stale = services.some(service => service.status === 'stale');
+    if (stale) {
+        summary.append(node('span', 'fixture-broadcast-stale', 'Listings may be out of date'));
+    }
+    summary.setAttribute(
+        'aria-label',
+        `Where to watch: ${text}${stale ? '. Broadcast listings may be out of date' : ''}`,
+    );
     return summary;
 }
 

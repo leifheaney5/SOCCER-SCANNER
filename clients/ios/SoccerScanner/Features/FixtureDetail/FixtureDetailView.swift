@@ -1,6 +1,7 @@
 import SwiftUI
 
 public struct FixtureDetailView: View {
+    @AppStorage("soccer-radar:broadcast-region") private var broadcastRegion = "all"
     let fixture: Fixture
     let timeZone: TimeZone
     @Binding private var scoresRevealed: Bool
@@ -86,12 +87,29 @@ public struct FixtureDetailView: View {
             }
 
             Section(String(localized: "Where to watch")) {
-                if fixture.whereToWatch.isEmpty {
-                    Text(String(localized: "Broadcast listing not provided."))
+                Picker(String(localized: "Broadcast region"), selection: $broadcastRegion) {
+                    Text(String(localized: "All regions")).tag("all")
+                    ForEach(broadcastRegions, id: \.self) { region in
+                        Text(region).tag(region)
+                    }
+                }
+                .accessibilityIdentifier("broadcast-region")
+                .accessibilityValue(
+                    broadcastRegion == "all"
+                        ? String(localized: "All regions")
+                        : broadcastRegion
+                )
+                if visibleWatchOptions.contains(where: { $0.status == "stale" }) {
+                    Text(String(localized: "Broadcast listings may be out of date."))
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+                if visibleWatchOptions.isEmpty {
+                    Text(emptyBroadcastMessage)
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 } else {
-                    ForEach(Array(fixture.whereToWatch.enumerated()), id: \.offset) { index, option in
+                    ForEach(Array(visibleWatchOptions.enumerated()), id: \.offset) { index, option in
                         VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
                             if let url = option.officialLinkURL {
                                 Link(option.displayName, destination: url)
@@ -139,6 +157,33 @@ public struct FixtureDetailView: View {
         .navigationTitle(String(localized: "Match details"))
         .navigationBarTitleDisplayMode(.inline)
         .accessibilityIdentifier("fixture-detail")
+    }
+
+    private var broadcastRegions: [String] {
+        let reported = fixture.broadcastCoverage?.regions.map(\.region) ?? []
+        let listed = fixture.whereToWatch.compactMap(\.region)
+        var regions = Set((reported + listed).filter {
+            !$0.isEmpty && $0 != "Region unknown"
+        })
+        if broadcastRegion != "all" { regions.insert(broadcastRegion) }
+        return regions.sorted()
+    }
+
+    private var visibleWatchOptions: [WatchOption] {
+        guard broadcastRegion != "all" else { return fixture.whereToWatch }
+        return fixture.whereToWatch.filter { $0.region == broadcastRegion }
+    }
+
+    private var emptyBroadcastMessage: String {
+        let status = broadcastRegion == "all"
+            ? fixture.broadcastCoverage?.status
+            : fixture.broadcastCoverage?.status(for: broadcastRegion)
+        switch status {
+        case "confirmed_none": return String(localized: "No listing confirmed for this region.")
+        case "stale": return String(localized: "Broadcast listing may be out of date.")
+        case "unverified": return String(localized: "Not verified yet.")
+        default: return String(localized: "Broadcast listing not provided.")
+        }
     }
 
     private func providerStatusLabel(_ status: String?) -> String {

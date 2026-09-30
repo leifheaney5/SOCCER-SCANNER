@@ -1,0 +1,32 @@
+name: Broadcast observations
+
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: broadcast-observations
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Refresh official broadcast observations
+        env:
+          OPS_ADMIN_TOKEN: ${{ secrets.OPS_ADMIN_TOKEN }}
+          SOCCER_RADAR_URL: https://soccer-radar.com
+        run: |
+          if [ -z "$OPS_ADMIN_TOKEN" ]; then
+            echo "The OPS_ADMIN_TOKEN repository secret is required."
+            exit 1
+          fi
+          curl --fail-with-body --silent --show-error \
+            --request POST \
+            --header "Authorization: Bearer ${OPS_ADMIN_TOKEN}" \
+            "${SOCCER_RADAR_URL}/api/internal/broadcast-refresh"

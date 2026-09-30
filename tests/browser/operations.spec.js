@@ -9,6 +9,7 @@ test('operations dashboard renders live status without echoing the token', async
             providers: {status: 'ok', providers: []},
             rateLimit: {status: 'ready'},
             metrics: {counters: {'api.requests': 4}, timings: {}},
+            diagnostics: {broadcastCoverage: {status: 'fresh', thresholdPercent: 90, rollingCoverage: []}},
         }),
     }));
     await page.goto('/operations');
@@ -16,5 +17,7 @@ test('operations dashboard renders live status without echoing the token', async
     await page.getByRole('button', {name: 'Load status'}).click();
     await expect(page.locator('#operations-status')).toHaveText('Operational status loaded.');
     await expect(page.locator('#operations-values')).toContainText('development');
+    await expect(page.locator('#operations-values')).toContainText('Broadcast coverage');
+    await expect(page.locator('#operations-values')).toContainText('thresholdPercent');
     await expect(page.locator('#operations-values')).not.toContainText('test-token');
 });

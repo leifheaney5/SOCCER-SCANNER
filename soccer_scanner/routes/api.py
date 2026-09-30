@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 import hmac
 import re
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -7,6 +7,7 @@ import requests
 from flask import Blueprint, abort, current_app, g, jsonify, request
 
 from soccer_scanner.domain.models import FixtureState, FixtureUnavailable
+from soccer_scanner.services.broadcast_refresh import OBSERVATION_TTL_SECONDS
 
 api = Blueprint('api', __name__, url_prefix='/api')
 
@@ -138,9 +139,13 @@ def _fixtures_by_date(*, versioned):
             'code': 'invalid_timezone',
         }), 400
     try:
-        return jsonify(current_app.extensions['fixture_service'].fixtures_for_date(
+        payload = current_app.extensions['fixture_service'].fixtures_for_date(
             requested_date, timezone_name
-        ))
+        )
+        broadcast_refresh = current_app.extensions.get('broadcast_refresh_service')
+        if broadcast_refresh is not None:
+            payload = broadcast_refresh.apply_to_payload(payload)
+        return jsonify(payload)
     except FixtureUnavailable as error:
         code = (
             'rate_limited'
@@ -251,6 +256,11 @@ def operations_v2():
         unresolved = None
     broadcast_registry = current_app.extensions.get('broadcast_sources')
     streaming_registry = current_app.extensions.get('streaming_registry')
+    broadcast_store = current_app.extensions.get('broadcast_observation_store')
+    try:
+        broadcast_snapshot = broadcast_store.read() if broadcast_store else None
+    except Exception:
+        broadcast_snapshot = None
     standings = current_app.extensions.get('standings_seasons')
     return jsonify({
         'build': current_app.extensions['build_info'].as_public_dict(),
@@ -265,6 +275,25 @@ def operations_v2():
                 {'id': source['id'], 'status': source.get('status'), 'scope': source.get('scope', [])}
                 for source in (broadcast_registry.sources() if broadcast_registry else [])
             ],
+            'broadcastCoverage': {
+                'status': (
+                    'unverified' if not broadcast_snapshot else (
+                        'stale' if (
+                            broadcast_snapshot.get('storageStatus') == 'stale'
+                            or broadcast_snapshot.get('refreshStatus') == 'stale'
+                            or not broadcast_snapshot.get('updatedAt')
+                            or datetime.now(timezone.utc) - datetime.fromisoformat(
+                                broadcast_snapshot['updatedAt'].replace('Z', '+00:00')
+                            ) > timedelta(seconds=OBSERVATION_TTL_SECONDS)
+                        ) else 'fresh'
+                    )
+                ),
+                'updatedAt': broadcast_snapshot.get('updatedAt') if broadcast_snapshot else None,
+                'sourceMetrics': broadcast_snapshot.get('coverage', {}) if broadcast_snapshot else {},
+                'rollingCoverage': broadcast_snapshot.get('rollingCoverage', []) if broadcast_snapshot else [],
+                'windowDays': 30,
+                'thresholdPercent': 90,
+            },
             'standings': {
                 'stale': standings.is_stale() if standings else None,
                 'reviewWarnings': standings.review_warnings() if standings else [],
@@ -309,7 +338,24 @@ def fixture_v2(canonical_fixture_id):
     match = current_app.extensions['fixture_service'].lookup_fixture(canonical_fixture_id)
     if match is None:
         return _fixture_error('fixture_not_found', 'Fixture link is unavailable or expired.', 404)
+    broadcast_refresh = current_app.extensions.get('broadcast_refresh_service')
+    if broadcast_refresh is not None:
+        match = broadcast_refresh.apply_to_payload({'matches': [match]})['matches'][0]
     return jsonify({'fixture': match})
+
+
+@api.post('/internal/broadcast-refresh')
+def refresh_broadcast_observations():
+    """Refresh official broadcast observations through the operations token."""
+    expected = str(current_app.config.get('OPS_ADMIN_TOKEN') or '')
+    authorization = request.headers.get('Authorization', '')
+    supplied = authorization[7:] if authorization.startswith('Bearer ') else ''
+    if not expected or not hmac.compare_digest(supplied, expected):
+        return _fixture_error('unauthorized', 'Valid operations credentials are required.', 401)
+    result = current_app.extensions['broadcast_refresh_service'].refresh(
+        datetime.now(timezone.utc).date()
+    )
+    return jsonify(result), 200 if result['status'] == 'success' else 503
 
 
 @api.get('/matches-today')

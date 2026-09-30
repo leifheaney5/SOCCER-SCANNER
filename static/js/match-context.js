@@ -99,7 +99,16 @@ function createStreamingSection(match) {
     section.setAttribute('aria-label', 'Where to watch');
     section.append(node('h3', 'context-streaming-heading', 'Where to watch'));
     if (!services.length) {
-        section.append(node('p', 'context-streaming-empty', 'Broadcast listing not provided.'));
+        const status = match?.broadcastCoverage?.status;
+        const region = match?.broadcastCoverage?.selectedRegion;
+        const fallback = status === 'confirmed_none'
+            ? `No listing confirmed${region ? ` for ${region}` : ''}`
+            : status === 'stale'
+                ? 'Broadcast listing may be out of date'
+                : status === 'unverified'
+                    ? `Not verified yet${region ? ` for ${region}` : ''}`
+                    : 'Broadcast listing not provided.';
+        section.append(node('p', 'context-streaming-empty', fallback));
         return section;
     }
     const list = node('ul', 'context-streaming-list');
@@ -150,6 +159,9 @@ function createStreamingSection(match) {
         list.append(item);
     }
     section.append(list);
+    if (services.some(service => service.status === 'stale')) {
+        section.append(node('p', 'context-streaming-stale', 'Broadcast listings may be out of date.'));
+    }
     section.append(node(
         'p',
         'context-streaming-disclaimer',

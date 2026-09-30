@@ -133,7 +133,8 @@ def test_native_state_fixtures_and_broadcast_detail_wiring_are_present():
         assert flag in app
         assert flag in ui_tests
     assert 'case stale' in preview
-    assert 'ForEach(Array(fixture.whereToWatch.enumerated())' in detail
+    assert 'ForEach(Array(visibleWatchOptions.enumerated())' in detail
+    assert 'private var visibleWatchOptions: [WatchOption]' in detail
     assert 'fixture.whereToWatch' in detail
     assert 'officialLinkURL' in detail
     assert 'Link(' in detail

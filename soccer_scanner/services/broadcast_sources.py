@@ -81,6 +81,22 @@ class BroadcastSourceRegistry:
     def sources(self):
         return [deepcopy(source) for source in self._sources.values()]
 
+    def refreshable_sources(self):
+        """Return only sources with active machine-readable fixture evidence."""
+        required_identity = {'competition', 'homeTeam', 'awayTeam', 'utcDate'}
+        return [
+            deepcopy(source)
+            for source in self._sources.values()
+            if source.get('status') == 'active'
+            and 'fixture-level' in source.get('scope', [])
+            and source.get('feed', {}).get('format') == 'official-json'
+            and required_identity.issubset(set(source.get('feed', {}).get('fixtureIdentity', [])))
+            and source.get('feed', {}).get('territoryField')
+            and source.get('feed', {}).get('observationTimestampField')
+            and source.get('feed', {}).get('providerMapping')
+            and source.get('feed', {}).get('refreshAdapter')
+        ]
+
     def describe_listing(self, listing):
         """Normalize a source listing; links remain absent until verified."""
         if not isinstance(listing, dict):

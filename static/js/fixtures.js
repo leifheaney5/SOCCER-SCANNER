@@ -64,12 +64,61 @@ let requestSequence = 0;
 let matchContext = null;
 let refreshController = null;
 let timezoneControl = null;
+let broadcastRegion = (() => {
+    try { return localStorage.getItem('soccer-radar:broadcast-region') || 'all'; } catch { return 'all'; }
+})();
 let filterDialog = null;
 let filterDialogManager = null;
 let filterDraft = null;
 let filterMediaQuery = null;
 
 const advancedFilterFields = ['competition', 'country', 'timeWindow', 'sort', 'hideFinished', 'availability', 'timezone'];
+
+function populateBroadcastRegions(matches) {
+    const select = byId('broadcast-region');
+    const regions = [...new Set(matches.flatMap(match => [
+        ...(Array.isArray(match?.broadcastCoverage?.regions)
+            ? match.broadcastCoverage.regions.map(item => item?.region) : []),
+        ...(Array.isArray(match?.whereToWatch) ? match.whereToWatch.map(item => item?.region) : []),
+        ...(Array.isArray(match?.streaming) ? match.streaming.map(item => item?.region) : []),
+    ]).concat(payload?.broadcastCoverageReport?.regions || [])
+        .filter(region => typeof region === 'string' && region.trim() && region !== 'Region unknown'))]
+        .sort((left, right) => left.localeCompare(right));
+    select.replaceChildren(new Option('All regions', 'all'), ...regions.map(region => new Option(region, region)));
+    if (broadcastRegion !== 'all' && !regions.includes(broadcastRegion)) {
+        select.add(new Option(broadcastRegion, broadcastRegion));
+    }
+    select.value = broadcastRegion;
+}
+
+function matchesForBroadcastRegion(matches) {
+    if (broadcastRegion === 'all') return matches;
+    return matches.map(match => {
+        const options = Array.isArray(match?.whereToWatch)
+            ? match.whereToWatch
+            : (Array.isArray(match?.streaming) ? match.streaming : []);
+        const selected = options.filter(item => item?.region === broadcastRegion);
+        const coverage = Array.isArray(match?.broadcastCoverage?.regions)
+            ? match.broadcastCoverage.regions.find(item => item?.region === broadcastRegion)
+            : null;
+        return {
+            ...match,
+            whereToWatch: selected,
+            streaming: selected.filter(item => String(item?.type || '').toUpperCase() === 'STREAMING'),
+            broadcastCoverage: {
+                ...match?.broadcastCoverage,
+                status: selected.length ? 'available' : coverage?.status || 'unverified',
+                selectedRegion: broadcastRegion,
+            },
+        };
+    });
+}
+
+function setBroadcastRegion(region) {
+    broadcastRegion = region || 'all';
+    try { localStorage.setItem('soccer-radar:broadcast-region', broadcastRegion); } catch { /* page-only preference */ }
+    reflectCurrentResults();
+}
 
 function setState(patch, metadata = {}) {
     return store.dispatch(patch, metadata);
@@ -107,7 +156,10 @@ async function copyFixtureLink() {
 }
 
 function filterValues(source = state) {
-    return Object.fromEntries(advancedFilterFields.map(field => [field, source[field]]));
+    return {
+        ...Object.fromEntries(advancedFilterFields.map(field => [field, source[field]])),
+        broadcastRegion,
+    };
 }
 
 function activeFilterCount(source = state) {
@@ -118,7 +170,8 @@ function activeFilterCount(source = state) {
         + Number(source.timeWindow !== 'all')
         + Number(source.sort !== 'kickoff')
         + Number(source.hideFinished)
-        + Number(source.availability !== 'all');
+        + Number(source.availability !== 'all')
+        + Number(broadcastRegion !== 'all');
 }
 
 function advancedFilterHasValues(source = state, baseline = state) {
@@ -128,7 +181,8 @@ function advancedFilterHasValues(source = state, baseline = state) {
         || source.sort !== 'kickoff'
         || Boolean(source.hideFinished)
         || source.availability !== 'all'
-        || source.timezone !== baseline.timezone;
+        || source.timezone !== baseline.timezone
+        || broadcastRegion !== 'all';
 }
 
 function syncControls({filterState = filterDraft || state} = {}) {
@@ -146,6 +200,7 @@ function syncControls({filterState = filterDraft || state} = {}) {
     byId('sort-filter').value = filterState.sort;
     byId('hide-finished').checked = filterState.hideFinished;
     byId('availability-filter').value = filterState.availability;
+    byId('broadcast-region').value = filterState.broadcastRegion ?? broadcastRegion;
     byId('fixture-search').value = state.query;
     byId('clear-search').hidden = !state.query;
     const competition = byId('competition-filter');
@@ -238,7 +293,8 @@ function reflectCurrentResults() {
         || null;
     // Every date and time rendered below must use the selected zone.
     setRenderTimeZone(state.timezone);
-    const filteredMatches = filterMatches(payload.matches, state);
+    const displayMatches = matchesForBroadcastRegion(payload.matches);
+    const filteredMatches = filterMatches(displayMatches, state);
     const matches = sortMatches(filteredMatches, state.sort);
     if (selectedFixtureId && !matches.some(match => (
         String(match.canonicalFixtureId || match.id) === selectedFixtureId
@@ -267,7 +323,7 @@ function reflectCurrentResults() {
     byId('dashboard-status').textContent = `${summary.total} fixtures shown`;
     byId('fixture-stream-title').textContent = 'Match schedule';
     const selectedMatch = selectedFixtureId
-        ? payload.matches.find(item => String(item.canonicalFixtureId || item.id) === selectedFixtureId)
+        ? displayMatches.find(item => String(item.canonicalFixtureId || item.id) === selectedFixtureId)
         : null;
     if (selectedMatch && matchContext?.selected()) {
         matchContext.update(selectedMatch);
@@ -337,6 +393,7 @@ async function loadFixtures({preserve = false} = {}) {
         payload = {...nextPayload, date: requestedDate};
         if (!Array.isArray(payload.matches)) payload.matches = [];
         populateCompetitions(payload.matches);
+        populateBroadcastRegions(payload.matches);
         syncControls();
         reflectCurrentResults();
         return {ok: true};
@@ -450,6 +507,7 @@ function commitFilterDraft() {
     });
     const timezoneChanged = Object.hasOwn(patch, 'timezone');
     delete patch.timezone;
+    const selectedRegion = filterDraft.broadcastRegion;
     if (timezoneChanged) {
         applyTimezone(filterDraft.timezone, {
             extraPatch: patch,
@@ -457,6 +515,9 @@ function commitFilterDraft() {
         });
     } else if (Object.keys(patch).length > 0) {
         applyFilter(patch);
+    }
+    if (selectedRegion !== undefined && selectedRegion !== broadcastRegion) {
+        setBroadcastRegion(selectedRegion);
     }
     closeFilterDialog();
 }
@@ -536,6 +597,10 @@ function bindEvents() {
         if (filterDialog?.open) updateFilterDraft({availability: event.target.value});
         else applyFilter({availability: event.target.value});
     });
+    byId('broadcast-region').addEventListener('change', event => {
+        if (filterDialog?.open) updateFilterDraft({broadcastRegion: event.target.value});
+        else setBroadcastRegion(event.target.value);
+    });
     document.querySelector('.status-filters').addEventListener('click', event => {
         const button = event.target.closest('[data-status]');
         if (!button) return;
@@ -563,9 +628,13 @@ function bindEvents() {
             availability: 'all',
             sort: 'kickoff',
             timezone: state.timezone,
+            broadcastRegion: 'all',
         };
         if (filterDialog?.open) updateFilterDraft(patch);
-        else applyFilter({...patch, status: 'all', query: ''});
+        else {
+            setBroadcastRegion('all');
+            applyFilter({...patch, status: 'all', query: ''});
+        }
     });
     byId('score-toggle').addEventListener('click', () => {
         scoresRevealed = !scoresRevealed;
@@ -593,7 +662,7 @@ function bindEvents() {
             setState({fixture: selectedFixtureId}, {reason: 'fixture'});
             syncUrl('push');
             reflectCurrentResults();
-            const match = payload?.matches?.find(item => (
+            const match = matchesForBroadcastRegion(payload?.matches || []).find(item => (
                 String(item.canonicalFixtureId || item.id) === selectedFixtureId
             ));
             const replacement = byId('fixture-stream').querySelector(
