@@ -733,10 +733,10 @@ test('visual tokens, type roles, and reduced motion match the product contract',
     });
     expect(styles.tokens).toEqual({
         bgPrimary: '#000000',
-        bgSecondary: '#0a0a0a',
-        bgCard: '#141414',
+        bgSecondary: '#121212',
+        bgCard: '#191919',
         accent: '#7CFF00',
-        border: '#2a2a2a',
+        border: '#404040',
     });
     expect(styles.bodyBackground).toBe('rgb(0, 0, 0)');
     expect(styles.bodyFont).toContain('Inter');
