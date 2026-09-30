@@ -54,16 +54,16 @@ jobs:
       - name: Generate the Xcode project
         run: xcodegen generate --spec project.yml
         env:
-          APPLE_BUNDLE_ID: ${{ secrets.APPLE_BUNDLE_ID || 'soccerradar.app' }}
+          APPLE_BUNDLE_ID: ${{ secrets.APPLE_BUNDLE_ID || 'com.leifheaney.soccerradar' }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID || '' }}
-          APPLE_BUNDLE_PREFIX: soccerradar
+          APPLE_BUNDLE_PREFIX: com.leifheaney
 
       - name: Validate generated build settings
         run: |
           mkdir -p build
           xcodebuild -project SoccerScanner.xcodeproj -scheme SoccerScanner -showBuildSettings \
             > build/build-settings.txt
-          grep -Fq 'PRODUCT_BUNDLE_IDENTIFIER = soccerradar.app' build/build-settings.txt
+          grep -Fq 'PRODUCT_BUNDLE_IDENTIFIER = com.leifheaney.soccerradar' build/build-settings.txt
           grep -Fq 'IPHONEOS_DEPLOYMENT_TARGET = 17.0' build/build-settings.txt
           grep -Fq 'ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon' build/build-settings.txt
 
@@ -157,6 +157,6 @@ jobs:
           APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           APPLE_BUNDLE_ID: ${{ secrets.APPLE_BUNDLE_ID }}
-          APPLE_BUNDLE_PREFIX: soccerradar
+          APPLE_BUNDLE_PREFIX: com.leifheaney
           BUILD_NUMBER: ${{ github.run_number }}
           FASTLANE_SKIP_UPDATE_CHECK: '1'
