@@ -8,12 +8,18 @@ async function mockFixtures(page, payload = fixturePayload) {
     }));
 }
 
-test('desktop fixture filters use a labeled two-level toolbar', async ({page}) => {
+test('desktop fixture filters show timezone abbreviations in a two-level toolbar', async ({page}) => {
     await page.setViewportSize({width: 1360, height: 900});
     await mockFixtures(page);
     await page.goto('/?date=2026-08-03');
 
-    await expect(page.locator('#timezone-filter').locator('xpath=../..')).toContainText('Timezone');
+    await expect(page.locator('#date-strip')).toHaveCount(0);
+    await expect(page.locator('.timezone-field > span')).toHaveCount(0);
+    const expectedTimezoneLabel = await page.evaluate(async () => {
+        const {formatTimezoneLabel} = await import('/static/js/time-zone.js');
+        return `New York (${formatTimezoneLabel('America/New_York').shortLabel})`;
+    });
+    await expect(page.locator('#timezone-filter option[value="America/New_York"]')).toHaveText(expectedTimezoneLabel);
     await expect(page.locator('#competition-filter').locator('xpath=../..')).toContainText('Competition');
     await expect(page.locator('#sort-filter').locator('xpath=../..')).toContainText('Sort');
 
@@ -97,6 +103,9 @@ test('mobile primary controls stay outside the sheet and Close discards advanced
     await expect(dialog).toBeVisible();
     await expect(dialog).toHaveRole('dialog', {name: 'Fixture filters'});
     expect(await page.locator('#secondary-filters').evaluate(element => element.parentElement.id)).toBe('filter-dialog-content');
+    await expect(dialog.locator('#timezone-filter')).toBeVisible();
+    await expect(dialog.locator('#timezone-filter')).toHaveValue('America/New_York');
+    expect(await page.locator('#timezone-filter').evaluate(element => element.closest('.secondary-filters') !== null)).toBe(true);
     expect(await page.locator('#fixture-search').evaluate(element => element.parentElement.parentElement.id)).toBe('primary-filters');
     expect(await page.locator('.status-filters').evaluate(element => element.parentElement.id)).toBe('primary-filters');
     await expect(dialog.locator('#fixture-search')).toHaveCount(0);
@@ -130,16 +139,19 @@ test('mobile primary changes commit immediately and advanced Apply commits draft
     await page.locator('#clear-filters').click();
     await expect(page.locator('#competition-filter')).toHaveValue('');
     await expect(page.locator('#time-filter')).toHaveValue('all');
+    await page.locator('#timezone-filter').selectOption('Europe/London');
+    await expect.poll(() => page.evaluate(() => location.search)).not.toContain('timezone=Europe%2FLondon');
     await page.locator('#competition-filter').selectOption('Premier League');
     await page.locator('#time-filter').selectOption('afternoon');
     await page.locator('#apply-filter-dialog').click();
 
     await expect(page.locator('#filter-dialog')).toBeHidden();
-    await expect(page.locator('#fixture-result-count')).toContainText('1 match');
+    await expect(page.locator('#fixture-result-count')).toContainText('0 matches');
     await expect.poll(() => page.evaluate(() => location.search)).toContain('q=Arsenal');
     await expect.poll(() => page.evaluate(() => location.search)).toContain('status=live');
     await expect.poll(() => page.evaluate(() => location.search)).toContain('competition=Premier+League');
     await expect.poll(() => page.evaluate(() => location.search)).toContain('time=afternoon');
+    await expect.poll(() => page.evaluate(() => location.search)).toContain('timezone=Europe%2FLondon');
     await expect(page.locator('#status-live')).toHaveAttribute('aria-pressed', 'true');
 });
 

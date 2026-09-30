@@ -112,12 +112,12 @@ for (const path of ['/teams', '/league-tables', '/privacy', '/data-sources', '/o
     });
 }
 
-test('the open header timezone popover has no serious accessibility violations', async ({page}) => {
+test('fixture timezone selector has no serious accessibility violations', async ({page}) => {
     await mockFixtures(page);
     await page.goto('/?date=2026-08-03');
     await expect(page.locator('#fixture-result-count')).toContainText('13 matches');
-    await page.locator('#timezone-trigger').click();
-    await expect(page.locator('#timezone-listbox')).toBeVisible();
+    await expect(page.locator('#timezone-trigger')).toHaveCount(0);
+    await expect(page.locator('#timezone-filter')).toBeVisible();
     await expectNoSeriousViolations(page);
 });
 

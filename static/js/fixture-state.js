@@ -36,19 +36,6 @@ export function shiftDate(value, amount, timezone = undefined) {
     return calendarDateInZone(date, 'UTC');
 }
 
-export function buildDateTabs(selectedDate) {
-    const formatter = new Intl.DateTimeFormat('en-US', {weekday: 'short', month: 'short', day: 'numeric'});
-    const today = todayLocal(new Date(), 'UTC');
-    return [-2, -1, 0, 1, 2].map(offset => {
-        const date = shiftDate(selectedDate, offset, 'UTC');
-        const label = date === today ? 'Today'
-            : date === shiftDate(today, -1, 'UTC') ? 'Yesterday'
-                : date === shiftDate(today, 1, 'UTC') ? 'Tomorrow'
-                    : formatter.format(new Date(`${date}T12:00:00Z`));
-        return {date, label, shortLabel: formatter.format(new Date(`${date}T12:00:00Z`))};
-    });
-}
-
 export function isValidDate(value) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value || ''))) return false;
     const [year, month, day] = value.split('-').map(Number);
