@@ -4,7 +4,7 @@ from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 
 
-OBSERVATION_CACHE_KEY = 'broadcast-observations-v1'
+OBSERVATION_CACHE_KEY = 'broadcast_refresh_v1'
 OBSERVATION_TTL_SECONDS = 2 * 60 * 60
 OBSERVATION_STALE_SECONDS = 35 * 24 * 60 * 60
 ROLLING_WINDOW_DAYS = 30
