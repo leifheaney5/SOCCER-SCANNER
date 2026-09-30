@@ -8,6 +8,15 @@
       "url": "https://www.espn.com/soccer/",
       "scope": ["fixture-level", "provider-reported"],
       "status": "active",
+      "feed": {
+        "format": "official-json",
+        "fixtureIdentity": ["competition", "homeTeam", "awayTeam", "utcDate"],
+        "territoryField": "region",
+        "observationTimestampField": "sourceUpdatedAt",
+        "providerMapping": "streaming-services.json",
+        "refreshAdapter": "espn-fixtures",
+        "completeTerritoryCoverage": false
+      },
       "lastVerified": "2026-08-13"
     },
     {

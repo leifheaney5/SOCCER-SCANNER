@@ -29,6 +29,9 @@ form.addEventListener('submit', async event => {
         addValue('Providers', payload.providers);
         addValue('Rate limiting', payload.rateLimit);
         addValue('Metrics', payload.metrics);
+        if (payload.diagnostics?.broadcastCoverage) {
+            addValue('Broadcast coverage', payload.diagnostics.broadcastCoverage);
+        }
         values.hidden = false;
         status.textContent = 'Operational status loaded.';
     } catch (error) {

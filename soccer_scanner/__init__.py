@@ -36,6 +36,7 @@ from .services.standings import StandingsSeasons
 from .services.streaming import StreamingRegistry
 from .services.search import SearchService
 from .services.broadcast_sources import BroadcastSourceRegistry
+from .services.broadcast_refresh import BroadcastObservationStore, BroadcastRefreshService
 from .services.teams import TeamAnalysisService
 from .services.team_identity import TeamIdentityResolver
 
@@ -259,6 +260,16 @@ def create_app(config=None):
         provider_health=app.extensions['provider_health'],
         streaming_registry=app.extensions['streaming_registry'],
         competition_registry=app.extensions['competition_registry'],
+    )
+    app.extensions['broadcast_observation_store'] = BroadcastObservationStore(
+        app.extensions['cache_backend'],
+    )
+    app.extensions['broadcast_refresh_service'] = BroadcastRefreshService(
+        app.extensions['broadcast_observation_store'],
+        lambda requested_date: app.extensions['fixture_service'].fixtures_for_date(
+            requested_date, 'UTC'
+        ),
+        source_registry=app.extensions['broadcast_sources'],
     )
     app.extensions['search_service'] = SearchService(app.extensions['fixture_service'])
     app.register_blueprint(pages)

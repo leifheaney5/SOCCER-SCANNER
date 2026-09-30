@@ -119,6 +119,21 @@ public struct WatchOption: Decodable, Hashable, Sendable {
     }
 }
 
+public struct BroadcastRegionCoverage: Decodable, Hashable, Sendable {
+    public let region: String
+    public let status: String
+}
+
+public struct BroadcastCoverage: Decodable, Hashable, Sendable {
+    public let status: String
+    public let regions: [BroadcastRegionCoverage]
+    public let sourceUpdatedAt: String?
+
+    public func status(for region: String) -> String? {
+        regions.first(where: { $0.region == region })?.status
+    }
+}
+
 public struct Fixture: Decodable, Identifiable, Hashable, Sendable {
     public let canonicalFixtureId: String?
     public let providerId: String?
@@ -131,6 +146,7 @@ public struct Fixture: Decodable, Identifiable, Hashable, Sendable {
     public let score: Score?
     public let broadcasts: [Broadcast]
     public let whereToWatch: [WatchOption]
+    public let broadcastCoverage: BroadcastCoverage?
     public let venue: String?
     public let interestEstimate: Double?
 
@@ -145,7 +161,7 @@ public struct Fixture: Decodable, Identifiable, Hashable, Sendable {
 
     private enum CodingKeys: String, CodingKey {
         case canonicalFixtureId, id, utcDate, localDate, status
-        case homeTeam, awayTeam, competition, score, broadcasts, whereToWatch, venue, interestEstimate
+        case homeTeam, awayTeam, competition, score, broadcasts, whereToWatch, broadcastCoverage, venue, interestEstimate
     }
 
     private struct StatusObject: Decodable { let code: String? }
@@ -189,6 +205,7 @@ public struct Fixture: Decodable, Identifiable, Hashable, Sendable {
         } else {
             whereToWatch = broadcasts.map { WatchOption(broadcast: $0) }
         }
+        broadcastCoverage = try container.decodeIfPresent(BroadcastCoverage.self, forKey: .broadcastCoverage)
         venue = try container.decodeIfPresent(String.self, forKey: .venue)
         interestEstimate = try container.decodeIfPresent(Double.self, forKey: .interestEstimate)
     }

@@ -186,3 +186,66 @@ test('detail panel rejects HTTPS links that do not match the verified provider',
     await expect(item.locator('a')).toHaveCount(0);
     await expect(item.locator('.context-streaming-name')).toHaveText('Peacock');
 });
+
+test('region preference filters watch listings, keeps coverage truthful, and persists', async ({page}) => {
+    const payload = structuredClone(fixturePayload);
+    payload.matches[0].whereToWatch = [
+        {...KNOWN_WITH_REGION, type: 'STREAMING'},
+        {id: null, displayName: 'BBC Sport', type: 'TV', region: 'GB', officialUrl: null},
+    ];
+    payload.matches[0].broadcastCoverage = {
+        status: 'available',
+        regions: [{region: 'GB', status: 'available'}, {region: 'US', status: 'available'}],
+    };
+    payload.matches[2].whereToWatch = [];
+    payload.matches[2].broadcastCoverage = {
+        status: 'unverified',
+        regions: [{region: 'GB', status: 'unverified'}, {region: 'US', status: 'unverified'}],
+    };
+    await page.route('**/api/v2/fixtures**', route => route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify(payload),
+    }));
+    await page.goto('/?date=2026-08-03');
+    await expect(page.locator('[data-fixture-id="live-secret"] .fixture-broadcast')).toContainText('BBC Sport');
+
+    await page.locator('#broadcast-region').selectOption('US');
+    await expect(page.locator('[data-fixture-id="live-secret"] .fixture-broadcast')).toContainText('Peacock');
+    await expect(page.locator('[data-fixture-id="live-secret"] .fixture-broadcast')).not.toContainText('BBC Sport');
+    await expect.poll(() => page.evaluate(() => localStorage.getItem('soccer-radar:broadcast-region'))).toBe('US');
+
+    await page.locator('#broadcast-region').selectOption('GB');
+    await page.locator('[data-fixture-id="upcoming"] .details-button').click();
+    await expect(page.locator('#match-context .context-streaming-empty')).toHaveText('Not verified yet for GB');
+
+    await page.reload();
+    await expect(page.locator('#broadcast-region')).toHaveValue('GB');
+});
+
+test('confirmed absence and stale listings have distinct accessible fallback labels', async ({page}) => {
+    const payload = structuredClone(fixturePayload);
+    payload.matches[2].whereToWatch = [];
+    payload.matches[2].broadcastCoverage = {
+        status: 'confirmed_none',
+        regions: [{region: 'US', status: 'confirmed_none'}],
+    };
+    payload.matches[1].whereToWatch = [];
+    payload.matches[1].broadcastCoverage = {
+        status: 'stale',
+        regions: [{region: 'US', status: 'stale'}],
+    };
+    await page.route('**/api/v2/fixtures**', route => route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify(payload),
+    }));
+    await page.goto('/?date=2026-08-03');
+    await page.locator('#broadcast-region').selectOption('US');
+
+    const none = page.locator('[data-fixture-id="upcoming"] .fixture-broadcast');
+    await expect(none).toHaveText('No listing confirmed for US');
+    await expect(none).toHaveAttribute('aria-label', 'Where to watch: No listing confirmed for US');
+
+    const stale = page.locator('[data-fixture-id="finished-secret"] .fixture-broadcast');
+    await expect(stale).toHaveText('Broadcast listing may be out of date');
+    await expect(stale).toHaveAttribute('aria-label', 'Where to watch: Broadcast listing may be out of date');
+});

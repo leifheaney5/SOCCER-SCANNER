@@ -31,6 +31,12 @@ class BroadcastSourceRegistryTest(unittest.TestCase):
         source['scope'].append('changed')
         self.assertNotIn('changed', self.registry.get('espn-broadcasts')['scope'])
 
+    def test_only_sources_with_machine_readable_fixture_level_evidence_are_refreshable(self):
+        self.assertEqual(
+            [source['id'] for source in self.registry.refreshable_sources()],
+            ['espn-broadcasts'],
+        )
+
     def test_unknown_source_is_not_resolvable(self):
         self.assertIsNone(self.registry.get('not-a-source'))
 

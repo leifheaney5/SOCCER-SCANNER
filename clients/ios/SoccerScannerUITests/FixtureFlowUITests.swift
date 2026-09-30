@@ -439,6 +439,26 @@ final class FixtureFlowUITests: XCTestCase {
         XCTAssertTrue(availability.exists)
     }
 
+    func testBroadcastRegionPreferencePersistsAcrossAppLaunches() {
+        let app = launchApp()
+        waitForList(app)
+        tapFixture(app, id: "fixture-row-fx_bbbbbbbbbbbbbbbbbbbbbbbb")
+
+        let regionPicker = element(app, "broadcast-region")
+        XCTAssertTrue(regionPicker.waitForExistence(timeout: 10))
+        regionPicker.tap()
+        app.buttons["GB"].tap()
+        XCTAssertEqual(regionPicker.value as? String, "GB")
+
+        app.terminate()
+        app.launch()
+        waitForList(app)
+        tapFixture(app, id: "fixture-row-fx_bbbbbbbbbbbbbbbbbbbbbbbb")
+
+        XCTAssertEqual(element(app, "broadcast-region").value as? String, "GB")
+        XCTAssertTrue(app.staticTexts["National Sports"].exists)
+    }
+
     func testFixtureDetailCanRevealAndHideItsScore() {
         let app = launchApp()
         waitForList(app)

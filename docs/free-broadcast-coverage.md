@@ -8,14 +8,38 @@ broadcaster from a competition-wide rights deal.
 
 | Source | Coverage | Link type | Status |
 | --- | --- | --- | --- |
-| ESPN fixture broadcasts | Only when ESPN reports a streaming entry for the fixture | Verified service homepage from the streaming registry | Active |
+| ESPN fixture broadcasts | Fixture-level rows reported in ESPN's official structured feed; region/time are source-provided | Verified service destination from the streaming registry | Active; refreshed hourly |
 | Official competition listings | Inventory for future fixture-level adapters | Source-specific, after verification | Inventory |
 | UEFA match calendar and where-to-watch listings | Competition-level inventory for future fixture-level adapters | Source-specific, after verification | Inventory |
 | FIFA+ live football | Competition-level inventory; availability may vary by territory | Source-specific, after verification | Inventory |
 | Concacaf where-to-watch listings | Competition-level inventory for future fixture-level adapters | Source-specific, after verification | Inventory |
 
-ESPN data is the baseline. Missing broadcast data is rendered as missing data;
-it is never replaced with a guessed service or URL.
+ESPN is currently the only refresh-qualified source. Its missing broadcast
+field does not prove that no listing exists. Those fixtures are labelled
+“Not verified yet”; they are never assigned a guessed service or URL. A source
+may confirm that no listing exists only when it explicitly declares complete
+coverage for that competition and territory.
+
+Hourly refreshes call `POST /api/internal/broadcast-refresh` using the existing
+`OPS_ADMIN_TOKEN`, then keep up to 30 days of canonical fixture observations in
+the shared cache. The public fixture endpoint only reads this optional
+snapshot; a cache or broadcast refresh failure leaves fixture loading intact.
+Observations older than two hours are labelled stale, with last-known data
+retained for up to 35 days beyond freshness.
+
+`GET /api/v2/fixtures` now adds `broadcastSourceFreshness`, a rolling
+`broadcastCoverageReport`, and a per-fixture `broadcastCoverage` object. The
+report counts fixtures with verified rows by competition and reported region.
+A pair is promoted to covered only if a qualified source declares complete
+territory coverage and verified or source-confirmed-none evidence reaches 90%
+over the 30-day window. Current ESPN metadata does not declare complete
+territory coverage, so no competition/region pair is promoted yet.
+
+The GitHub Actions workflow requires the repository secret
+`OPS_ADMIN_TOKEN`, whose value must match Railway's sealed runtime value. The
+workflow uses the secret only as an Authorization header and does not print
+it. Stale and unavailable refreshes return a failure status to GitHub Actions
+for operational visibility.
 
 The application registry lives in
 [`soccer_scanner/data/broadcast-sources.json`](../soccer_scanner/data/broadcast-sources.json).
@@ -67,8 +91,9 @@ available as diagnostics.
    logo, freshness, malformed-data, and no-fabrication tests.
 4. Run each adapter in observation mode before allowing it to enrich the public
    fixture response.
-5. Promote an adapter only when its match-linking and freshness metrics remain
-   within the documented threshold for a full observation period.
+5. Promote a competition/region pair only after a rolling 30-day observation
+   period verifies at least 90% of fixtures and the source certifies complete
+   territory coverage.
 
 ## Required normalized record
 

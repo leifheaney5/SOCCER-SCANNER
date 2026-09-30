@@ -40,6 +40,7 @@ final class FixtureDecodingTests: XCTestCase {
           "score":{"fullTime":{"away":0,"home":1}},
           "broadcasts":[{"name":"Peacock","region":"US","type":"STREAMING"}],
           "whereToWatch":[{"id":"usa-network","displayName":"USA Network","type":"TV","region":"US","officialUrl":"https://www.usanetwork.com/"}],
+          "broadcastCoverage":{"status":"available","regions":[{"region":"US","status":"available"},{"region":"GB","status":"unverified"}],"sourceUpdatedAt":"2026-08-05T19:30:00Z"},
           "interestEstimate":0.8,"sourceUpdatedAt":"2026-08-05T19:30:00Z","venue":"Emirates"}]}
         """
         let day = try decodeDay(json)
@@ -56,6 +57,8 @@ final class FixtureDecodingTests: XCTestCase {
         XCTAssertEqual(fixture.whereToWatch.first?.displayName, "USA Network")
         XCTAssertEqual(fixture.whereToWatch.first?.categoryLabel, "TV")
         XCTAssertEqual(fixture.whereToWatch.first?.officialLinkURL?.host, "www.usanetwork.com")
+        XCTAssertEqual(fixture.broadcastCoverage?.status(for: "GB"), "unverified")
+        XCTAssertEqual(fixture.broadcastCoverage?.status(for: "US"), "available")
         XCTAssertFalse(day.isPartial)
     }
 

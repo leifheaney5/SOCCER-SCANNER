@@ -56,6 +56,22 @@ paths:
           $ref: '#/components/responses/InvalidRequest'
         '404':
           $ref: '#/components/responses/NotFound'
+  /api/internal/broadcast-refresh:
+    post:
+      operationId: refreshBroadcastObservations
+      summary: Refresh source-backed broadcast observations
+      security:
+        - opsTokenBearer: []
+      responses:
+        '200':
+          description: Refresh completed or last-known observations retained as stale
+          content:
+            application/json:
+              schema: {type: object, additionalProperties: true}
+        '401':
+          description: Operations bearer token is invalid or not configured
+        '503':
+          description: No refresh was available and no last-known snapshot exists
   /api/v2/search:
     get:
       operationId: searchFixtures
@@ -324,6 +340,8 @@ components:
         lastUpdated: {type: string, format: date-time, nullable: true}
         providers: {type: object, additionalProperties: true}
         cache: {type: object, additionalProperties: true}
+        broadcastSourceFreshness: {$ref: '#/components/schemas/BroadcastSourceFreshness'}
+        broadcastCoverageReport: {$ref: '#/components/schemas/BroadcastCoverageReport'}
     Fixture:
       type: object
       required: [canonicalFixtureId, utcDate, homeTeam, awayTeam, competition, status]
@@ -338,7 +356,33 @@ components:
         score: {type: object, nullable: true, additionalProperties: true}
         broadcasts: {type: array, items: {type: object, additionalProperties: true}}
         whereToWatch: {type: array, items: {type: object, additionalProperties: true}}
+        broadcastCoverage: {$ref: '#/components/schemas/BroadcastCoverage'}
         streaming: {type: array, items: {type: object, additionalProperties: true}}
+    BroadcastSourceFreshness:
+      type: object
+      properties:
+        status: {type: string, enum: [fresh, stale, unverified]}
+        updatedAt: {type: string, format: date-time, nullable: true}
+    BroadcastCoverageReport:
+      type: object
+      properties:
+        windowDays: {type: integer, const: 30}
+        thresholdPercent: {type: integer, const: 90}
+        regions: {type: array, items: {type: string}}
+        competitions: {type: array, items: {type: object, additionalProperties: true}}
+    BroadcastCoverage:
+      type: object
+      properties:
+        status: {type: string, enum: [available, confirmed_none, unverified, stale]}
+        sourceUpdatedAt: {type: string, format: date-time, nullable: true}
+        regions:
+          type: array
+          items:
+            type: object
+            required: [region, status]
+            properties:
+              region: {type: string}
+              status: {type: string, enum: [available, confirmed_none, unverified, stale]}
     Team:
       type: object
       properties:
