@@ -45,7 +45,7 @@ command output where applicable.
   the workflow artifacts. Successful run: GitHub Actions iOS run
   `31289973761`.
 - [x] Confirm the generated target has the intended deployment target (`iOS
-  17.0`), bundle identifier default (`pro.soccerscanner.app` unless the
+  17.0`), bundle identifier default (`soccerradar.app` unless the
   registered release value is supplied at build time), semantic version, and
   monotonic build number.
 - [x] `clients/ios/SoccerScanner/PrivacyInfo.xcprivacy` is present in the

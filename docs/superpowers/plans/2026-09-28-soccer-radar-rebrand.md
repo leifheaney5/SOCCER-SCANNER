@@ -93,7 +93,7 @@ def test_aasa_is_served_directly_on_both_hosts(self):
     app = create_app({
         'TESTING': True,
         'APPLE_TEAM_ID': 'ABCDE12345',
-        'APPLE_BUNDLE_ID': 'pro.soccerscanner.app',
+        'APPLE_BUNDLE_ID': 'soccerradar.app',
     })
     client = app.test_client()
 
@@ -186,12 +186,12 @@ Expected: both browsers report Soccer Radar identity; canonical, social, sitemap
 - Test: `clients/ios/SoccerScannerTests/TimeZoneAndDeepLinkTests.swift`
 
 **Interfaces:**
-- Consumes: the existing production API path, bundle identifier `pro.soccerscanner.app`, AASA route, and deep-link host allowlist.
+- Consumes: the existing production API path, bundle identifier `soccerradar.app`, AASA route, and deep-link host allowlist.
 - Produces: the Soccer Radar display/store identity and support for both `soccer-radar.com` and `soccerscanner.pro` Universal Links.
 
 - [x] **Step 1: Pin the app identity and host compatibility**
 
-Update source-contract assertions for the display name, website, marketing URL, AASA entitlements for both domains, and unchanged bundle identifier. Add deep-link tests that accept equivalent fixture links on both hosts and continue rejecting an unrelated host.
+Update source-contract assertions for the display name, website, marketing URL, AASA entitlements for both domains, and the `soccerradar.app` bundle identifier. Add deep-link tests that accept equivalent fixture links on both hosts and continue rejecting an unrelated host.
 
 Run: `python -m pytest tests/test_ios_release_assets.py -q`
 

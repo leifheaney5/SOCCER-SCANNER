@@ -47,7 +47,8 @@ def test_native_project_and_entitlements_expose_only_verified_defaults():
 
     assert 'iOS: "17.0"' in project
     assert 'IPHONEOS_DEPLOYMENT_TARGET: "17.0"' in project
-    assert 'PRODUCT_BUNDLE_IDENTIFIER: pro.soccerscanner.app' in project
+    assert 'bundleIdPrefix: soccerradar' in project
+    assert 'PRODUCT_BUNDLE_IDENTIFIER: soccerradar.app' in project
     assert 'ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon' in project
     assert 'APPLE_TEAM_ID' not in entitlements
     assert '<string>applinks:soccerscanner.pro</string>' in entitlements
@@ -58,8 +59,9 @@ def test_native_project_and_entitlements_expose_only_verified_defaults():
     assert 'INFOPLIST_KEY_CFBundleDisplayName: Soccer Radar' in project
 
 
-def test_native_brand_and_production_links_use_soccer_radar_without_renaming_bundle_id():
+def test_native_brand_and_production_links_use_soccer_radar_bundle_id():
     project = (IOS_ROOT / 'project.yml').read_text(encoding='utf-8')
+    workflow = (ROOT / '.github' / 'workflows' / 'ios.yml').read_text(encoding='utf-8')
     environment = (IOS_ROOT / 'SoccerScanner' / 'Config' / 'AppEnvironment.swift').read_text(
         encoding='utf-8'
     )
@@ -76,7 +78,10 @@ def test_native_brand_and_production_links_use_soccer_radar_without_renaming_bun
         encoding='utf-8'
     ).strip()
 
-    assert 'PRODUCT_BUNDLE_IDENTIFIER: pro.soccerscanner.app' in project
+    assert 'PRODUCT_BUNDLE_IDENTIFIER: soccerradar.app' in project
+    assert "APPLE_BUNDLE_ID: ${{ secrets.APPLE_BUNDLE_ID || 'soccerradar.app' }}" in workflow
+    assert 'APPLE_BUNDLE_PREFIX: soccerradar' in workflow
+    assert "PRODUCT_BUNDLE_IDENTIFIER = soccerradar.app" in workflow
     assert 'https://soccer-radar.com' in environment
     assert 'Soccer Radar website' in settings
     assert '"soccer-radar.com"' in deep_links

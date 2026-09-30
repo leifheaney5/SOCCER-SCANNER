@@ -201,7 +201,7 @@ class AppleAppSiteAssociationTest(unittest.TestCase):
         app = create_app({
             'TESTING': True,
             'APPLE_TEAM_ID': 'ABCDE12345',
-            'APPLE_BUNDLE_ID': 'pro.soccerscanner.app',
+            'APPLE_BUNDLE_ID': 'soccerradar.app',
         })
 
         response = app.test_client().get('/.well-known/apple-app-site-association')
@@ -210,7 +210,7 @@ class AppleAppSiteAssociationTest(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.mimetype, 'application/json')
         details = payload['applinks']['details'][0]
-        self.assertEqual(details['appIDs'], ['ABCDE12345.pro.soccerscanner.app'])
+        self.assertEqual(details['appIDs'], ['ABCDE12345.soccerradar.app'])
         components = details['components']
         self.assertEqual(components[0]['/'], '/fixtures/*.ics')
         self.assertTrue(components[0]['exclude'])
@@ -221,7 +221,7 @@ class AppleAppSiteAssociationTest(unittest.TestCase):
         app = create_app({
             'TESTING': True,
             'APPLE_TEAM_ID': 'ABCDE12345',
-            'APPLE_BUNDLE_ID': 'pro.soccerscanner.app',
+            'APPLE_BUNDLE_ID': 'soccerradar.app',
         })
         client = app.test_client()
 

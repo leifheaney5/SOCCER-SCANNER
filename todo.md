@@ -12,7 +12,8 @@
   - Evidence: Chromium/WebKit browser checks → 22 passed; route/app tests → 62 passed; `RESULT: PASS`, exit status 0.
   - Captured output: `C:\Users\lphea\AppData\Local\Temp\soccer-radar-T003-web-20260928.log`.
   - Ledger gate: left unchecked because this checkout has no `check.sh`.
-- [ ] T004: Rebrand iOS display/store metadata and support Universal Links on both domains without changing the bundle ID; verify with `python -m pytest tests/test_ios_release_assets.py -q` and the candidate's GitHub Actions iOS workflow.
+- [ ] T004: Rebrand iOS display/store metadata, set the bundle ID to `soccerradar.app`, and support Universal Links on both domains; verify with `python -m pytest tests/test_ios_release_assets.py -q` and the candidate's GitHub Actions iOS workflow.
+  - Scope update 2026-09-30: the owner superseded the earlier unchanged-bundle-ID requirement with `soccerradar.app`; the prior evidence below applies only to the former identifier.
   - Evidence: local source gate `python -m pytest tests/test_ios_release_assets.py -q` → 14 passed; `RESULT: PASS`, exit status 0. Candidate macOS workflow remains pending.
   - Captured output: `C:\Users\lphea\AppData\Local\Temp\soccer-radar-T004-ios-source-20260928.log`.
   - Ledger gate: left unchecked because this checkout has no `check.sh`.
