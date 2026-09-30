@@ -263,9 +263,10 @@ body {
     padding: 10px;
     padding-inline-start: max(10px, env(safe-area-inset-left, 0px));
     padding-inline-end: max(10px, env(safe-area-inset-right, 0px));
-    display: flex;
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
     align-items: center;
-    gap: 10px;
+    gap: 14px 18px;
     border: 1px solid var(--border-color);
     border-radius: 10px;
     background: rgba(10, 10, 10, 0.97);
@@ -282,13 +283,17 @@ body {
 
 .date-controls {
     flex: 0 0 auto;
-    gap: 4px;
+    display: flex;
+    align-items: center;
+    gap: 4px 10px;
     position: relative;
 }
 
 .primary-filters {
     min-width: 0;
-    flex: 0 0 auto;
+    grid-column: 2;
+    display: grid;
+    grid-template-columns: minmax(180px, 1fr) auto;
     gap: 8px;
 }
 
@@ -310,10 +315,28 @@ body {
 
 .secondary-filters {
     min-width: 0;
-    flex: 1 1 auto;
-    justify-content: flex-end;
-    gap: 8px;
-    flex-wrap: wrap;
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    align-items: end;
+    gap: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border-color);
+}
+
+.advanced-filter-heading {
+    grid-column: 1 / -1;
+    min-height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.advanced-filter-heading h2 {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 650;
 }
 
 .check-control {
@@ -386,6 +409,32 @@ body {
     background: var(--bg-primary);
 }
 
+.filter-field {
+    min-width: 0;
+    display: grid;
+    gap: 5px;
+    color: var(--text-muted);
+    font-size: 11px;
+    line-height: 1.2;
+}
+
+.filter-field > span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.timezone-field select {
+    width: 148px;
+    min-height: 40px;
+    padding: 0 30px 0 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 13px;
+}
+
 .date-picker-wrap {
     display: flex;
     align-items: center;
@@ -441,8 +490,12 @@ body {
 }
 
 .select-control select {
-    width: 174px;
-    padding: 0 34px 0 11px;
+    width: 100%;
+    min-height: 40px;
+    padding: 0 30px 0 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--bg-primary);
 }
 
 .status-filters {
@@ -493,6 +546,10 @@ body {
 .clear-filters {
     color: var(--text-secondary);
     font-size: 12px;
+}
+
+.secondary-filters .clear-filters {
+    justify-self: start;
 }
 
 .data-notice {
@@ -1639,8 +1696,11 @@ dialog::backdrop {
 }
 
 @media (max-width: 1099px) {
-    .filter-toolbar { align-items: flex-start; flex-wrap: wrap; }
-    .primary-filters { flex-wrap: wrap; max-width: 100%; }
+    .filter-toolbar { grid-template-columns: minmax(0, 1fr); align-items: start; }
+    .date-controls,
+    .primary-filters { grid-column: 1 / -1; }
+    .primary-filters { grid-template-columns: minmax(0, 1fr) auto; }
+    .secondary-filters { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .status-filters { width: 100%; max-width: 100%; flex-wrap: wrap; }
 
     .dashboard-layout {
@@ -1653,22 +1713,74 @@ dialog::backdrop {
 }
 
 @media (max-width: 900px) {
-    .filter-toolbar {
-        align-items: flex-start;
-        flex-wrap: wrap;
+    .filter-toolbar { grid-template-columns: minmax(0, 1fr) auto; }
+
+    .date-controls {
+        min-width: 0;
+        width: 100%;
+        grid-column: 1;
+        grid-row: 1;
+        display: grid;
+        grid-template-columns: 44px auto minmax(0, 1fr) 44px;
     }
 
-    .secondary-filters {
-        flex: 1 1 100%;
-        justify-content: flex-start;
-    }
+    .timezone-field { display: none; }
 
     .primary-filters {
-        flex: 1 1 auto;
+        width: 100%;
+        grid-column: 1 / -1;
+        grid-row: 2;
+        display: contents;
+    }
+
+    .primary-filters .search-control {
+        grid-column: 1 / -1;
+        grid-row: 2;
+    }
+
+    .primary-filters .status-filters {
+        grid-column: 1 / -1;
+        grid-row: 3;
+    }
+
+    .date-controls .icon-button,
+    .date-controls .control-button,
+    .date-picker-wrap,
+    .date-picker-wrap input {
+        min-width: 44px;
+        min-height: 44px;
+    }
+
+    .date-picker-wrap input { width: 100%; }
+
+    .filter-toggle {
+        min-width: 74px;
+        min-height: 44px;
+        grid-column: 2;
+        grid-row: 1;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .search-control,
+    .status-filters {
+        width: 100%;
+        min-height: 44px;
+    }
+
+    .search-control input,
+    .search-control button { min-height: 44px; }
+
+    .status-filters button {
+        min-width: 0;
+        min-height: 44px;
+        flex: 1 1 0;
+        padding-inline: 6px;
     }
 
     .search-control {
-        width: min(100%, 320px);
+        width: 100%;
     }
 }
 
@@ -1708,6 +1820,8 @@ dialog::backdrop {
         display: grid;
         grid-template-columns: 44px auto minmax(0, 1fr) 44px;
     }
+
+    .timezone-field { display: none; }
 
     .primary-filters {
         width: 100%;
@@ -1783,12 +1897,13 @@ dialog::backdrop {
         justify-content: initial;
     }
 
+    .filter-dialog .advanced-filter-heading { grid-column: 1; }
+
     .filter-dialog .clear-filters {
-        position: sticky;
-        bottom: 0;
-        z-index: 1;
-        padding-block: 10px;
-        background: var(--bg-primary);
+        width: auto;
+        min-height: 40px;
+        position: static;
+        padding-block: 0;
     }
 
     dialog.filter-dialog {

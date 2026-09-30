@@ -525,7 +525,7 @@ function commitFilterDraft() {
 function bindFilterDialog(dialogManager) {
     filterDialogManager = dialogManager;
     filterDialog = byId('filter-dialog');
-    filterMediaQuery = window.matchMedia('(max-width: 767px)');
+    filterMediaQuery = window.matchMedia('(max-width: 900px)');
     moveSecondaryFiltersForViewport();
     filterMediaQuery.addEventListener?.('change', moveSecondaryFiltersForViewport);
     byId('filter-toggle').addEventListener('click', () => {
