@@ -31,7 +31,6 @@ const {
     writeScorePreference,
 } = scorePreferenceModule;
 const {
-    renderFeatured,
     renderEmptyState,
     renderFixtureStream,
     renderLoading,
@@ -309,7 +308,6 @@ function reflectCurrentResults() {
     const summary = summarizeMatches(matches);
     renderSummary(byId('daily-summary'), payload.matches, payload);
     renderNotice(byId('data-notice'), payload);
-    renderFeatured(byId('featured-match'), filteredMatches, scoresRevealed);
     if (matches.length === 0) {
         renderEmptyState(byId('fixture-stream'), {filtered: payload.matches.length > 0});
     } else {
@@ -367,8 +365,6 @@ async function loadFixtures({preserve = false} = {}) {
         renderLoading(byId('fixture-stream'));
         byId('fixture-result-count').textContent = 'Loading';
         byId('daily-summary').querySelector('.summary-primary').textContent = 'Loading matches';
-        byId('featured-match').hidden = true;
-        byId('featured-match').replaceChildren();
         byId('data-notice').hidden = true;
     }
     try {
@@ -676,7 +672,6 @@ function bindEvents() {
         }
     };
     byId('fixture-stream').addEventListener('click', fixtureAction);
-    byId('featured-match').addEventListener('click', fixtureAction);
     window.addEventListener('popstate', () => {
         cancelPendingSearch();
         const previous = state;
