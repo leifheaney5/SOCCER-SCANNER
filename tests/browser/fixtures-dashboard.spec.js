@@ -8,6 +8,42 @@ async function mockFixtures(page, payload = fixturePayload) {
     }));
 }
 
+test('desktop fixture filters use a labeled two-level toolbar', async ({page}) => {
+    await page.setViewportSize({width: 1360, height: 900});
+    await mockFixtures(page);
+    await page.goto('/?date=2026-08-03');
+
+    await expect(page.locator('#timezone-filter').locator('xpath=../..')).toContainText('Timezone');
+    await expect(page.locator('#competition-filter').locator('xpath=../..')).toContainText('Competition');
+    await expect(page.locator('#sort-filter').locator('xpath=../..')).toContainText('Sort');
+
+    const layout = await page.evaluate(() => {
+        const date = document.querySelector('.date-controls').getBoundingClientRect();
+        const primary = document.querySelector('.primary-filters').getBoundingClientRect();
+        const advanced = document.querySelector('.secondary-filters');
+        const toolbar = document.querySelector('.filter-toolbar').getBoundingClientRect();
+        return {
+            dateCenter: date.top + date.height / 2,
+            primaryCenter: primary.top + primary.height / 2,
+            dateTop: date.top,
+            advancedTop: advanced.getBoundingClientRect().top,
+            toolbarLeft: toolbar.left,
+            toolbarRight: toolbar.right,
+            advancedLeft: advanced.getBoundingClientRect().left,
+            advancedRight: advanced.getBoundingClientRect().right,
+            advancedColumns: getComputedStyle(advanced).gridTemplateColumns.split(' ').length,
+            timezoneInsideDate: document.querySelector('#timezone-filter').closest('.date-controls') !== null,
+        };
+    });
+
+    expect(layout.timezoneInsideDate).toBe(true);
+    expect(Math.abs(layout.dateCenter - layout.primaryCenter)).toBeLessThan(3);
+    expect(layout.advancedTop).toBeGreaterThan(layout.dateTop);
+    expect(layout.advancedLeft).toBeGreaterThanOrEqual(layout.toolbarLeft);
+    expect(layout.advancedRight).toBeLessThanOrEqual(layout.toolbarRight);
+    expect(layout.advancedColumns).toBeGreaterThanOrEqual(4);
+});
+
 test('semantic shell shows spoiler control and fixture-shaped loading rows', async ({page}) => {
     let releaseResponse;
     const responseGate = new Promise(resolve => { releaseResponse = resolve; });
@@ -754,15 +790,17 @@ for (const {width, height} of [
         if (width < 1100) expect(measurements.contextDisplay).toBe('none');
         else expect(measurements.contextDisplay).not.toBe('none');
 
-        if (width <= 767) {
+        if (width <= 900) {
             expect(measurements.filterToggleDisplay).not.toBe('none');
             expect(measurements.toolbarHeight).toBeLessThan(200);
             await expect(page.locator('#filter-dialog')).toBeHidden();
-            for (const target of measurements.targets) {
-                expect(target.height, `${target.id} height`).toBeGreaterThanOrEqual(44);
-                expect(target.width, `${target.id} width`).toBeGreaterThanOrEqual(44);
+            if (width <= 767) {
+                for (const target of measurements.targets) {
+                    expect(target.height, `${target.id} height`).toBeGreaterThanOrEqual(44);
+                    expect(target.width, `${target.id} width`).toBeGreaterThanOrEqual(44);
+                }
+                await expect(page.locator('.fixture-card').first().locator('.fixture-mobile-meta')).toBeVisible();
             }
-            await expect(page.locator('.fixture-card').first().locator('.fixture-mobile-meta')).toBeVisible();
             await page.locator('#filter-toggle').click();
             await expect(page.locator('#secondary-filters')).toBeVisible();
         } else {
