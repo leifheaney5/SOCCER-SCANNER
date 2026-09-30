@@ -101,7 +101,7 @@ try {
         revealedScores: document.querySelectorAll('.score-display--revealed').length,
         width: document.documentElement.scrollWidth,
         viewport: document.documentElement.clientWidth,
-        timezone: document.querySelector('[data-timezone-label]')?.textContent || '',
+        timezone: document.querySelector('#timezone-filter')?.value || '',
         manifest: document.querySelector('link[rel="manifest"]')?.getAttribute('href') || '',
         favicon: document.querySelector('link[rel="icon"]')?.getAttribute('href') || '',
     }));
