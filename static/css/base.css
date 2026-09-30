@@ -1,13 +1,13 @@
 :root {
     color-scheme: dark;
     --bg-primary: #000000;
-    --bg-secondary: #0a0a0a;
-    --bg-tertiary: #1a1a1a;
-    --bg-card: #141414;
-    --border-color: #2a2a2a;
+    --bg-secondary: #121212;
+    --bg-tertiary: #252525;
+    --bg-card: #191919;
+    --border-color: #404040;
     --text-primary: #ffffff;
-    --text-secondary: #a0a0b0;
-    --text-muted: #858594;
+    --text-secondary: #c8c8c8;
+    --text-muted: #a5a5a5;
     --accent-primary: #7CFF00;
     --accent-secondary: #a8ff4d;
     --accent-rgb: 124, 255, 0;
