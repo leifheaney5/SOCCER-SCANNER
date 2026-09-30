@@ -11,6 +11,83 @@ from soccer_scanner.services.broadcast_refresh import (
 
 
 class BroadcastRefreshTest(unittest.TestCase):
+    def test_failed_refresh_rewrites_cache_without_reducing_remaining_retention(self):
+        clock = [0.0]
+        cache = MemoryCacheBackend(clock=lambda: clock[0])
+        store = BroadcastObservationStore(cache)
+        updated_at = datetime(2026, 9, 29, 12, tzinfo=timezone.utc)
+        store.write({'observations': [], 'fixtures': [], 'coverage': {}, 'sources': {}}, updated_at=updated_at)
+        clock[0] = OBSERVATION_TTL_SECONDS + 100
+        service = BroadcastRefreshService(
+            store,
+            lambda requested_date: {'state': 'provider_unavailable', 'matches': []},
+            source_registry=BroadcastSourceRegistry.from_file('soccer_scanner/data/broadcast-sources.json'),
+            now=lambda: updated_at + timedelta(seconds=OBSERVATION_TTL_SECONDS + 100),
+        )
+
+        result = service.refresh(date(2026, 9, 29))
+        clock[0] += OBSERVATION_STALE_SECONDS - 100 - 1
+
+        self.assertEqual(result['status'], 'stale')
+        self.assertIsNotNone(store.read())
+        clock[0] += 2
+        self.assertIsNone(store.read())
+
+    def test_successful_empty_confirmed_refresh_is_successful(self):
+        app = create_app({'TESTING': True})
+        service = BroadcastRefreshService(
+            app.extensions['broadcast_observation_store'],
+            lambda requested_date: {
+                'state': 'empty_confirmed', 'matches': [],
+                'providers': {'espn': {'status': 'empty_confirmed'}},
+            },
+            source_registry=app.extensions['broadcast_sources'],
+            now=lambda: datetime(2026, 9, 29, 16, tzinfo=timezone.utc),
+        )
+        self.assertEqual(service.refresh(date(2026, 9, 29))['status'], 'success')
+
+    def test_snapshot_identity_preserves_tv_and_streaming_entries(self):
+        app = create_app({'TESTING': True})
+        fixture = {
+            'canonicalFixtureId': 'fx_' + ('c' * 24),
+            'utcDate': '2026-09-29T20:00:00Z',
+            'competition': {'canonicalId': 'eng.1', 'name': 'Premier League'},
+            'sourceUpdatedAt': '2026-09-29T16:00:00Z',
+            'whereToWatch': [
+                {'displayName': 'ESPN', 'type': 'TV', 'region': 'US', 'sourceId': 'espn-broadcasts'},
+                {'displayName': 'ESPN', 'type': 'STREAMING', 'region': 'US', 'sourceId': 'espn-broadcasts'},
+            ],
+        }
+        service = BroadcastRefreshService(
+            app.extensions['broadcast_observation_store'],
+            lambda requested_date: {'state': 'success', 'matches': [fixture]},
+            source_registry=app.extensions['broadcast_sources'],
+            now=lambda: datetime(2026, 9, 29, 16, tzinfo=timezone.utc),
+        )
+
+        service.refresh(date(2026, 9, 29))
+
+        stored = app.extensions['broadcast_observation_store'].read()
+        self.assertEqual({row['type'] for row in stored['observations']}, {'TV', 'STREAMING'})
+
+    def test_restored_observations_keep_streaming_compatibility_field(self):
+        app = create_app({'TESTING': True})
+        store = app.extensions['broadcast_observation_store']
+        fixture_id = 'fx_' + ('e' * 24)
+        store.write({
+            'observations': [{
+                'fixtureKey': fixture_id, 'displayName': 'Peacock', 'id': 'peacock',
+                'type': 'STREAMING', 'region': 'US', 'sourceId': 'espn-broadcasts',
+                'status': 'available', 'officialUrl': 'https://www.peacocktv.com/',
+            }],
+            'fixtures': [], 'coverage': {}, 'sources': {},
+        }, updated_at=datetime.now(timezone.utc))
+        payload = {'matches': [{'canonicalFixtureId': fixture_id, 'whereToWatch': []}]}
+
+        app.extensions['broadcast_refresh_service'].apply_to_payload(payload)
+
+        self.assertEqual([row['displayName'] for row in payload['matches'][0]['streaming']], ['Peacock'])
+
     def test_failed_refresh_does_not_extend_the_last_observation_retention_window(self):
         clock = [0.0]
         cache = MemoryCacheBackend(clock=lambda: clock[0])
@@ -331,6 +408,33 @@ class BroadcastRefreshTest(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json['status'], 'success')
         self.assertNotIn('ops-secret', response.get_data(as_text=True))
+
+    def test_internal_refresh_is_rate_limited(self):
+        app = create_app({'TESTING': True, 'OPS_ADMIN_TOKEN': 'ops-secret', 'RATE_LIMIT_MAX_REQUESTS': 1})
+
+        class RefreshService:
+            def refresh(self, requested_date):
+                return {'status': 'success', 'coverage': {}, 'updatedAt': '2026-09-29T16:00:00Z'}
+
+        app.extensions['broadcast_refresh_service'] = RefreshService()
+        client = app.test_client()
+        headers = {'Authorization': 'Bearer ops-secret'}
+        self.assertEqual(client.post('/api/internal/broadcast-refresh', headers=headers).status_code, 200)
+        self.assertEqual(client.post('/api/internal/broadcast-refresh', headers=headers).status_code, 429)
+
+    def test_operations_report_stale_broadcast_storage(self):
+        app = create_app({'TESTING': True, 'OPS_ADMIN_TOKEN': 'ops-secret'})
+        app.extensions['broadcast_observation_store'].write(
+            {'observations': [], 'fixtures': [], 'coverage': {}, 'sources': {}, 'refreshStatus': 'success'},
+            updated_at=datetime(2026, 9, 29, 12, tzinfo=timezone.utc),
+        )
+
+        response = app.test_client().get(
+            '/api/v2/operations', headers={'X-Ops-Token': 'ops-secret'},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json['diagnostics']['broadcastCoverage']['status'], 'stale')
 
 
 if __name__ == '__main__':

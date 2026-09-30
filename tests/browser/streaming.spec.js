@@ -222,6 +222,54 @@ test('region preference filters watch listings, keeps coverage truthful, and per
     await expect(page.locator('#broadcast-region')).toHaveValue('GB');
 });
 
+test('mobile broadcast region is drafted and applies or cancels with the filter sheet', async ({page}) => {
+    const payload = structuredClone(fixturePayload);
+    payload.matches[0].whereToWatch = [
+        {...KNOWN_WITH_REGION, type: 'STREAMING'},
+        {id: null, displayName: 'BBC Sport', type: 'TV', region: 'GB', officialUrl: null},
+    ];
+    await page.route('**/api/v2/fixtures**', route => route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify(payload),
+    }));
+    await page.setViewportSize({width: 390, height: 844});
+    await page.goto('/?date=2026-08-03');
+
+    await page.locator('#filter-toggle').click();
+    await page.locator('#broadcast-region').selectOption('US');
+    await expect(page.locator('[data-fixture-id="live-secret"] .fixture-broadcast')).toContainText('BBC Sport');
+    await expect.poll(() => page.evaluate(() => localStorage.getItem('soccer-radar:broadcast-region'))).toBeNull();
+    await page.locator('#cancel-filter-dialog').click();
+    await expect(page.locator('#broadcast-region')).toHaveValue('all');
+
+    await page.locator('#filter-toggle').click();
+    await page.locator('#broadcast-region').selectOption('US');
+    await page.locator('#apply-filter-dialog').click();
+    await expect(page.locator('[data-fixture-id="live-secret"] .fixture-broadcast')).not.toContainText('BBC Sport');
+    await expect.poll(() => page.evaluate(() => localStorage.getItem('soccer-radar:broadcast-region'))).toBe('US');
+});
+
+test('stale watch options disclose their freshness in cards and details', async ({page}) => {
+    const payload = structuredClone(fixturePayload);
+    payload.matches[0].whereToWatch = [{
+        ...KNOWN_WITH_REGION,
+        type: 'STREAMING',
+        status: 'stale',
+    }];
+    await page.route('**/api/v2/fixtures**', route => route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify(payload),
+    }));
+    await page.goto('/?date=2026-08-03');
+
+    const card = page.locator('[data-fixture-id="live-secret"] .fixture-broadcast');
+    await expect(card.locator('.fixture-broadcast-stale')).toHaveText('Listings may be out of date');
+    await expect(card).toHaveAttribute('aria-label', /may be out of date/);
+    await page.setViewportSize({width: 1280, height: 900});
+    await page.locator('[data-fixture-id="live-secret"] .details-button').click();
+    await expect(page.locator('#match-context .context-streaming-stale')).toHaveText('Broadcast listings may be out of date.');
+});
+
 test('confirmed absence and stale listings have distinct accessible fallback labels', async ({page}) => {
     const payload = structuredClone(fixturePayload);
     payload.matches[2].whereToWatch = [];

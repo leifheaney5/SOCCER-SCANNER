@@ -156,7 +156,10 @@ async function copyFixtureLink() {
 }
 
 function filterValues(source = state) {
-    return Object.fromEntries(advancedFilterFields.map(field => [field, source[field]]));
+    return {
+        ...Object.fromEntries(advancedFilterFields.map(field => [field, source[field]])),
+        broadcastRegion,
+    };
 }
 
 function activeFilterCount(source = state) {
@@ -167,7 +170,8 @@ function activeFilterCount(source = state) {
         + Number(source.timeWindow !== 'all')
         + Number(source.sort !== 'kickoff')
         + Number(source.hideFinished)
-        + Number(source.availability !== 'all');
+        + Number(source.availability !== 'all')
+        + Number(broadcastRegion !== 'all');
 }
 
 function advancedFilterHasValues(source = state, baseline = state) {
@@ -177,7 +181,8 @@ function advancedFilterHasValues(source = state, baseline = state) {
         || source.sort !== 'kickoff'
         || Boolean(source.hideFinished)
         || source.availability !== 'all'
-        || source.timezone !== baseline.timezone;
+        || source.timezone !== baseline.timezone
+        || broadcastRegion !== 'all';
 }
 
 function syncControls({filterState = filterDraft || state} = {}) {
@@ -195,7 +200,7 @@ function syncControls({filterState = filterDraft || state} = {}) {
     byId('sort-filter').value = filterState.sort;
     byId('hide-finished').checked = filterState.hideFinished;
     byId('availability-filter').value = filterState.availability;
-    byId('broadcast-region').value = broadcastRegion;
+    byId('broadcast-region').value = filterState.broadcastRegion ?? broadcastRegion;
     byId('fixture-search').value = state.query;
     byId('clear-search').hidden = !state.query;
     const competition = byId('competition-filter');
@@ -502,6 +507,7 @@ function commitFilterDraft() {
     });
     const timezoneChanged = Object.hasOwn(patch, 'timezone');
     delete patch.timezone;
+    const selectedRegion = filterDraft.broadcastRegion;
     if (timezoneChanged) {
         applyTimezone(filterDraft.timezone, {
             extraPatch: patch,
@@ -509,6 +515,9 @@ function commitFilterDraft() {
         });
     } else if (Object.keys(patch).length > 0) {
         applyFilter(patch);
+    }
+    if (selectedRegion !== undefined && selectedRegion !== broadcastRegion) {
+        setBroadcastRegion(selectedRegion);
     }
     closeFilterDialog();
 }
@@ -588,7 +597,10 @@ function bindEvents() {
         if (filterDialog?.open) updateFilterDraft({availability: event.target.value});
         else applyFilter({availability: event.target.value});
     });
-    byId('broadcast-region').addEventListener('change', event => setBroadcastRegion(event.target.value));
+    byId('broadcast-region').addEventListener('change', event => {
+        if (filterDialog?.open) updateFilterDraft({broadcastRegion: event.target.value});
+        else setBroadcastRegion(event.target.value);
+    });
     document.querySelector('.status-filters').addEventListener('click', event => {
         const button = event.target.closest('[data-status]');
         if (!button) return;
@@ -616,9 +628,13 @@ function bindEvents() {
             availability: 'all',
             sort: 'kickoff',
             timezone: state.timezone,
+            broadcastRegion: 'all',
         };
         if (filterDialog?.open) updateFilterDraft(patch);
-        else applyFilter({...patch, status: 'all', query: ''});
+        else {
+            setBroadcastRegion('all');
+            applyFilter({...patch, status: 'all', query: ''});
+        }
     });
     byId('score-toggle').addEventListener('click', () => {
         scoresRevealed = !scoresRevealed;

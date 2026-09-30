@@ -457,6 +457,10 @@ final class FixtureFlowUITests: XCTestCase {
 
         XCTAssertEqual(element(app, "broadcast-region").value as? String, "GB")
         XCTAssertTrue(app.staticTexts["National Sports"].exists)
+
+        app.navigationBars.buttons.firstMatch.tap()
+        tapFixture(app, id: "fixture-row-fx_aaaaaaaaaaaaaaaaaaaaaaaa")
+        XCTAssertEqual(element(app, "broadcast-region").value as? String, "GB")
     }
 
     func testFixtureDetailCanRevealAndHideItsScore() {

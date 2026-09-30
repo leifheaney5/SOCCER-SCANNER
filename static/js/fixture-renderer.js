@@ -322,7 +322,14 @@ function createStreamingNode(match) {
         return `${service.displayName} (${type})${region}`;
     }).join(' · ');
     summary.append(createStreamingIcon(services[0]), node('span', '', text));
-    summary.setAttribute('aria-label', `Where to watch: ${text}`);
+    const stale = services.some(service => service.status === 'stale');
+    if (stale) {
+        summary.append(node('span', 'fixture-broadcast-stale', 'Listings may be out of date'));
+    }
+    summary.setAttribute(
+        'aria-label',
+        `Where to watch: ${text}${stale ? '. Broadcast listings may be out of date' : ''}`,
+    );
     return summary;
 }
 

@@ -159,6 +159,9 @@ function createStreamingSection(match) {
         list.append(item);
     }
     section.append(list);
+    if (services.some(service => service.status === 'stale')) {
+        section.append(node('p', 'context-streaming-stale', 'Broadcast listings may be out of date.'));
+    }
     section.append(node(
         'p',
         'context-streaming-disclaimer',

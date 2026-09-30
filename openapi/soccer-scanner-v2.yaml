@@ -64,14 +64,16 @@ paths:
         - opsTokenBearer: []
       responses:
         '200':
-          description: Refresh completed or last-known observations retained as stale
+          description: Refresh completed successfully
           content:
             application/json:
               schema: {type: object, additionalProperties: true}
         '401':
           description: Operations bearer token is invalid or not configured
+        '429':
+          description: Operations refresh rate limit exceeded
         '503':
-          description: No refresh was available and no last-known snapshot exists
+          description: Refresh unavailable; last-known data may have been retained as stale
   /api/v2/search:
     get:
       operationId: searchFixtures

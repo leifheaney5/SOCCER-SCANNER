@@ -99,6 +99,11 @@ public struct FixtureDetailView: View {
                         ? String(localized: "All regions")
                         : broadcastRegion
                 )
+                if visibleWatchOptions.contains(where: { $0.status == "stale" }) {
+                    Text(String(localized: "Broadcast listings may be out of date."))
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
                 if visibleWatchOptions.isEmpty {
                     Text(emptyBroadcastMessage)
                         .font(.footnote)
@@ -157,9 +162,11 @@ public struct FixtureDetailView: View {
     private var broadcastRegions: [String] {
         let reported = fixture.broadcastCoverage?.regions.map(\.region) ?? []
         let listed = fixture.whereToWatch.compactMap(\.region)
-        return Array(Set(reported + listed).filter {
+        var regions = Set((reported + listed).filter {
             !$0.isEmpty && $0 != "Region unknown"
-        }).sorted()
+        })
+        if broadcastRegion != "all" { regions.insert(broadcastRegion) }
+        return regions.sorted()
     }
 
     private var visibleWatchOptions: [WatchOption] {

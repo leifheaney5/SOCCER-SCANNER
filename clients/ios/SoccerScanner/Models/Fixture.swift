@@ -75,6 +75,7 @@ public struct WatchOption: Decodable, Hashable, Sendable {
     public let region: String?
     public let officialUrl: String?
     public let logoPath: String?
+    public let status: String?
 
     public init(broadcast: Broadcast) {
         id = nil
@@ -83,6 +84,7 @@ public struct WatchOption: Decodable, Hashable, Sendable {
         region = broadcast.region
         officialUrl = nil
         logoPath = nil
+        status = nil
     }
 
     public var categoryLabel: String {

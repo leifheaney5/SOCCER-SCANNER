@@ -142,6 +142,7 @@ def create_app(config=None):
         'api.fixture_v2': 'fixtures',
         'api.search_v2': 'search',
         'api.identity_report': 'operations',
+        'api.refresh_broadcast_observations': 'operations',
     }
 
     @app.before_request

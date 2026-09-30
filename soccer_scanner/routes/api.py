@@ -1,4 +1,4 @@
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 import hmac
 import re
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -7,6 +7,7 @@ import requests
 from flask import Blueprint, abort, current_app, g, jsonify, request
 
 from soccer_scanner.domain.models import FixtureState, FixtureUnavailable
+from soccer_scanner.services.broadcast_refresh import OBSERVATION_TTL_SECONDS
 
 api = Blueprint('api', __name__, url_prefix='/api')
 
@@ -276,8 +277,16 @@ def operations_v2():
             ],
             'broadcastCoverage': {
                 'status': (
-                    broadcast_snapshot.get('refreshStatus', 'fresh')
-                    if broadcast_snapshot else 'unverified'
+                    'unverified' if not broadcast_snapshot else (
+                        'stale' if (
+                            broadcast_snapshot.get('storageStatus') == 'stale'
+                            or broadcast_snapshot.get('refreshStatus') == 'stale'
+                            or not broadcast_snapshot.get('updatedAt')
+                            or datetime.now(timezone.utc) - datetime.fromisoformat(
+                                broadcast_snapshot['updatedAt'].replace('Z', '+00:00')
+                            ) > timedelta(seconds=OBSERVATION_TTL_SECONDS)
+                        ) else 'fresh'
+                    )
                 ),
                 'updatedAt': broadcast_snapshot.get('updatedAt') if broadcast_snapshot else None,
                 'sourceMetrics': broadcast_snapshot.get('coverage', {}) if broadcast_snapshot else {},

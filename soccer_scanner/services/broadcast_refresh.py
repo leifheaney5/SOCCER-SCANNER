@@ -39,7 +39,11 @@ class BroadcastObservationStore:
             OBSERVATION_CACHE_KEY,
             value,
             ttl_seconds=max(0, OBSERVATION_TTL_SECONDS - age_seconds),
-            stale_ttl_seconds=max(0, OBSERVATION_STALE_SECONDS - age_seconds),
+            stale_ttl_seconds=max(
+                0,
+                OBSERVATION_TTL_SECONDS + OBSERVATION_STALE_SECONDS
+                - max(age_seconds, OBSERVATION_TTL_SECONDS),
+            ),
         )
         return value
 
@@ -63,7 +67,7 @@ class BroadcastRefreshService:
             return {'status': 'unavailable', 'coverage': {}, 'updatedAt': None}
         try:
             payload = self.fixtures_loader(requested_date)
-            if not isinstance(payload, dict) or payload.get('state') not in {'success', 'partial'}:
+            if not isinstance(payload, dict) or payload.get('state') not in {'success', 'partial', 'empty_confirmed'}:
                 raise RuntimeError('Fixture source did not return a complete refresh payload.')
             espn_status = (payload.get('providers') or {}).get('espn', {}).get('status')
             if espn_status and espn_status not in {'success', 'empty_confirmed'}:
@@ -85,11 +89,17 @@ class BroadcastRefreshService:
                 )
             ]
             by_identity = {
-                (item.get('fixtureKey'), item.get('sourceId'), item.get('displayName'), item.get('region')): item
+                (
+                    item.get('fixtureKey'), item.get('sourceId'), item.get('displayName'),
+                    item.get('region'), item.get('type'),
+                ): item
                 for item in retained
             }
             for item in observations:
-                identity = (item['fixtureKey'], item['sourceId'], item['displayName'], item['region'])
+                identity = (
+                    item['fixtureKey'], item['sourceId'], item['displayName'],
+                    item['region'], item.get('type'),
+                )
                 by_identity[identity] = item
             retained_fixtures = {
                 item['fixtureKey']: item
@@ -190,6 +200,22 @@ class BroadcastRefreshService:
                         current.append(item)
                         seen.add(identity)
                 fixture['whereToWatch'] = current
+                streaming = [
+                    item for item in (fixture.get('streaming') or [])
+                    if isinstance(item, dict)
+                ]
+                streaming.extend(
+                    item for item in current
+                    if str(item.get('type') or '').upper() == 'STREAMING'
+                )
+                compatibility_streaming = {}
+                for item in streaming:
+                    identity = (
+                        item.get('id'), item.get('displayName') or item.get('name'),
+                        item.get('region'),
+                    )
+                    compatibility_streaming[identity] = item
+                fixture['streaming'] = list(compatibility_streaming.values())
 
                 known_regions = {
                     str(item.get('region') or '').strip()
