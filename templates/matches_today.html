@@ -5,25 +5,6 @@
 
 {% block header_actions %}
 <div class="header-actions">
-    <div id="timezone-control" class="timezone-control" data-open="false">
-        <button id="timezone-trigger" class="timezone-trigger" type="button"
-                aria-haspopup="dialog" aria-expanded="false"
-                aria-controls="timezone-listbox">
-            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                <path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18ZM12 7v5l3 2"/>
-            </svg>
-            <span data-timezone-label>UTC</span>
-        </button>
-        <div id="timezone-listbox" class="timezone-popover" role="dialog"
-             aria-label="Select timezone" hidden>
-            <label class="sr-only" for="timezone-search">Search timezones</label>
-            <input id="timezone-search" class="timezone-search" type="search"
-                   autocomplete="off" placeholder="Search timezones"
-                   aria-controls="timezone-options">
-            <ul id="timezone-options" class="timezone-options" role="listbox"
-                aria-label="Timezones" tabindex="0"></ul>
-        </div>
-    </div>
     <button id="score-toggle" class="score-toggle" type="button" aria-pressed="false" aria-label="Reveal scores">
         <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" data-icon="eye-off">
             <path d="M3 3l18 18M10.6 10.7a2 2 0 0 0 2.7 2.7M9.9 4.2A10.7 10.7 0 0 1 12 4c5.5 0 9 5.2 9 5.2a15 15 0 0 1-2.1 2.6M6.6 6.6C4.4 8 3 10 3 10s3.5 5 9 5c1.2 0 2.3-.2 3.3-.6"/>
@@ -37,7 +18,6 @@
 <div class="dashboard-shell">
     <section class="daily-heading" aria-labelledby="page-title">
         <div>
-            <p class="eyebrow">Matchday ledger</p>
             <h1 id="page-title">Fixtures</h1>
             <p id="selected-date-label" class="selected-date">Selected date</p>
         </div>
@@ -45,36 +25,6 @@
             <span class="summary-primary">Loading matches</span>
         </div>
     </section>
-
-    <nav id="date-strip" class="date-strip" aria-label="Browse fixture dates"></nav>
-
-    {% if search_enabled %}
-    <section class="global-search-launcher" aria-label="Global fixture search">
-        <button id="global-search-trigger" class="global-search-trigger" type="button"
-                aria-haspopup="dialog" aria-controls="global-search-dialog">
-            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
-            <span>Search anywhere</span>
-            <kbd>/</kbd>
-        </button>
-    </section>
-
-    <dialog id="global-search-dialog" class="global-search-dialog" aria-labelledby="global-search-title">
-        <div class="global-search-frame">
-            <div class="dialog-header">
-                <h2 id="global-search-title">Search fixtures</h2>
-                <button id="global-search-close" class="icon-button" type="button" aria-label="Close global search">×</button>
-            </div>
-            <label class="global-search-input-wrap">
-                <span class="sr-only">Search teams, competitions, or fixtures</span>
-                <input id="global-search-input" type="search" role="combobox" aria-expanded="true"
-                       aria-controls="global-search-results" autocomplete="off"
-                       placeholder="Search teams, competitions, or fixtures">
-            </label>
-            <p id="global-search-status" class="global-search-status" role="status" aria-live="polite"></p>
-            <div id="global-search-results" class="global-search-results" role="listbox" aria-label="Search results"></div>
-        </div>
-    </dialog>
-    {% endif %}
 
     <section class="filter-toolbar" aria-label="Fixture filters">
         <div class="date-controls" aria-label="Choose fixture date">
@@ -91,7 +41,6 @@
             </button>
             <p id="date-error" class="field-error" role="alert" hidden>Enter a real calendar date in YYYY-MM-DD format.</p>
             <label class="filter-field timezone-field">
-                <span>Timezone</span>
                 <select id="timezone-filter" aria-label="Fixture timezone">
                     <option value="UTC">UTC</option>
                     <option value="America/New_York">New York</option>
@@ -273,7 +222,5 @@
 <link rel="modulepreload" href="{{ url_for('static', filename='js/fixture-renderer.js', v=build.assetVersion) }}">
 <link rel="modulepreload" href="{{ url_for('static', filename='js/match-status.js', v=build.assetVersion) }}">
 <link rel="modulepreload" href="{{ url_for('static', filename='js/time-zone.js', v=build.assetVersion) }}">
-<link rel="modulepreload" href="{{ url_for('static', filename='js/timezone-control.js', v=build.assetVersion) }}">
 <script type="module" src="{{ url_for('static', filename='js/fixtures.js', v=build.assetVersion) }}"></script>
-{% if search_enabled %}<script type="module" src="{{ url_for('static', filename='js/global-search.js', v=build.assetVersion) }}"></script>{% endif %}
 {% endblock %}

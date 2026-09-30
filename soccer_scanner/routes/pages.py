@@ -11,18 +11,12 @@ pages = Blueprint('pages', __name__)
 
 @pages.get('/')
 def fixtures():
-    return render_template(
-        'matches_today.html',
-        search_enabled=current_app.extensions['feature_flags'].is_enabled('search'),
-    )
+    return render_template('matches_today.html')
 
 
 @pages.get('/matches-today')
 def legacy_fixtures():
-    return render_template(
-        'matches_today.html',
-        search_enabled=current_app.extensions['feature_flags'].is_enabled('search'),
-    )
+    return render_template('matches_today.html')
 
 
 @pages.get('/teams')

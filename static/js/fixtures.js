@@ -2,7 +2,7 @@ const assetVersion = new URL(import.meta.url).searchParams.get('v');
 const versionedModule = path => (
     assetVersion ? `${path}?v=${encodeURIComponent(assetVersion)}` : path
 );
-const [appStoreModule, fixtureStateModule, scorePreferenceModule, fixtureRendererModule, matchContextModule, refreshModule, dialogModule, timezoneControlModule, timeZoneModule] = await Promise.all([
+const [appStoreModule, fixtureStateModule, scorePreferenceModule, fixtureRendererModule, matchContextModule, refreshModule, dialogModule, timeZoneModule] = await Promise.all([
     import(versionedModule('./app-store.js')),
     import(versionedModule('./fixture-state.js')),
     import(versionedModule('./score-preference.js')),
@@ -10,12 +10,10 @@ const [appStoreModule, fixtureStateModule, scorePreferenceModule, fixtureRendere
     import(versionedModule('./match-context.js')),
     import(versionedModule('./refresh-controller.js')),
     import(versionedModule('./dialog-manager.js')),
-    import(versionedModule('./timezone-control.js')),
     import(versionedModule('./time-zone.js')),
 ]);
 const {createStore} = appStoreModule;
 const {
-    buildDateTabs,
     createState,
     filterMatches,
     groupMatches,
@@ -43,8 +41,7 @@ const {
 const {createMatchContext} = matchContextModule;
 const {createRefreshController} = refreshModule;
 const {createDialogManager} = dialogModule;
-const {createTimezoneControl} = timezoneControlModule;
-const {calendarDateInZone} = timeZoneModule;
+const {calendarDateInZone, formatTimezoneLabel} = timeZoneModule;
 
 const byId = id => document.getElementById(id);
 const detectedTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
@@ -62,7 +59,6 @@ let activeRequestController = null;
 let requestSequence = 0;
 let matchContext = null;
 let refreshController = null;
-let timezoneControl = null;
 let broadcastRegion = (() => {
     try { return localStorage.getItem('soccer-radar:broadcast-region') || 'all'; } catch { return 'all'; }
 })();
@@ -193,6 +189,13 @@ function syncControls({filterState = filterDraft || state} = {}) {
     if (![...timezone.options].some(option => option.value === state.timezone)) {
         timezone.add(new Option(state.timezone.replaceAll('_', ' '), state.timezone));
     }
+    [...timezone.options].forEach(option => {
+        option.dataset.locationLabel ??= option.textContent.trim();
+        const abbreviation = option.value === 'UTC'
+            ? 'UTC'
+            : formatTimezoneLabel(option.value).shortLabel;
+        option.textContent = `${option.dataset.locationLabel} (${abbreviation})`;
+    });
     timezone.value = filterState.timezone;
     byId('country-filter').value = filterState.country;
     byId('time-filter').value = filterState.timeWindow;
@@ -216,28 +219,6 @@ function syncControls({filterState = filterDraft || state} = {}) {
         ? !advancedFilterHasValues(filterState, state)
         : !(activeFilters || advancedFilterHasValues(state));
     syncScoreToggle(byId('score-toggle'), scoresRevealed);
-    timezoneControl?.sync();
-}
-
-function renderDateStrip() {
-    const strip = byId('date-strip');
-    if (!strip) return;
-    strip.replaceChildren(...buildDateTabs(state.date).map(tab => {
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.className = 'date-strip-item';
-        button.dataset.date = tab.date;
-        button.setAttribute('aria-current', tab.date === state.date ? 'date' : 'false');
-        const label = document.createElement('span');
-        label.className = 'date-strip-label';
-        label.textContent = tab.label;
-        const date = document.createElement('span');
-        date.className = 'date-strip-date';
-        date.textContent = tab.shortLabel;
-        button.append(label, date);
-        button.addEventListener('click', () => chooseDate(tab.date));
-        return button;
-    }));
 }
 
 function populateCompetitions(matches) {
@@ -444,14 +425,10 @@ function chooseDate(date) {
     selectedFixtureId = null;
     matchContext?.reset();
     syncControls();
-    renderDateStrip();
     syncUrl('push');
     loadFixtures();
 }
 
-// Shared by the `#timezone-filter` select and the header timezone control so
-// the two views of `state.timezone` cannot drift: whichever one changes the
-// zone, this is the only place that applies it.
 function applyTimezone(timezone, {extraPatch = {}, reason = 'timezone'} = {}) {
     cancelPendingSearch();
     const fixtureId = selectedFixtureId || state.fixture || '';
@@ -476,12 +453,15 @@ function moveSecondaryFiltersForViewport() {
     const secondaryFilters = byId('secondary-filters');
     const dialogContent = byId('filter-dialog-content');
     const toolbar = document.querySelector('.filter-toolbar');
-    if (!secondaryFilters || !dialogContent || !toolbar) return;
+    const timezoneField = byId('timezone-filter')?.closest('.timezone-field');
+    if (!secondaryFilters || !dialogContent || !toolbar || !timezoneField) return;
     if (isMobileFilterLayout()) {
         dialogContent.append(secondaryFilters);
+        secondaryFilters.insertBefore(timezoneField, secondaryFilters.children[1] || null);
     } else {
         if (filterDialog?.open) filterDialogManager?.close(filterDialog, {restoreFocus: false});
         toolbar.append(secondaryFilters);
+        document.querySelector('.date-controls')?.append(timezoneField);
     }
 }
 
@@ -701,8 +681,6 @@ function bindEvents() {
     byId('copy-fixture-link').addEventListener('click', copyFixtureLink);
 }
 
-renderDateStrip();
-
 function init() {
     const dialogManager = createDialogManager();
     matchContext = createMatchContext({
@@ -729,11 +707,6 @@ function init() {
             }
         },
         dialogManager,
-    });
-    timezoneControl = createTimezoneControl({
-        root: byId('timezone-control'),
-        getTimeZone: () => state.timezone,
-        onChange: applyTimezone,
     });
     bindFilterDialog(dialogManager);
     syncUrl('replace');
