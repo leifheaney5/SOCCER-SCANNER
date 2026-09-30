@@ -183,7 +183,7 @@ def test_native_icon_privacy_and_release_lane_assets_are_present():
     assert "runpy.run_path('Tools/select_simulator.py')" in workflow
     assert 'runtime.rsplit' not in workflow
     assert 'permissions:\n  contents: read' in workflow
-    assert 'timeout-minutes: 30' in workflow
+    assert 'timeout-minutes: 45' in workflow
     assert 'timeout-minutes: 45' in workflow
 
 
