@@ -94,6 +94,11 @@ public struct FixtureDetailView: View {
                     }
                 }
                 .accessibilityIdentifier("broadcast-region")
+                .accessibilityValue(
+                    broadcastRegion == "all"
+                        ? String(localized: "All regions")
+                        : broadcastRegion
+                )
                 if visibleWatchOptions.isEmpty {
                     Text(emptyBroadcastMessage)
                         .font(.footnote)
