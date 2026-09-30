@@ -236,19 +236,3 @@ export function summarizeMatches(matches) {
     }
     return summary;
 }
-
-export function selectFeatured(matches) {
-    const list = Array.isArray(matches) ? matches : [];
-    const mostInteresting = kind => list.reduce((selected, match) => {
-        if (statusKind(match) !== kind) return selected;
-        const interest = Number(match?.interestEstimate ?? match?.enhanced_info?.importance_score ?? 0);
-        const selectedInterest = Number(
-            selected?.interestEstimate ?? selected?.enhanced_info?.importance_score ?? 0,
-        );
-        return !selected || interest > selectedInterest ? match : selected;
-    }, null);
-    return mostInteresting('live')
-        || mostInteresting('upcoming')
-        || mostInteresting('finished')
-        || null;
-}

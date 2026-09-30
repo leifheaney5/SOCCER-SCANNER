@@ -272,7 +272,7 @@ test('hidden scores never enter DOM content and reveal consistently', async ({pa
     expect(accessibilityTree).toContain('Score hidden');
 
     await page.locator('#score-toggle').click();
-    await expect(page.getByText('97 – 96', {exact: true})).toHaveCount(2);
+    await expect(page.getByText('97 – 96', {exact: true})).toHaveCount(1);
     await expect(page.getByText('97 – 96', {exact: true}).first()).toBeVisible();
     await expect(page.getByText('95 – 94', {exact: true})).toBeVisible();
     await expect(page.getByText('Score unavailable', {exact: true})).toBeVisible();
@@ -284,16 +284,12 @@ test('hidden scores never enter DOM content and reveal consistently', async ({pa
     await expect(page.getByText('97 – 96', {exact: true})).toHaveCount(0);
 });
 
-test('fixtures render paired identities, crest fallbacks, groups, and live-first feature', async ({page}) => {
+test('fixtures render paired identities, crest fallbacks, and groups without a featured match box', async ({page}) => {
     await mockFixtures(page);
     await page.goto('/?date=2026-08-03');
     await expect(page.locator('#fixture-result-count')).toContainText('13 matches');
 
-    const featured = page.locator('#featured-match');
-    await expect(featured).toContainText('Live now');
-    await expect(featured).toContainText('Arsenal');
-    await expect(featured).toContainText('River Plate');
-    await expect(featured.locator('.team-crest')).toHaveCount(2);
+    await expect(page.locator('#featured-match')).toHaveCount(0);
 
     await expect(page.locator('.competition-group')).toHaveCount(5);
     const premier = page.locator('.competition-group', {hasText: 'Premier League'});
@@ -811,31 +807,16 @@ for (const {width, height} of [
     });
 }
 
-test('narrow mobile keeps the featured score between the teams and the date legible', async ({page}) => {
+test('narrow mobile keeps the fixture date legible without a featured match box', async ({page}) => {
     await page.setViewportSize({width: 375, height: 812});
     await mockFixtures(page);
     await page.goto('/?date=2026-08-03');
     await expect(page.locator('#fixture-result-count')).toContainText('13 matches');
 
-    const layout = await page.locator('#featured-match').evaluate(featured => {
-        const [home, away] = featured.querySelectorAll('.team-identity--featured');
-        const score = featured.querySelector('.score-display--featured');
-        const date = document.getElementById('dashboard-date');
-        const homeBox = home.getBoundingClientRect();
-        const scoreBox = score.getBoundingClientRect();
-        const awayBox = away.getBoundingClientRect();
-        const dateBox = date.getBoundingClientRect();
-        return {
-            homeX: homeBox.x,
-            scoreX: scoreBox.x,
-            awayX: awayBox.x,
-            dateWidth: dateBox.width,
-        };
-    });
-
-    expect(layout.homeX).toBeLessThan(layout.scoreX);
-    expect(layout.scoreX).toBeLessThan(layout.awayX);
-    expect(layout.dateWidth).toBeGreaterThanOrEqual(130);
+    const dateWidth = await page.locator('#dashboard-date').evaluate(date => date.getBoundingClientRect().width);
+    await expect(page.locator('#featured-match')).toHaveCount(0);
+    await expect(page.locator('.fixture-card').first()).toBeVisible();
+    expect(dateWidth).toBeGreaterThanOrEqual(130);
 });
 
 test('landscape mobile remains scroll-safe and match details stay operable', async ({page}) => {

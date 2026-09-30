@@ -21,10 +21,11 @@ class SoccerScannerRoutesTest(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         for element_id in (
             'dashboard-date', 'fixture-stream', 'score-toggle',
-            'daily-summary', 'featured-match', 'match-context',
+            'daily-summary', 'match-context',
             'match-context-dialog', 'dashboard-status', 'data-notice',
         ):
             self.assertIn(f'id="{element_id}"', html)
+        self.assertNotIn('id="featured-match"', html)
         self.assertIn('aria-label="Primary navigation"', html)
         self.assertIn('aria-current="page"', html)
         self.assertIn('href="https://select-xi.pro/"', html)

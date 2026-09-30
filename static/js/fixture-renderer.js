@@ -10,7 +10,7 @@ const [crestModule, fixtureStateModule, scorePreferenceModule, statusModule, tim
     import(versionedModule('./time-zone.js')),
 ]);
 const {createCrest} = crestModule;
-const {selectFeatured, statusKind, statusValue, summarizeMatches} = fixtureStateModule;
+const {statusKind, statusValue, summarizeMatches} = fixtureStateModule;
 const {validScore} = scorePreferenceModule;
 const {describeStatus, statusShortLabel, statusLabel: canonicalStatusLabel} = statusModule;
 const {
@@ -117,10 +117,10 @@ export function createScoreNode(match, revealed, {featured = false} = {}) {
     return score;
 }
 
-function createTeamIdentity(team, {featured = false} = {}) {
-    const identity = node('div', featured ? 'team-identity team-identity--featured' : 'team-identity');
+function createTeamIdentity(team) {
+    const identity = node('div', 'team-identity');
     identity.append(
-        createCrest(team, {size: featured ? 52 : 32, lazy: !featured, className: featured ? 'team-crest--featured' : ''}),
+        createCrest(team),
         node('span', 'team-name', team?.name || 'Team unavailable'),
     );
     return identity;
@@ -181,9 +181,9 @@ export function formatFreshness(value, now = new Date()) {
     return `Updated ${elapsedDays}d ago`;
 }
 
-function createDetailsButton(match, featured = false) {
-    const label = featured ? 'Open match details' : 'Details';
-    const button = node('button', featured ? 'details-button details-button--featured' : 'details-button');
+function createDetailsButton(match) {
+    const label = 'Details';
+    const button = node('button', 'details-button');
     button.type = 'button';
     button.dataset.action = 'select-fixture';
     button.dataset.fixtureId = fixtureId(match);
@@ -492,32 +492,6 @@ export function renderNotice(container, payload) {
         : 'Available matches are shown while another provider reconnects.';
     container.append(node('strong', '', title), node('span', '', detail));
     container.dataset.state = payload.stale ? 'stale' : 'partial';
-    container.hidden = false;
-}
-
-export function renderFeatured(container, matches, revealed) {
-    const match = selectFeatured(matches);
-    container.replaceChildren();
-    if (!match) {
-        container.hidden = true;
-        return;
-    }
-    const kind = statusKind(match);
-    const header = node('div', 'featured-header');
-    const label = kind === 'live' ? 'Live now' : (kind === 'upcoming' ? 'Next up' : 'Latest result');
-    header.append(
-        node('span', 'featured-label', label),
-        node('span', 'featured-competition', match?.competition?.name || 'Competition'),
-    );
-    const teams = node('div', 'featured-teams');
-    teams.append(
-        createTeamIdentity(match?.homeTeam, {featured: true}),
-        createScoreNode(match, revealed, {featured: true}),
-        createTeamIdentity(match?.awayTeam, {featured: true}),
-    );
-    const footer = node('div', 'featured-footer');
-    footer.append(node('span', 'featured-status', `${statusDescription(match)} · ${formatKickoff(match?.utcDate)}`), createDetailsButton(match, true));
-    container.append(header, teams, footer);
     container.hidden = false;
 }
 

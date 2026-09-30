@@ -460,7 +460,7 @@ body {
 }
 
 .search-control {
-    width: min(260px, 24vw);
+    width: 100%;
     padding-left: 11px;
     display: grid;
     grid-template-columns: auto minmax(0, 1fr) auto;
@@ -621,71 +621,6 @@ body {
     font-variant-numeric: tabular-nums;
 }
 
-.featured-match {
-    margin-bottom: 20px;
-    overflow: hidden;
-    border: 1px solid #333333;
-    border-radius: 10px;
-    background: var(--bg-card);
-}
-
-.featured-header,
-.featured-footer {
-    min-height: 42px;
-    padding: 9px 14px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-}
-
-.featured-header {
-    border-bottom: 1px solid var(--border-color);
-}
-
-.featured-footer {
-    border-top: 1px solid var(--border-color);
-}
-
-.featured-label {
-    color: var(--accent-secondary);
-    font-family: var(--font-data);
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-}
-
-.featured-competition,
-.featured-status {
-    color: var(--text-secondary);
-    font-size: 12px;
-}
-
-.featured-teams {
-    min-width: 0;
-    padding: 18px 20px;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(94px, auto) minmax(0, 1fr);
-    align-items: center;
-    gap: 18px;
-}
-
-.team-identity--featured {
-    flex-direction: column;
-    justify-content: center;
-    text-align: center;
-}
-
-.team-identity--featured .team-name {
-    font-size: 15px;
-    font-weight: 700;
-}
-
-.featured-teams .team-identity:last-child {
-    flex-direction: column;
-}
-
 .details-button {
     min-width: 80px;
     padding: 0 10px;
@@ -694,12 +629,6 @@ body {
     justify-content: center;
     gap: 5px;
     font-size: 12px;
-}
-
-.details-button--featured {
-    min-height: 34px;
-    background: var(--bg-tertiary);
-    color: var(--text-primary);
 }
 
 .competition-group {
@@ -1075,7 +1004,6 @@ body {
     background: var(--bg-tertiary);
 }
 
-.team-crest--featured,
 .team-crest--context,
 .team-crest--drawer {
     width: 52px;
@@ -1921,11 +1849,6 @@ dialog::backdrop {
         padding-bottom: max(12px, env(safe-area-inset-bottom, 0px));
     }
 
-    .featured-teams {
-        padding-inline: 12px;
-        gap: 8px;
-    }
-
     dialog.sheet-dialog,
     dialog.team-drawer {
         width: 100%;
@@ -2078,19 +2001,6 @@ dialog::backdrop {
     .daily-summary {
         gap-inline: 10px;
         font-size: 11px;
-    }
-
-    .featured-teams {
-        grid-template-columns: minmax(0, 1fr) 78px minmax(0, 1fr);
-    }
-
-    .team-identity--featured .team-name {
-        font-size: 12px;
-    }
-
-    .score-display--featured {
-        min-width: 0;
-        font-size: 18px;
     }
 }
 
