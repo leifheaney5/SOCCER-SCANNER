@@ -16,7 +16,8 @@ require "shellwords"
 
 default_platform(:ios)
 
-XCODEPROJ = "SoccerScanner.xcodeproj"
+IOS_ROOT = File.expand_path("..", __dir__)
+XCODEPROJ = File.join(IOS_ROOT, "SoccerScanner.xcodeproj")
 SCHEME = "SoccerScanner"
 
 def required_release_env(name)
@@ -95,7 +96,9 @@ end
 platform :ios do
   desc "Generate the Xcode project from project.yml"
   lane :generate do
-    sh("xcodegen generate --spec project.yml")
+    Dir.chdir(IOS_ROOT) do
+      sh("xcodegen generate --spec project.yml")
+    end
   end
 
   desc "Validate release assets and legal/support gates without building"

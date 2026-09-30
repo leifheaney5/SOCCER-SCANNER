@@ -253,6 +253,14 @@ def test_upload_lanes_validate_app_store_credentials_before_building():
     assert fastfile.count('api_key: key') >= 3
 
 
+def test_fastlane_resolves_generated_project_from_the_ios_root():
+    fastfile = (IOS_ROOT / 'fastlane' / 'Fastfile').read_text(encoding='utf-8')
+
+    assert 'IOS_ROOT = File.expand_path("..", __dir__)' in fastfile
+    assert 'XCODEPROJ = File.join(IOS_ROOT, "SoccerScanner.xcodeproj")' in fastfile
+    assert 'Dir.chdir(IOS_ROOT) do' in fastfile
+
+
 if __name__ == '__main__':
     test_native_info_plist_matches_release_contract()
     test_native_project_and_entitlements_expose_only_verified_defaults()
