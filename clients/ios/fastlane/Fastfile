@@ -66,7 +66,7 @@ end
 def asset_preflight!
   # Keep every build lane aligned with the repository-controlled asset,
   # metadata, and workflow checks enforced by simulator CI.
-  sh("python3 ../../tests/test_ios_release_assets.py")
+  sh("python3 ../../../tests/test_ios_release_assets.py")
 end
 
 def release_preflight!

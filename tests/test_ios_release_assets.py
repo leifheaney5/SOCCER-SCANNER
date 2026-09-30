@@ -222,7 +222,7 @@ def test_submission_lanes_have_a_legal_and_support_preflight():
     assert '[TO BE COMPLETED BY LEGAL OWNER]' in fastfile
     assert 'metadata/en-US/support_url.txt' in fastfile
     assert 'support_url.txt must contain one verified HTTPS URL' in fastfile
-    assert 'python3 ../../tests/test_ios_release_assets.py' in fastfile
+    assert 'python3 ../../../tests/test_ios_release_assets.py' in fastfile
 
 
 def test_archive_lane_has_an_explicit_runtime_signing_contract():
