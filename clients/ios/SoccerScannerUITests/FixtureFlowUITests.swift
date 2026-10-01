@@ -71,11 +71,6 @@ final class FixtureFlowUITests: XCTestCase {
         case "advanced-competition": return labelledElement(app, containing: "Competition")
         case "settings-privacy-link": return labelledElement(app, equalTo: "Privacy")
         case "settings-terms-link": return labelledElement(app, equalTo: "Terms of Service")
-        case "settings-support-unavailable":
-            return labelledElement(
-                app,
-                equalTo: "Support contact is not configured for this build."
-            )
         default:
             if identifier.hasPrefix("timezone-") {
                 return labelledElement(
@@ -500,8 +495,9 @@ final class FixtureFlowUITests: XCTestCase {
         )
         XCTAssertFalse(element(app, "fixture-score").exists)
         XCTAssertFalse(element(app, "detail-score").exists)
-        XCTAssertTrue(waitForElement(app, "settings-support-unavailable").exists)
-        XCTAssertTrue(app.staticTexts["Support contact is not configured for this build."].exists)
+        let supportLink = waitForElement(app, "settings-support-email-link")
+        XCTAssertTrue(supportLink.exists)
+        XCTAssertEqual(supportLink.label, "support@trequa.io")
     }
 
     func testSettingsHideEnvironmentLabelInProduction() {
