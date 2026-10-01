@@ -237,6 +237,8 @@ def test_archive_lane_has_an_explicit_runtime_signing_contract():
     assert 'PROVISIONING_PROFILE_SPECIFIER=' in fastfile
     assert 'generate_apple_certs: true' in fastfile
     assert 'sigh(' in fastfile
+    assert 'ORPHANED_DISTRIBUTION_CERTIFICATE_ID = "4CV5ZD47R4"' in fastfile
+    assert 'orphaned_certificate&.delete!' in fastfile
     assert 'create_keychain(' in fastfile
     assert 'File.expand_path("#{lane_context[SharedValues::KEYCHAIN_PATH]}-db")' in fastfile
     assert 'delete_keychain(keychain_path: keychain_path)' in fastfile
