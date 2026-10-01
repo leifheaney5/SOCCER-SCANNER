@@ -73,7 +73,7 @@ Source: `templates/terms.html`. The fastlane `release_upload` and
 | 5 | Venue / dispute resolution | 141–145 | Courts of [county, state], or arbitration | Choosing arbitration brings more decisions (class-action waiver, opt-out, small-claims carve-out) and needs counsel. |
 | 6 | Liability cap | 124–131 | Amount or formula | The app is free, so "fees paid" formulas resolve to $0. Many free services use a fixed sum; the number is a legal call. |
 | 7 | Jurisdiction carve-outs | 124–131 | Statutory rights the cap can't limit | E.g. consumer-law rights in some regions, liability that can't be excluded by law. Counsel decides scope. |
-| 8 | Contact for legal notices | 141–145 | Email (and address) | `support@trequa.io` is on branch `fix/ios-support-email-link`, not yet on `main`. Confirm whether it's also the legal-notice address. |
+| 8 | Contact for legal notices | 141–145 | Email (and address) | `support@trequa.io` is the native Settings support link (PR #27). Confirm whether it's also the legal-notice address. |
 
 ### Accuracy issue to fix in the same edit
 
@@ -166,7 +166,7 @@ Paste each URL into Notes and tap it:
 - [ ] Detail shows Kick-off, Timezone, Competition, Country, Venue (`FixtureDetailView.swift:70–87`).
 - [ ] Change the broadcast region, quit, relaunch: the region persists (expected; `@AppStorage`).
 - [ ] Settings shows Version and Build matching the TestFlight build. The Website, Privacy, Terms and Data sources links open (`SettingsView.swift:15–52`).
-- [ ] Support row: on `main` it says support isn't configured. If the `fix/ios-support-email-link` build is installed, the `support@trequa.io` link opens Mail.
+- [ ] Settings → Support shows `support@trequa.io`, and tapping it opens Mail.
 
 ---
 
