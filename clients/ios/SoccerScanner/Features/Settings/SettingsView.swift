@@ -38,8 +38,11 @@ public struct SettingsView: View {
             }
 
             Section(String(localized: "Support")) {
-                Text(String(localized: "Support contact is not configured for this build."))
-                    .accessibilityIdentifier("settings-support-unavailable")
+                Link(
+                    String(localized: "support@trequa.io"),
+                    destination: URL(string: "mailto:support@trequa.io")!
+                )
+                .accessibilityIdentifier("settings-support-email-link")
             }
 
             Section(String(localized: "Website and legal")) {

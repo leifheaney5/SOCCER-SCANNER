@@ -8,7 +8,7 @@ The fixture list is the current native surface. It loads a selected calendar day
 
 Fixture links are parsed by the app root from both `onOpenURL` and Universal Link user activities. Only a validated fixture route is consumed natively; unsupported or malformed routes leave the fixture list usable. The route lookup uses the typed fixture endpoint and reports a missing fixture without inventing a destination.
 
-Settings is available from the fixture-list toolbar. It shows the app version/build from `Bundle`, selected timezone, spoiler and data-source explanations, plus website, privacy, terms, and data-source links. The environment label appears only outside production. Its Support section truthfully states that support contact is not configured for this build; no native support link is present because this repository contains no verified support destination or owner.
+Settings is available from the fixture-list toolbar. It shows the app version/build from `Bundle`, selected timezone, spoiler and data-source explanations, plus website, privacy, terms, and data-source links. The environment label appears only outside production. Its Support section links directly to `support@trequa.io`.
 
 ## Layout
 

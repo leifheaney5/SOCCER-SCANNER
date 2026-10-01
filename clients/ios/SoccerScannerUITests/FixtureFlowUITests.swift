@@ -71,11 +71,6 @@ final class FixtureFlowUITests: XCTestCase {
         case "advanced-competition": return labelledElement(app, containing: "Competition")
         case "settings-privacy-link": return labelledElement(app, equalTo: "Privacy")
         case "settings-terms-link": return labelledElement(app, equalTo: "Terms of Service")
-        case "settings-support-unavailable":
-            return labelledElement(
-                app,
-                equalTo: "Support contact is not configured for this build."
-            )
         default:
             if identifier.hasPrefix("timezone-") {
                 return labelledElement(
