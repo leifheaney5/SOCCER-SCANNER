@@ -232,13 +232,12 @@ def test_archive_lane_has_an_explicit_runtime_signing_contract():
     assert 'APPLE_TEAM_ID' in fastfile
     assert 'APPLE_BUNDLE_ID' in fastfile
     assert 'BUILD_NUMBER' in fastfile
-    assert 'CODE_SIGN_STYLE=Automatic' in fastfile
-    assert '-allowProvisioningUpdates' in fastfile
-    assert '-authenticationKeyPath' in fastfile
-    assert '-authenticationKeyID' in fastfile
-    assert '-authenticationKeyIssuerID' in fastfile
-    assert "CODE_SIGN_IDENTITY=#{Shellwords.escape('Apple Distribution')}" in fastfile
-    assert 'signingStyle: "automatic"' in fastfile
+    assert 'CODE_SIGN_STYLE=Manual' in fastfile
+    assert 'CODE_SIGN_IDENTITY=#{Shellwords.escape("Apple Distribution")}' in fastfile
+    assert 'PROVISIONING_PROFILE_SPECIFIER=' in fastfile
+    assert 'generate_apple_certs: true' in fastfile
+    assert 'sigh(' in fastfile
+    assert 'signingStyle: "manual"' in fastfile
     assert 'xcargs: \'CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY=""\'' in fastfile
     assert 'lane :preflight' in fastfile
     assert 'def asset_preflight!' in fastfile

@@ -1,5 +1,5 @@
 require "shellwords"
-require "tempfile"
+require "tmpdir"
 
 # Soccer Scanner iOS release automation.
 #
@@ -27,22 +27,34 @@ def required_release_env(name)
   value
 end
 
-def with_signing_api_key_file
-  key_file = Tempfile.new("soccer-radar-app-store-connect-key")
-  key_file.chmod(0o600)
-  key_file.write(required_release_env("APP_STORE_CONNECT_PRIVATE_KEY"))
-  key_file.close
-  yield key_file.path
-ensure
-  key_file&.close!
+def with_app_store_signing_profile(key)
+  team_id = required_release_env("APPLE_TEAM_ID")
+  bundle_id = required_release_env("APPLE_BUNDLE_ID")
+
+  Dir.mktmpdir("soccer-radar-signing-") do |signing_assets_dir|
+    cert(
+      api_key: key,
+      team_id: team_id,
+      development: false,
+      generate_apple_certs: true,
+      output_path: signing_assets_dir
+    )
+    profile_uuid = sigh(
+      api_key: key,
+      team_id: team_id,
+      app_identifier: bundle_id,
+      adhoc: false,
+      development: false,
+      output_path: signing_assets_dir
+    )
+    yield profile_uuid
+  end
 end
 
-def release_signing_xcargs(authentication_key_path)
+def release_signing_xcargs(profile_uuid)
   team_id = required_release_env("APPLE_TEAM_ID")
   bundle_id = required_release_env("APPLE_BUNDLE_ID")
   build_number = required_release_env("BUILD_NUMBER")
-  key_id = required_release_env("APP_STORE_CONNECT_KEY_ID")
-  issuer_id = required_release_env("APP_STORE_CONNECT_ISSUER_ID")
 
   unless team_id.match?(/\A[A-Z0-9]{10}\z/)
     UI.user_error!("Release blocked: APPLE_TEAM_ID must be a 10-character Apple Team ID.")
@@ -55,12 +67,9 @@ def release_signing_xcargs(authentication_key_path)
   end
 
   [
-    "-allowProvisioningUpdates",
-    "-authenticationKeyPath #{Shellwords.escape(authentication_key_path)}",
-    "-authenticationKeyID #{Shellwords.escape(key_id)}",
-    "-authenticationKeyIssuerID #{Shellwords.escape(issuer_id)}",
-    "CODE_SIGN_STYLE=Automatic",
-    "CODE_SIGN_IDENTITY=#{Shellwords.escape('Apple Distribution')}",
+    "CODE_SIGN_STYLE=Manual",
+    "CODE_SIGN_IDENTITY=#{Shellwords.escape("Apple Distribution")}",
+    "PROVISIONING_PROFILE_SPECIFIER=#{Shellwords.escape(profile_uuid)}",
     "DEVELOPMENT_TEAM=#{Shellwords.escape(team_id)}",
     "PRODUCT_BUNDLE_IDENTIFIER=#{Shellwords.escape(bundle_id)}",
     "CURRENT_PROJECT_VERSION=#{Shellwords.escape(build_number)}"
@@ -146,18 +155,21 @@ platform :ios do
       xcodeproj: XCODEPROJ,
       build_number: ENV.fetch("BUILD_NUMBER", Time.now.strftime("%Y%m%d%H%M"))
     )
-    with_signing_api_key_file do |authentication_key_path|
-      signing_xcargs = release_signing_xcargs(authentication_key_path)
+    with_app_store_signing_profile(api_key) do |profile_uuid|
+      signing_xcargs = release_signing_xcargs(profile_uuid)
       build_app(
         project: XCODEPROJ,
         scheme: SCHEME,
         configuration: "Release",
         export_method: "app-store",
-        # Supply App Store Connect API authentication to xcodebuild so the
-        # headless runner can manage signing without an interactive Xcode login.
+        # Sign the archive with the App Store distribution profile generated
+        # above; simulator CI remains signing-free.
         xcargs: signing_xcargs,
         export_options: {
-          signingStyle: "automatic",
+          signingStyle: "manual",
+          provisioningProfiles: {
+            ENV.fetch("APPLE_BUNDLE_ID") => profile_uuid
+          },
           uploadBitcode: false,
           uploadSymbols: true
         },
