@@ -60,6 +60,7 @@ def release_signing_xcargs(authentication_key_path)
     "-authenticationKeyID #{Shellwords.escape(key_id)}",
     "-authenticationKeyIssuerID #{Shellwords.escape(issuer_id)}",
     "CODE_SIGN_STYLE=Automatic",
+    "CODE_SIGN_IDENTITY=#{Shellwords.escape('Apple Distribution')}",
     "DEVELOPMENT_TEAM=#{Shellwords.escape(team_id)}",
     "PRODUCT_BUNDLE_IDENTIFIER=#{Shellwords.escape(bundle_id)}",
     "CURRENT_PROJECT_VERSION=#{Shellwords.escape(build_number)}"
