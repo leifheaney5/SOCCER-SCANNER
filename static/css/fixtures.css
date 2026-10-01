@@ -1665,6 +1665,25 @@ dialog::backdrop {
         white-space: nowrap;
     }
 
+    /* Venue/stage and competition share the meta cell; give venue its own row when present. */
+    .fixture-card:has(.fixture-meta > *) {
+        grid-template-areas:
+            "status score"
+            "teams teams"
+            "competition action"
+            "meta action";
+    }
+
+    .fixture-card:has(.fixture-meta > *) .fixture-mobile-meta {
+        grid-area: competition;
+        align-self: end;
+    }
+
+    .fixture-card:has(.fixture-meta > *) .fixture-meta {
+        align-self: start;
+        margin-top: -5px;
+    }
+
     .fixture-action {
         grid-area: action;
     }
