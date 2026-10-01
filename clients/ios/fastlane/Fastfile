@@ -21,8 +21,8 @@ default_platform(:ios)
 IOS_ROOT = File.expand_path("..", __dir__)
 XCODEPROJ = File.join(IOS_ROOT, "SoccerScanner.xcodeproj")
 SCHEME = "SoccerScanner"
-# Created by the first CI signing attempt, which did not preserve its private key.
-ORPHANED_DISTRIBUTION_CERTIFICATE_ID = "4CV5ZD47R4"
+# Created by the previous CI signing attempt, which did not preserve its private key.
+ORPHANED_DISTRIBUTION_CERTIFICATE_ID = "XDYV54ZP48"
 
 def required_release_env(name)
   value = ENV[name].to_s.strip

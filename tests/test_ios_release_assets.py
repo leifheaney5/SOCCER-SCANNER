@@ -37,6 +37,13 @@ def test_native_info_plist_matches_release_contract():
         'UIInterfaceOrientationLandscapeLeft',
         'UIInterfaceOrientationLandscapeRight',
     }
+    ipad_orientations = _plist_value(path, 'UISupportedInterfaceOrientations~ipad')
+    assert {item.text for item in ipad_orientations} >= {
+        'UIInterfaceOrientationPortrait',
+        'UIInterfaceOrientationPortraitUpsideDown',
+        'UIInterfaceOrientationLandscapeLeft',
+        'UIInterfaceOrientationLandscapeRight',
+    }
 
 
 def test_native_project_and_entitlements_expose_only_verified_defaults():
@@ -56,6 +63,8 @@ def test_native_project_and_entitlements_expose_only_verified_defaults():
     assert 'applinks:soccerscanner.pro' in project
     assert 'applinks:soccer-radar.com' in project
     assert 'CFBundleDisplayName: Soccer Radar' in project
+    assert 'UISupportedInterfaceOrientations~ipad:' in project
+    assert 'UIInterfaceOrientationPortraitUpsideDown' in project
     assert 'INFOPLIST_KEY_CFBundleDisplayName: Soccer Radar' in project
 
 
@@ -237,7 +246,8 @@ def test_archive_lane_has_an_explicit_runtime_signing_contract():
     assert 'PROVISIONING_PROFILE_SPECIFIER=' in fastfile
     assert 'generate_apple_certs: true' in fastfile
     assert 'sigh(' in fastfile
-    assert 'ORPHANED_DISTRIBUTION_CERTIFICATE_ID = "4CV5ZD47R4"' in fastfile
+    assert 'ORPHANED_DISTRIBUTION_CERTIFICATE_ID =' in fastfile
+    assert 'certificate.id == ORPHANED_DISTRIBUTION_CERTIFICATE_ID' in fastfile
     assert 'orphaned_certificate&.delete!' in fastfile
     assert 'create_keychain(' in fastfile
     assert 'File.expand_path("#{lane_context[SharedValues::KEYCHAIN_PATH]}-db")' in fastfile
