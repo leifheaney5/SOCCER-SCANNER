@@ -234,6 +234,9 @@ def test_archive_lane_has_an_explicit_runtime_signing_contract():
     assert 'BUILD_NUMBER' in fastfile
     assert 'CODE_SIGN_STYLE=Automatic' in fastfile
     assert '-allowProvisioningUpdates' in fastfile
+    assert '-authenticationKeyPath' in fastfile
+    assert '-authenticationKeyID' in fastfile
+    assert '-authenticationKeyIssuerID' in fastfile
     assert 'signingStyle: "automatic"' in fastfile
     assert 'xcargs: \'CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY=""\'' in fastfile
     assert 'lane :preflight' in fastfile

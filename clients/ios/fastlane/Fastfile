@@ -1,4 +1,5 @@
 require "shellwords"
+require "tempfile"
 
 # Soccer Scanner iOS release automation.
 #
@@ -26,10 +27,22 @@ def required_release_env(name)
   value
 end
 
-def release_signing_xcargs
+def with_signing_api_key_file
+  key_file = Tempfile.new("soccer-radar-app-store-connect-key")
+  key_file.chmod(0o600)
+  key_file.write(required_release_env("APP_STORE_CONNECT_PRIVATE_KEY"))
+  key_file.close
+  yield key_file.path
+ensure
+  key_file&.close!
+end
+
+def release_signing_xcargs(authentication_key_path)
   team_id = required_release_env("APPLE_TEAM_ID")
   bundle_id = required_release_env("APPLE_BUNDLE_ID")
   build_number = required_release_env("BUILD_NUMBER")
+  key_id = required_release_env("APP_STORE_CONNECT_KEY_ID")
+  issuer_id = required_release_env("APP_STORE_CONNECT_ISSUER_ID")
 
   unless team_id.match?(/\A[A-Z0-9]{10}\z/)
     UI.user_error!("Release blocked: APPLE_TEAM_ID must be a 10-character Apple Team ID.")
@@ -43,6 +56,9 @@ def release_signing_xcargs
 
   [
     "-allowProvisioningUpdates",
+    "-authenticationKeyPath #{Shellwords.escape(authentication_key_path)}",
+    "-authenticationKeyID #{Shellwords.escape(key_id)}",
+    "-authenticationKeyIssuerID #{Shellwords.escape(issuer_id)}",
     "CODE_SIGN_STYLE=Automatic",
     "DEVELOPMENT_TEAM=#{Shellwords.escape(team_id)}",
     "PRODUCT_BUNDLE_IDENTIFIER=#{Shellwords.escape(bundle_id)}",
@@ -124,29 +140,30 @@ platform :ios do
   lane :build do
     generate
     asset_preflight!
-    signing_xcargs = release_signing_xcargs
     # Build number must be monotonic; the CI run number guarantees that.
     increment_build_number(
       xcodeproj: XCODEPROJ,
       build_number: ENV.fetch("BUILD_NUMBER", Time.now.strftime("%Y%m%d%H%M"))
     )
-    build_app(
-      project: XCODEPROJ,
-      scheme: SCHEME,
-      configuration: "Release",
-      export_method: "app-store",
-      # Supplied only at release time so no Apple identifiers live in the repo.
-      # Automatic signing lets the authenticated release runner create/use the
-      # registered App Store profile; simulator CI remains signing-free.
-      xcargs: signing_xcargs,
-      export_options: {
-        signingStyle: "automatic",
-        uploadBitcode: false,
-        uploadSymbols: true
-      },
-      output_directory: "../build",
-      output_name: "SoccerScanner.ipa"
-    )
+    with_signing_api_key_file do |authentication_key_path|
+      signing_xcargs = release_signing_xcargs(authentication_key_path)
+      build_app(
+        project: XCODEPROJ,
+        scheme: SCHEME,
+        configuration: "Release",
+        export_method: "app-store",
+        # Supply App Store Connect API authentication to xcodebuild so the
+        # headless runner can manage signing without an interactive Xcode login.
+        xcargs: signing_xcargs,
+        export_options: {
+          signingStyle: "automatic",
+          uploadBitcode: false,
+          uploadSymbols: true
+        },
+        output_directory: "../build",
+        output_name: "SoccerScanner.ipa"
+      )
+    end
   end
 
   desc "Upload a build to TestFlight (no public release)"
