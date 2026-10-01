@@ -500,8 +500,9 @@ final class FixtureFlowUITests: XCTestCase {
         )
         XCTAssertFalse(element(app, "fixture-score").exists)
         XCTAssertFalse(element(app, "detail-score").exists)
-        XCTAssertTrue(waitForElement(app, "settings-support-unavailable").exists)
-        XCTAssertTrue(app.staticTexts["Support contact is not configured for this build."].exists)
+        let supportLink = waitForElement(app, "settings-support-email-link")
+        XCTAssertTrue(supportLink.exists)
+        XCTAssertEqual(supportLink.label, "support@trequa.io")
     }
 
     func testSettingsHideEnvironmentLabelInProduction() {
