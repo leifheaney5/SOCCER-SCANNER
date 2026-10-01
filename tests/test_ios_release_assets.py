@@ -237,6 +237,8 @@ def test_archive_lane_has_an_explicit_runtime_signing_contract():
     assert 'PROVISIONING_PROFILE_SPECIFIER=' in fastfile
     assert 'generate_apple_certs: true' in fastfile
     assert 'sigh(' in fastfile
+    assert 'create_keychain(' in fastfile
+    assert 'delete_keychain(name: keychain_name)' in fastfile
     assert 'signingStyle: "manual"' in fastfile
     assert 'xcargs: \'CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY=""\'' in fastfile
     assert 'lane :preflight' in fastfile

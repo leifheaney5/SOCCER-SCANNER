@@ -1,4 +1,5 @@
 require "shellwords"
+require "securerandom"
 require "tmpdir"
 
 # Soccer Scanner iOS release automation.
@@ -30,6 +31,21 @@ end
 def with_app_store_signing_profile(key)
   team_id = required_release_env("APPLE_TEAM_ID")
   bundle_id = required_release_env("APPLE_BUNDLE_ID")
+  keychain_name = "soccer-radar-signing-#{Process.pid}"
+  keychain_password = SecureRandom.hex(32)
+  keychain_created = false
+
+  create_keychain(
+    name: keychain_name,
+    password: keychain_password,
+    default_keychain: true,
+    unlock: true,
+    timeout: 3600,
+    add_to_search_list: true,
+    require_create: true
+  )
+  keychain_created = true
+  keychain_path = lane_context[SharedValues::KEYCHAIN_PATH]
 
   Dir.mktmpdir("soccer-radar-signing-") do |signing_assets_dir|
     cert(
@@ -37,18 +53,20 @@ def with_app_store_signing_profile(key)
       team_id: team_id,
       development: false,
       generate_apple_certs: true,
-      output_path: signing_assets_dir
+      output_path: signing_assets_dir,
+      keychain_path: keychain_path,
+      keychain_password: keychain_password
     )
     profile_uuid = sigh(
       api_key: key,
       team_id: team_id,
       app_identifier: bundle_id,
-      adhoc: false,
-      development: false,
       output_path: signing_assets_dir
     )
     yield profile_uuid
   end
+ensure
+  delete_keychain(name: keychain_name) if keychain_created
 end
 
 def release_signing_xcargs(profile_uuid)
