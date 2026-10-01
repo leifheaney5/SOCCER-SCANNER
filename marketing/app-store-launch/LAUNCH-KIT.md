@@ -183,12 +183,24 @@ end card (`soccer-radar.com`).
 - Copy stays within `marketing/README.md` "safe claims". It makes no
   completeness, streaming-guarantee or real-time claims; "Where to watch" shows
   "Not verified yet" because that's what the provider reported.
-- **Capture-only CSS override:** on phone widths the live site draws venue and
-  competition text on top of each other in fixture cards (both are placed in
-  grid-area `meta`, `static/css/fixtures.css:1622` with
-  `fixture-renderer.js:373`). The reel hides the venue line in list cards to
-  avoid showing that bug. The site itself is unchanged.
+- **Capture-only CSS override in this cut:** when it was recorded, the live
+  site drew venue and competition text on top of each other in phone-width
+  fixture cards. This cut hides the venue line in list cards. The bug was
+  fixed and deployed in #29 (`aa8a556`), and `reel-tools/` no longer applies
+  the override, so a re-record shows the real layout.
 - The silent audio track exists for platform compatibility. Add licensed
   music in Instagram or TikTok.
 - The reel shows the **website**, not the native app. Don't use it as an
   App Store app preview video; Apple requires those to show the app itself.
+
+### Files
+
+- `images/title.png`, `images/end.png`: 1080×1920 title and end cards.
+- `images/captions/c1–c6.png`: transparent caption overlays, in reel order.
+- `images/storyboard/`: `reel-storyboard.png` (8 frames from the final cut),
+  `frame-0…7.png` (the same frames individually), and `site-states.png`
+  (exploration captures of the live tabs, search, detail and filter states).
+- `images/fix-evidence/`: the overlap bug before the fix
+  (`before-overlap-390.png`), the fixed card in local tests
+  (`after-local-390.png`), and on production (`after-live-390.png`).
+- `reel-tools/`: scripts that rebuild the reel; see its README.
