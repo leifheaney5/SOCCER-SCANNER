@@ -1,4 +1,6 @@
 require "shellwords"
+require "securerandom"
+require "tmpdir"
 
 # Soccer Scanner iOS release automation.
 #
@@ -16,8 +18,11 @@ require "shellwords"
 
 default_platform(:ios)
 
-XCODEPROJ = "SoccerScanner.xcodeproj"
+IOS_ROOT = File.expand_path("..", __dir__)
+XCODEPROJ = File.join(IOS_ROOT, "SoccerScanner.xcodeproj")
 SCHEME = "SoccerScanner"
+# Created by the previous CI signing attempt, which did not preserve its private key.
+ORPHANED_DISTRIBUTION_CERTIFICATE_ID = "XDYV54ZP48"
 
 def required_release_env(name)
   value = ENV[name].to_s.strip
@@ -25,7 +30,53 @@ def required_release_env(name)
   value
 end
 
-def release_signing_xcargs
+def with_app_store_signing_profile(key)
+  team_id = required_release_env("APPLE_TEAM_ID")
+  bundle_id = required_release_env("APPLE_BUNDLE_ID")
+  keychain_name = "soccer-radar-signing-#{Process.pid}"
+  keychain_password = SecureRandom.hex(32)
+  keychain_created = false
+
+  create_keychain(
+    name: keychain_name,
+    password: keychain_password,
+    default_keychain: true,
+    unlock: true,
+    timeout: 3600,
+    add_to_search_list: true,
+    require_create: true
+  )
+  keychain_created = true
+  keychain_path = File.expand_path("#{lane_context[SharedValues::KEYCHAIN_PATH]}-db")
+
+  Dir.mktmpdir("soccer-radar-signing-") do |signing_assets_dir|
+    orphaned_certificate = Spaceship::ConnectAPI::Certificate.all.find do |certificate|
+      certificate.id == ORPHANED_DISTRIBUTION_CERTIFICATE_ID
+    end
+    orphaned_certificate&.delete!
+
+    cert(
+      api_key: key,
+      team_id: team_id,
+      development: false,
+      generate_apple_certs: true,
+      output_path: signing_assets_dir,
+      keychain_path: keychain_path,
+      keychain_password: keychain_password
+    )
+    profile_uuid = sigh(
+      api_key: key,
+      team_id: team_id,
+      app_identifier: bundle_id,
+      output_path: signing_assets_dir
+    )
+    yield profile_uuid
+  end
+ensure
+  delete_keychain(keychain_path: keychain_path) if keychain_created
+end
+
+def release_signing_xcargs(profile_uuid)
   team_id = required_release_env("APPLE_TEAM_ID")
   bundle_id = required_release_env("APPLE_BUNDLE_ID")
   build_number = required_release_env("BUILD_NUMBER")
@@ -41,8 +92,9 @@ def release_signing_xcargs
   end
 
   [
-    "-allowProvisioningUpdates",
-    "CODE_SIGN_STYLE=Automatic",
+    "CODE_SIGN_STYLE=Manual",
+    "CODE_SIGN_IDENTITY=#{Shellwords.escape("Apple Distribution")}",
+    "PROVISIONING_PROFILE_SPECIFIER=#{Shellwords.escape(profile_uuid)}",
     "DEVELOPMENT_TEAM=#{Shellwords.escape(team_id)}",
     "PRODUCT_BUNDLE_IDENTIFIER=#{Shellwords.escape(bundle_id)}",
     "CURRENT_PROJECT_VERSION=#{Shellwords.escape(build_number)}"
@@ -58,14 +110,15 @@ def api_key
     key_id: ENV.fetch("APP_STORE_CONNECT_KEY_ID"),
     issuer_id: ENV.fetch("APP_STORE_CONNECT_ISSUER_ID"),
     key_content: ENV.fetch("APP_STORE_CONNECT_PRIVATE_KEY"),
-    in_house: false
+    in_house: false,
+    set_spaceship_token: true
   )
 end
 
 def asset_preflight!
   # Keep every build lane aligned with the repository-controlled asset,
   # metadata, and workflow checks enforced by simulator CI.
-  sh("python3 ../../tests/test_ios_release_assets.py")
+  sh("python3 ../../../tests/test_ios_release_assets.py")
 end
 
 def release_preflight!
@@ -95,7 +148,9 @@ end
 platform :ios do
   desc "Generate the Xcode project from project.yml"
   lane :generate do
-    sh("xcodegen generate --spec project.yml")
+    Dir.chdir(IOS_ROOT) do
+      sh("xcodegen generate --spec project.yml")
+    end
   end
 
   desc "Validate release assets and legal/support gates without building"
@@ -121,29 +176,33 @@ platform :ios do
   lane :build do
     generate
     asset_preflight!
-    signing_xcargs = release_signing_xcargs
     # Build number must be monotonic; the CI run number guarantees that.
     increment_build_number(
       xcodeproj: XCODEPROJ,
       build_number: ENV.fetch("BUILD_NUMBER", Time.now.strftime("%Y%m%d%H%M"))
     )
-    build_app(
-      project: XCODEPROJ,
-      scheme: SCHEME,
-      configuration: "Release",
-      export_method: "app-store",
-      # Supplied only at release time so no Apple identifiers live in the repo.
-      # Automatic signing lets the authenticated release runner create/use the
-      # registered App Store profile; simulator CI remains signing-free.
-      xcargs: signing_xcargs,
-      export_options: {
-        signingStyle: "automatic",
-        uploadBitcode: false,
-        uploadSymbols: true
-      },
-      output_directory: "../build",
-      output_name: "SoccerScanner.ipa"
-    )
+    with_app_store_signing_profile(api_key) do |profile_uuid|
+      signing_xcargs = release_signing_xcargs(profile_uuid)
+      build_app(
+        project: XCODEPROJ,
+        scheme: SCHEME,
+        configuration: "Release",
+        export_method: "app-store",
+        # Sign the archive with the App Store distribution profile generated
+        # above; simulator CI remains signing-free.
+        xcargs: signing_xcargs,
+        export_options: {
+          signingStyle: "manual",
+          provisioningProfiles: {
+            ENV.fetch("APPLE_BUNDLE_ID") => profile_uuid
+          },
+          uploadBitcode: false,
+          uploadSymbols: true
+        },
+        output_directory: "../build",
+        output_name: "SoccerScanner.ipa"
+      )
+    end
   end
 
   desc "Upload a build to TestFlight (no public release)"

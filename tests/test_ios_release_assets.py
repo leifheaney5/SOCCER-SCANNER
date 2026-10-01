@@ -37,6 +37,13 @@ def test_native_info_plist_matches_release_contract():
         'UIInterfaceOrientationLandscapeLeft',
         'UIInterfaceOrientationLandscapeRight',
     }
+    ipad_orientations = _plist_value(path, 'UISupportedInterfaceOrientations~ipad')
+    assert {item.text for item in ipad_orientations} >= {
+        'UIInterfaceOrientationPortrait',
+        'UIInterfaceOrientationPortraitUpsideDown',
+        'UIInterfaceOrientationLandscapeLeft',
+        'UIInterfaceOrientationLandscapeRight',
+    }
 
 
 def test_native_project_and_entitlements_expose_only_verified_defaults():
@@ -47,7 +54,8 @@ def test_native_project_and_entitlements_expose_only_verified_defaults():
 
     assert 'iOS: "17.0"' in project
     assert 'IPHONEOS_DEPLOYMENT_TARGET: "17.0"' in project
-    assert 'PRODUCT_BUNDLE_IDENTIFIER: pro.soccerscanner.app' in project
+    assert 'bundleIdPrefix: com.leifheaney' in project
+    assert 'PRODUCT_BUNDLE_IDENTIFIER: com.leifheaney.soccerradar' in project
     assert 'ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon' in project
     assert 'APPLE_TEAM_ID' not in entitlements
     assert '<string>applinks:soccerscanner.pro</string>' in entitlements
@@ -55,11 +63,14 @@ def test_native_project_and_entitlements_expose_only_verified_defaults():
     assert 'applinks:soccerscanner.pro' in project
     assert 'applinks:soccer-radar.com' in project
     assert 'CFBundleDisplayName: Soccer Radar' in project
+    assert 'UISupportedInterfaceOrientations~ipad:' in project
+    assert 'UIInterfaceOrientationPortraitUpsideDown' in project
     assert 'INFOPLIST_KEY_CFBundleDisplayName: Soccer Radar' in project
 
 
-def test_native_brand_and_production_links_use_soccer_radar_without_renaming_bundle_id():
+def test_native_brand_and_production_links_use_soccer_radar_bundle_id():
     project = (IOS_ROOT / 'project.yml').read_text(encoding='utf-8')
+    workflow = (ROOT / '.github' / 'workflows' / 'ios.yml').read_text(encoding='utf-8')
     environment = (IOS_ROOT / 'SoccerScanner' / 'Config' / 'AppEnvironment.swift').read_text(
         encoding='utf-8'
     )
@@ -76,7 +87,10 @@ def test_native_brand_and_production_links_use_soccer_radar_without_renaming_bun
         encoding='utf-8'
     ).strip()
 
-    assert 'PRODUCT_BUNDLE_IDENTIFIER: pro.soccerscanner.app' in project
+    assert 'PRODUCT_BUNDLE_IDENTIFIER: com.leifheaney.soccerradar' in project
+    assert "APPLE_BUNDLE_ID: ${{ secrets.APPLE_BUNDLE_ID || 'com.leifheaney.soccerradar' }}" in workflow
+    assert 'APPLE_BUNDLE_PREFIX: com.leifheaney' in workflow
+    assert "PRODUCT_BUNDLE_IDENTIFIER = com.leifheaney.soccerradar" in workflow
     assert 'https://soccer-radar.com' in environment
     assert 'Soccer Radar website' in settings
     assert '"soccer-radar.com"' in deep_links
@@ -178,7 +192,7 @@ def test_native_icon_privacy_and_release_lane_assets_are_present():
     assert "runpy.run_path('Tools/select_simulator.py')" in workflow
     assert 'runtime.rsplit' not in workflow
     assert 'permissions:\n  contents: read' in workflow
-    assert 'timeout-minutes: 30' in workflow
+    assert 'timeout-minutes: 45' in workflow
     assert 'timeout-minutes: 45' in workflow
 
 
@@ -217,7 +231,7 @@ def test_submission_lanes_have_a_legal_and_support_preflight():
     assert '[TO BE COMPLETED BY LEGAL OWNER]' in fastfile
     assert 'metadata/en-US/support_url.txt' in fastfile
     assert 'support_url.txt must contain one verified HTTPS URL' in fastfile
-    assert 'python3 ../../tests/test_ios_release_assets.py' in fastfile
+    assert 'python3 ../../../tests/test_ios_release_assets.py' in fastfile
 
 
 def test_archive_lane_has_an_explicit_runtime_signing_contract():
@@ -227,9 +241,18 @@ def test_archive_lane_has_an_explicit_runtime_signing_contract():
     assert 'APPLE_TEAM_ID' in fastfile
     assert 'APPLE_BUNDLE_ID' in fastfile
     assert 'BUILD_NUMBER' in fastfile
-    assert 'CODE_SIGN_STYLE=Automatic' in fastfile
-    assert '-allowProvisioningUpdates' in fastfile
-    assert 'signingStyle: "automatic"' in fastfile
+    assert 'CODE_SIGN_STYLE=Manual' in fastfile
+    assert 'CODE_SIGN_IDENTITY=#{Shellwords.escape("Apple Distribution")}' in fastfile
+    assert 'PROVISIONING_PROFILE_SPECIFIER=' in fastfile
+    assert 'generate_apple_certs: true' in fastfile
+    assert 'sigh(' in fastfile
+    assert 'ORPHANED_DISTRIBUTION_CERTIFICATE_ID =' in fastfile
+    assert 'certificate.id == ORPHANED_DISTRIBUTION_CERTIFICATE_ID' in fastfile
+    assert 'orphaned_certificate&.delete!' in fastfile
+    assert 'create_keychain(' in fastfile
+    assert 'File.expand_path("#{lane_context[SharedValues::KEYCHAIN_PATH]}-db")' in fastfile
+    assert 'delete_keychain(keychain_path: keychain_path)' in fastfile
+    assert 'signingStyle: "manual"' in fastfile
     assert 'xcargs: \'CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY=""\'' in fastfile
     assert 'lane :preflight' in fastfile
     assert 'def asset_preflight!' in fastfile
@@ -246,6 +269,14 @@ def test_upload_lanes_validate_app_store_credentials_before_building():
 
     assert 'key = api_key\n    build' in fastfile
     assert fastfile.count('api_key: key') >= 3
+
+
+def test_fastlane_resolves_generated_project_from_the_ios_root():
+    fastfile = (IOS_ROOT / 'fastlane' / 'Fastfile').read_text(encoding='utf-8')
+
+    assert 'IOS_ROOT = File.expand_path("..", __dir__)' in fastfile
+    assert 'XCODEPROJ = File.join(IOS_ROOT, "SoccerScanner.xcodeproj")' in fastfile
+    assert 'Dir.chdir(IOS_ROOT) do' in fastfile
 
 
 if __name__ == '__main__':
