@@ -45,7 +45,7 @@ def with_app_store_signing_profile(key)
     require_create: true
   )
   keychain_created = true
-  keychain_path = lane_context[SharedValues::KEYCHAIN_PATH]
+  keychain_path = File.expand_path("#{lane_context[SharedValues::KEYCHAIN_PATH]}-db")
 
   Dir.mktmpdir("soccer-radar-signing-") do |signing_assets_dir|
     cert(
@@ -66,7 +66,7 @@ def with_app_store_signing_profile(key)
     yield profile_uuid
   end
 ensure
-  delete_keychain(name: keychain_name) if keychain_created
+  delete_keychain(keychain_path: keychain_path) if keychain_created
 end
 
 def release_signing_xcargs(profile_uuid)
