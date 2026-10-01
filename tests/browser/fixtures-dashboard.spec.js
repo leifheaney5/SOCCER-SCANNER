@@ -850,3 +850,47 @@ test('landscape mobile remains scroll-safe and match details stay operable', asy
     await expect(page.locator('#match-context-dialog')).not.toBeVisible();
     await expect(details).toBeFocused();
 });
+
+test('mobile fixture cards keep venue and competition text from overlapping', async ({page}) => {
+    await mockFixtures(page);
+    for (const width of [390, 320]) {
+        await page.setViewportSize({width, height: 844});
+        await page.goto('/?date=2026-08-03');
+        await expect(page.locator('.fixture-card .fixture-venue').first()).toBeVisible();
+
+        const cards = await page.locator('.fixture-card').evaluateAll(nodes => nodes.map(card => {
+            const box = element => {
+                if (!element) return null;
+                const rect = element.getBoundingClientRect();
+                return {top: rect.top, bottom: rect.bottom, left: rect.left, right: rect.right, height: rect.height};
+            };
+            return {
+                venue: box(card.querySelector('.fixture-venue')),
+                competition: box(card.querySelector('.fixture-mobile-meta')),
+                card: box(card),
+            };
+        }));
+
+        const withVenue = cards.filter(card => card.venue);
+        const withoutVenue = cards.filter(card => !card.venue);
+        expect(withVenue.length).toBeGreaterThan(0);
+        expect(withoutVenue.length).toBeGreaterThan(0);
+        for (const {venue, competition, card} of withVenue) {
+            expect(venue.height).toBeGreaterThan(0);
+            expect(competition.height).toBeGreaterThan(0);
+            const overlaps = venue.top < competition.bottom && competition.top < venue.bottom
+                && venue.left < competition.right && competition.left < venue.right;
+            expect(overlaps, `venue and competition overlap at ${width}px`).toBe(false);
+            expect(venue.bottom).toBeLessThanOrEqual(card.bottom);
+            expect(competition.top).toBeGreaterThanOrEqual(card.top);
+        }
+        for (const {competition} of withoutVenue) {
+            expect(competition.height).toBeGreaterThan(0);
+        }
+    }
+
+    await page.setViewportSize({width: 1360, height: 900});
+    await page.goto('/?date=2026-08-03');
+    await expect(page.locator('.fixture-card .fixture-venue').first()).toBeVisible();
+    await expect(page.locator('.fixture-card .fixture-mobile-meta').first()).toBeHidden();
+});
