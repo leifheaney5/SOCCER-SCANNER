@@ -122,6 +122,24 @@ final class FixtureDecodingTests: XCTestCase {
         XCTAssertNil(FixtureDateParser.date(from: "not-a-date"))
     }
 
+    func testMinutePrecisionKickoffsFromProductionParseToTheSameInstant() throws {
+        // ESPN-sourced fixtures arrive without seconds, e.g. "2026-10-02T22:15Z";
+        // before this was accepted every such kickoff rendered as "Time TBC".
+        let withSeconds = try XCTUnwrap(FixtureDateParser.date(from: "2026-10-02T22:15:00Z"))
+        XCTAssertEqual(FixtureDateParser.date(from: "2026-10-02T22:15Z"), withSeconds)
+        XCTAssertEqual(FixtureDateParser.date(from: "2026-10-02T18:15-04:00"), withSeconds)
+        XCTAssertNil(FixtureDateParser.date(from: "2026-10-02T22Z"))
+
+        let json = """
+        {"date":"2026-10-02","timezone":"UTC","matches":[
+          {"canonicalFixtureId":"fx_minute","utcDate":"2026-10-02T22:15Z","localDate":"2026-10-02",
+           "status":{"code":"scheduled"},"homeTeam":{"name":"Independiente"},
+           "awayTeam":{"name":"Instituto"}}]}
+        """
+        let fixture = try XCTUnwrap(try decodeDay(json).matches.first)
+        XCTAssertEqual(fixture.utcDate, withSeconds)
+    }
+
     func testAnActualPartialResponseMarksTheDayPartial() throws {
         let json = """
         {"date":"2026-08-05","timezone":"UTC","state":"partial",

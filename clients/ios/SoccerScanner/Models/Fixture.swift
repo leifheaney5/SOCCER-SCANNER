@@ -269,9 +269,12 @@ public struct FixtureDay: Decodable, Sendable {
 
 /// Kickoff instant parsing.
 ///
-/// Fractional seconds are optional upstream, so both forms are attempted. This
-/// is a distinct type rather than an `ISO8601DateFormatter` extension: adding a
-/// `date(from:)` method there would shadow the built-in and recurse.
+/// Fractional seconds are optional upstream, and the production API also sends
+/// minute-precision instants such as `2026-10-02T22:15Z` (ESPN's format), which
+/// `ISO8601DateFormatter` rejects because it always requires seconds. All three
+/// forms are attempted. This is a distinct type rather than an
+/// `ISO8601DateFormatter` extension: adding a `date(from:)` method there would
+/// shadow the built-in and recurse.
 public enum FixtureDateParser {
     // ISO8601DateFormatter is documented as thread-safe for parsing, and these
     // are configured once and never mutated afterwards. `nonisolated(unsafe)`
@@ -288,7 +291,20 @@ public enum FixtureDateParser {
         return formatter
     }()
 
+    // Fixed POSIX locale and Gregorian calendar so device settings never
+    // change how the wire format is read.
+    nonisolated(unsafe) private static let minutePrecision: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.dateFormat = "yyyy-MM-dd'T'HH:mmXXXXX"
+        return formatter
+    }()
+
     public static func date(from string: String) -> Date? {
-        withFractionalSeconds.date(from: string) ?? plain.date(from: string)
+        withFractionalSeconds.date(from: string)
+            ?? plain.date(from: string)
+            ?? minutePrecision.date(from: string)
     }
 }
