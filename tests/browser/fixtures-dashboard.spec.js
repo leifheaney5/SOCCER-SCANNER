@@ -487,6 +487,10 @@ test('empty date, filtered empty, provider error retry, partial, and stale state
 });
 
 test('initial fixture failure retries automatically and loads fixtures without a page refresh', async ({page}) => {
+    // The automatic retry replaces the unavailable summary with a loading state, so hold
+    // the page clock until the unavailable state has been observed, then release the retry.
+    await page.clock.install({time: new Date('2026-08-03T12:00:00Z')});
+    await page.clock.pauseAt(new Date('2026-08-03T12:00:01Z'));
     let attempts = 0;
     await page.route('**/api/v2/fixtures**', route => {
         attempts += 1;
@@ -504,6 +508,7 @@ test('initial fixture failure retries automatically and loads fixtures without a
     await page.goto('/');
 
     await expect(page.getByRole('heading', {name: 'Football data is temporarily unavailable'})).toBeVisible();
+    await page.clock.runFor(1_000);
     await expect(page.locator('#fixture-result-count')).toContainText('13 matches', {timeout: 5_000});
     await expect(page.locator('.fixture-card')).toHaveCount(10);
     await expect(page.locator('.summary-primary')).toHaveText('13 matches');
