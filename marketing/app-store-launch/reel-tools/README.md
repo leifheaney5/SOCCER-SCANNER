@@ -15,7 +15,8 @@ node live-check.cjs <out>             # optional: asserts no venue/competition o
   `--force-device-scale-factor` because headless screencasts otherwise come
   out at CSS-pixel size. Scroll is stepped one frame at a time for a true
   30 fps.
-- The search scene types the first team currently listed, so the script
+- The search scene types the home team of the last Upcoming card (the latest
+  kickoff, least likely to carry a stale provider status), so the script
   works on any day. Captions live in `cards.cjs`. Keep them within the safe
   claims in `marketing/README.md`.
 - `compose.py` writes H.264 High, `yuv420p` limited-range BT.709, with a

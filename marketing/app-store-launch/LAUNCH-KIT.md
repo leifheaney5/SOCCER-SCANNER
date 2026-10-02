@@ -174,20 +174,17 @@ Paste each URL into Notes and tap it:
 
 `soccer-radar-reel.mp4`: 1080×1920, 30 fps, H.264 High / AAC (silent track),
 29.6 s, about 3.4 MB. Captured from live https://soccer-radar.com on
-2026-10-01 at a 405×720 phone viewport, rendered at 2.67× for full resolution.
+2026-10-01 at 21:57 EDT at a 405×720 phone viewport, rendered at 2.67× for
+full resolution. No CSS overrides: it shows the production layout, including
+the #29 venue/competition fix (`aa8a556`).
 
 Storyboard: title card → today's fixtures → scroll with hidden scores →
-Live/Upcoming tabs → search "Real Madrid" → Match context → filter sheet →
-end card (`soccer-radar.com`).
+Live/Upcoming tabs → search "Nicaragua" → Match context (Nicaragua v Costa
+Rica) → filter sheet → end card (`soccer-radar.com`).
 
 - Copy stays within `marketing/README.md` "safe claims". It makes no
   completeness, streaming-guarantee or real-time claims; "Where to watch" shows
   "Not verified yet" because that's what the provider reported.
-- **Capture-only CSS override in this cut:** when it was recorded, the live
-  site drew venue and competition text on top of each other in phone-width
-  fixture cards. This cut hides the venue line in list cards. The bug was
-  fixed and deployed in #29 (`aa8a556`), and `reel-tools/` no longer applies
-  the override, so a re-record shows the real layout.
 - The silent audio track exists for platform compatibility. Add licensed
   music in Instagram or TikTok.
 - The reel shows the **website**, not the native app. Don't use it as an

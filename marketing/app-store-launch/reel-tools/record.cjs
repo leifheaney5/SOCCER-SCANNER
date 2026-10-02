@@ -88,8 +88,10 @@ const sleep = (ms) => new Promise(r => setTimeout(r, ms));
   await p.evaluate(() => scrollTo({ top: 0, behavior: 'instant' })); await sleep(250);
   mark('tabs'); await tap('#status-live'); await sleep(2000); await tap('#status-upcoming'); await sleep(1500);
   // Search for a team that is actually listed now, so the script works on any day.
+  // Cards are kickoff-ordered; the last Upcoming card is the least likely to carry
+  // a stale provider "scheduled" status for a match that already kicked off.
   if (!(await p.locator('.fixture-card .team-name').count())) { await tap('#status-all'); await sleep(800); }
-  const team = (await p.locator('.fixture-card .team-name').first().textContent()).trim();
+  const team = (await p.locator('.fixture-card').last().locator('.team-name').first().textContent()).trim();
   mark('search'); await tap('#fixture-search'); await p.keyboard.type(team, { delay: 110 }); await sleep(1500);
   mark('details'); await tap('.details-button'); await sleep(3400);
   await p.keyboard.press('Escape'); await sleep(400);
