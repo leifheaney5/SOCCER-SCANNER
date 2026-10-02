@@ -392,6 +392,8 @@ class SoccerScannerRoutesTest(unittest.TestCase):
         self.assertIn(b'no account', privacy.data)
         self.assertIn(b'native iOS app', privacy.data)
         self.assertIn(b'X-Request-ID', privacy.data)
+        self.assertIn(b'broadcast region', privacy.data)
+        self.assertIn(b'localStorage', privacy.data)
         for item in (b'analytics', b'crash reporting', b'advertising SDKs'):
             self.assertIn(item, privacy.data)
         self.assertEqual(sources.status_code, 200)

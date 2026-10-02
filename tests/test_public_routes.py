@@ -54,6 +54,13 @@ class TermsRouteTest(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn('name="robots" content="noindex, follow"', html)
 
+    def test_terms_name_the_operator_and_the_stored_broadcast_region(self):
+        html = self.client.get('/terms').get_data(as_text=True)
+
+        self.assertIn('Trequa', html)
+        self.assertIn('broadcast region', html)
+        self.assertNotIn('saved defaults are kept', html)
+
     def test_footer_links_terms_privacy_and_data_sources(self):
         html = self.client.get('/').get_data(as_text=True)
 
