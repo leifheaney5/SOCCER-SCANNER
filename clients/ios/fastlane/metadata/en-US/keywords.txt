@@ -1,1 +1,1 @@
-football, soccer, fixtures, scores, schedule, matches
+football, soccer, fixtures, scores, schedule, matches, spoilers, games, live, upcoming, results, tv
