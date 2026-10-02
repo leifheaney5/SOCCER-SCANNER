@@ -1,5 +1,6 @@
 """Validate release-critical native assets without requiring Xcode."""
 
+import re
 import json
 from pathlib import Path
 import struct
@@ -264,11 +265,7 @@ def test_archive_lane_has_an_explicit_runtime_signing_contract():
     assert 'CODE_SIGN_STYLE=Manual' in fastfile
     assert 'CODE_SIGN_IDENTITY=#{Shellwords.escape("Apple Distribution")}' in fastfile
     assert 'PROVISIONING_PROFILE_SPECIFIER=' in fastfile
-    assert 'generate_apple_certs: true' in fastfile
     assert 'sigh(' in fastfile
-    assert 'ORPHANED_DISTRIBUTION_CERTIFICATE_ID =' in fastfile
-    assert 'certificate.id == ORPHANED_DISTRIBUTION_CERTIFICATE_ID' in fastfile
-    assert 'orphaned_certificate&.delete!' in fastfile
     assert 'create_keychain(' in fastfile
     assert 'File.expand_path("#{lane_context[SharedValues::KEYCHAIN_PATH]}-db")' in fastfile
     assert 'delete_keychain(keychain_path: keychain_path)' in fastfile
@@ -276,6 +273,24 @@ def test_archive_lane_has_an_explicit_runtime_signing_contract():
     assert 'xcargs: \'CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY=""\'' in fastfile
     assert 'lane :preflight' in fastfile
     assert 'def asset_preflight!' in fastfile
+
+
+def test_release_signing_imports_one_persistent_distribution_certificate():
+    fastfile = (IOS_ROOT / 'fastlane' / 'Fastfile').read_text(encoding='utf-8')
+    workflow = (ROOT / '.github' / 'workflows' / 'ios.yml').read_text(encoding='utf-8')
+
+    # Every CI keychain is fresh, so creating a certificate per run discards its
+    # private key and exhausts Apple's Distribution certificate limit. Import the
+    # one stored certificate instead; never create, revoke or delete certificates.
+    assert 'required_release_env("APPLE_DISTRIBUTION_CERT_P12_BASE64")' in fastfile
+    assert 'required_release_env("APPLE_DISTRIBUTION_CERT_PASSWORD")' in fastfile
+    assert 'import_certificate(' in fastfile
+    assert 'generate_apple_certs' not in fastfile
+    assert re.search(r'^\s*cert\(', fastfile, re.MULTILINE) is None
+    assert 'ORPHANED_DISTRIBUTION_CERTIFICATE_ID' not in fastfile
+    assert 'delete!' not in fastfile
+    assert 'APPLE_DISTRIBUTION_CERT_P12_BASE64: ${{ secrets.APPLE_DISTRIBUTION_CERT_P12_BASE64 }}' in workflow
+    assert 'APPLE_DISTRIBUTION_CERT_PASSWORD: ${{ secrets.APPLE_DISTRIBUTION_CERT_PASSWORD }}' in workflow
 
 
 def test_submission_lanes_leave_screenshots_portal_managed():

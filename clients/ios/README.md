@@ -61,12 +61,32 @@ creation. `fastlane test` and the GitHub Actions test job disable code signing.
 The GitHub Actions test job runs the UI and hosted unit suites as separate
 schemes so UI tests can control each app launch independently.
 The manual archive lanes require `APPLE_TEAM_ID` (10-character Team ID),
-`APPLE_BUNDLE_ID` (the registered bundle ID), and a numeric `BUILD_NUMBER`.
-They pass `CODE_SIGN_STYLE=Automatic` and `-allowProvisioningUpdates` to
-Xcode, with the App Store export configured for automatic signing. The
-authenticated runner must therefore have the registered bundle ID, Associated
-Domains capability, and permission to create or use its distribution profile.
-Missing App Store Connect key variables fail before an archive is built.
+`APPLE_BUNDLE_ID` (the registered bundle ID), a numeric `BUILD_NUMBER`, and the
+long-lived Apple Distribution certificate as `APPLE_DISTRIBUTION_CERT_P12_BASE64`
+plus `APPLE_DISTRIBUTION_CERT_PASSWORD`. They import that certificate into a
+temporary keychain, let `sigh` create or reuse the App Store profile for it, and
+archive with manual signing (`CODE_SIGN_STYLE=Manual`, `Apple Distribution`).
+The lanes never create, revoke, or delete certificates: each CI keychain is
+fresh, so a per-run certificate would lose its private key and exhaust Apple's
+Distribution certificate limit. Missing App Store Connect key or certificate
+variables fail before an archive is built.
+
+### One-time Distribution certificate setup
+
+Run on Windows or macOS with `openssl` and an authenticated `gh`:
+
+```powershell
+pwsh clients/ios/Tools/setup_distribution_certificate.ps1 -Email you@example.com
+```
+
+It writes a private key and certificate request to `~/soccer-radar-signing`,
+pauses while you upload the request as an **Apple Distribution** certificate at
+https://developer.apple.com/account/resources/certificates/add and save the
+download as `distribution.cer` there, then stores the `.p12` and a random
+password as `app-store` environment secrets. If Apple reports the Distribution
+limit, first revoke an unused certificate that no machine holds a private key
+for; revoking one stops TestFlight installs of builds signed with it. Back up
+the `.p12` and password, then delete the folder.
 
 Run `bundle exec fastlane preflight` on macOS after legal and support values are
 approved to validate the source release gates without building. Run
