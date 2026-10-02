@@ -20,7 +20,8 @@ final class AppStoreScreenshotTests: XCTestCase {
         XCUIDevice.shared.orientation = .portrait
         let app = XCUIApplication()
         app.launchArguments = ["-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
-        app.launchEnvironment = ["SOCCER_SCANNER_ENVIRONMENT": "production"]
+        // US Eastern kickoff times for the US storefront; CI runners default to UTC.
+        app.launchEnvironment = ["SOCCER_SCANNER_ENVIRONMENT": "production", "TZ": "America/New_York"]
         app.launch()
 
         let list = identified(app, "fixtures-list")
