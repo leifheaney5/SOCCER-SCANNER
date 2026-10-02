@@ -9,8 +9,6 @@ permissions:
 
 on:
   workflow_dispatch:
-  push:
-    branches: ['ci/ios-app-store-screenshots']
 
 concurrency:
   group: ios-screenshots-${{ github.ref }}

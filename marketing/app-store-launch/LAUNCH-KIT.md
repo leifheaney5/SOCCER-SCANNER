@@ -32,13 +32,15 @@ through 17 Pro Max, or iPhone Air) satisfies the iPhone requirement.
    Messages and email recompress them.
 4. Confirm the pixel size matches the table before uploading.
 
-**B. Simulator capture on GitHub Actions (if you lack a 13" iPad or a qualifying iPhone).**
-The repository has no screenshot automation; the UI tests attach no images.
-This path needs a new UI test plus a `workflow_dispatch` option in
-`.github/workflows/ios.yml`. That's a protected path, so it needs your approval.
-It would create `iPhone 14 Plus` (1284×2778) and `iPad Pro 13-inch (M4)`
-(2064×2752) simulators, capture the shot list below, flatten alpha, and
-upload the PNGs as a workflow artifact.
+**B. Simulator capture on GitHub Actions (used for the current listing).**
+Run `gh workflow run ios-screenshots.yml --repo leifheaney5/soccer-radar --ref main`.
+It runs `AppStoreScreenshotTests` against live production data on an
+`iPhone 11 Pro Max` (1242×2688) and an `iPad Pro 13-inch (M4)` (2064×2752)
+simulator, in US Eastern time with a 9:41 status bar, and uploads alpha-free
+JPEGs as the `app-store-screenshots-iphone-6.5` and
+`app-store-screenshots-ipad-13` artifacts. The 2026-10-02 captures are in
+`images/app-store-native/`. Check every capture for revealed scores and odd
+provider data before uploading.
 
 ### Shot list (native app screens, in upload order)
 
