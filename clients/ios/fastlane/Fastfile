@@ -14,15 +14,20 @@ require "tmpdir"
 #   APP_STORE_CONNECT_PRIVATE_KEY   (contents of the .p8)
 #   APPLE_TEAM_ID
 #   APPLE_BUNDLE_ID
+#   APPLE_DISTRIBUTION_CERT_P12_BASE64  (base64 of the one Apple Distribution .p12)
+#   APPLE_DISTRIBUTION_CERT_PASSWORD    (password of that .p12)
 #   BUILD_NUMBER                    (a new numeric App Store build number)
+#
+# Signing imports one long-lived Apple Distribution certificate from secrets.
+# CI keychains are created fresh per run, so generating a certificate per run
+# would discard its private key and exhaust Apple's certificate limit. See
+# clients/ios/README.md for the one-time certificate setup.
 
 default_platform(:ios)
 
 IOS_ROOT = File.expand_path("..", __dir__)
 XCODEPROJ = File.join(IOS_ROOT, "SoccerScanner.xcodeproj")
 SCHEME = "SoccerScanner"
-# Created by the previous CI signing attempt, which did not preserve its private key.
-ORPHANED_DISTRIBUTION_CERTIFICATE_ID = "XDYV54ZP48"
 
 def required_release_env(name)
   value = ENV[name].to_s.strip
@@ -33,6 +38,8 @@ end
 def with_app_store_signing_profile(key)
   team_id = required_release_env("APPLE_TEAM_ID")
   bundle_id = required_release_env("APPLE_BUNDLE_ID")
+  certificate_p12 = required_release_env("APPLE_DISTRIBUTION_CERT_P12_BASE64").unpack1("m")
+  certificate_password = required_release_env("APPLE_DISTRIBUTION_CERT_PASSWORD")
   keychain_name = "soccer-radar-signing-#{Process.pid}"
   keychain_password = SecureRandom.hex(32)
   keychain_created = false
@@ -50,20 +57,17 @@ def with_app_store_signing_profile(key)
   keychain_path = File.expand_path("#{lane_context[SharedValues::KEYCHAIN_PATH]}-db")
 
   Dir.mktmpdir("soccer-radar-signing-") do |signing_assets_dir|
-    orphaned_certificate = Spaceship::ConnectAPI::Certificate.all.find do |certificate|
-      certificate.id == ORPHANED_DISTRIBUTION_CERTIFICATE_ID
-    end
-    orphaned_certificate&.delete!
-
-    cert(
-      api_key: key,
-      team_id: team_id,
-      development: false,
-      generate_apple_certs: true,
-      output_path: signing_assets_dir,
+    certificate_path = File.join(signing_assets_dir, "distribution.p12")
+    File.binwrite(certificate_path, certificate_p12)
+    import_certificate(
+      certificate_path: certificate_path,
+      certificate_password: certificate_password,
       keychain_path: keychain_path,
-      keychain_password: keychain_password
+      keychain_password: keychain_password,
+      log_output: false
     )
+    # sigh only uses certificates installed in the keychain, so the profile is
+    # tied to the imported certificate; it never creates a certificate.
     profile_uuid = sigh(
       api_key: key,
       team_id: team_id,
