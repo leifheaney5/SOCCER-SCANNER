@@ -31,9 +31,12 @@ on:
         type: choice
         options: [none, beta, release_upload, release_submit]
 
+# Push and pull_request runs supersede older runs on the same ref. Manual
+# (workflow_dispatch) release runs share one queue and are never cancelled, so
+# a merge to main cannot abort a TestFlight upload or App Store submission.
 concurrency:
-  group: ios-${{ github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.event_name == 'workflow_dispatch' && 'ios-release' || format('ios-{0}', github.ref) }}
+  cancel-in-progress: ${{ github.event_name != 'workflow_dispatch' }}
 
 jobs:
   build-and-test:

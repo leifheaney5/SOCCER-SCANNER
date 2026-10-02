@@ -196,6 +196,19 @@ def test_native_icon_privacy_and_release_lane_assets_are_present():
     assert 'timeout-minutes: 45' in workflow
 
 
+def test_release_dispatch_runs_cannot_be_cancelled_by_pushes():
+    workflow = (ROOT / '.github' / 'workflows' / 'ios.yml').read_text(encoding='utf-8')
+
+    # Manual release runs queue in their own group and are never cancelled;
+    # push and pull_request runs still supersede older runs on the same ref.
+    assert (
+        "  group: ${{ github.event_name == 'workflow_dispatch' && 'ios-release'"
+        " || format('ios-{0}', github.ref) }}"
+    ) in workflow
+    assert "  cancel-in-progress: ${{ github.event_name != 'workflow_dispatch' }}" in workflow
+    assert 'cancel-in-progress: true' not in workflow
+
+
 def test_native_testflight_metadata_templates_are_present_and_nonempty():
     metadata = IOS_ROOT / 'fastlane' / 'metadata' / 'en-US'
     required_templates = (
