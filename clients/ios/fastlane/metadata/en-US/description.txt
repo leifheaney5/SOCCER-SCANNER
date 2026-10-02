@@ -1,21 +1,38 @@
-Soccer Radar shows you the day's football fixtures without spoiling the result.
+Recorded the match? Watching on a delay? Soccer Radar lets you check the day's soccer (football) fixtures without ever seeing a score you didn't ask for.
 
 SPOILER-SAFE BY DEFAULT
-Scores stay hidden until you choose to reveal them. Every launch starts hidden again, so opening the app before you watch a recording will not give the game away.
+Every score starts hidden, in the fixture list and on every match page. Tap Reveal when you're ready, and hide them again just as easily. Every time the app starts, scores are hidden again, so checking kick-off times before you watch a recording never gives the game away. VoiceOver reads a hidden score as "Score hidden", never the numbers.
 
-YOUR TIMEZONE, NOT A GUESS
-Pick the timezone you actually care about. Kick-off times and the day a fixture belongs to both follow your selection, so a late kick-off does not quietly appear on the wrong date when you travel.
+FIND THE MATCHES YOU CARE ABOUT
+• Jump between days with previous, today and next, or pick any date
+• Filter by live, upcoming or finished in one tap
+• Search by team or competition
+• Narrow by competition, country and time of day, sort the list, or hide finished matches
+
+KICK-OFF TIMES IN YOUR TIMEZONE
+Use your device's timezone or switch to a major one such as London, New York, Los Angeles, Berlin, Tokyo or Sydney. Kick-off times and the day a match belongs to both follow your choice, so a late kick-off never lands on the wrong date when you travel.
 
 STATUSES THAT SAY WHAT THEY MEAN
-Half time, extra time, penalties, delayed, postponed and abandoned are shown distinctly rather than being lumped together as "live".
+Half time, extra time, penalties, delayed, postponed, suspended, cancelled and abandoned are each shown clearly instead of being lumped together as "live".
+
+MATCH DETAILS AT A GLANCE
+Open any fixture for its kick-off time, competition, country and venue, with its own spoiler control.
 
 WHERE TO WATCH
-When a data provider reports a streaming service for a fixture, it is listed with its region. Availability varies by country, rights period and subscription, and listings may be incomplete or out of date.
+When a data provider reports TV or streaming coverage for a match, Soccer Radar lists it for the broadcast region you choose, and remembers that region. Availability varies by country, rights period and subscription, and listings may be incomplete or out of date. If no listing has been verified, the app says so rather than guessing.
 
-NO ACCOUNT REQUIRED
-There is no sign-up and no login. Soccer Radar does not collect personal data, does not track you, and contains no advertising or analytics SDK.
+BUILT FOR EVERYONE
+Layouts adapt to larger text sizes, controls are labelled for VoiceOver, and the app runs on iPhone and iPad in portrait and landscape.
+
+PRIVATE BY DESIGN
+No account, no sign-up, no login. Soccer Radar does not collect personal data, does not track you, and contains no advertising or analytics SDKs.
+
+ALSO ON THE WEB
+Use Soccer Radar in any browser at soccer-radar.com.
 
 ABOUT THE DATA
-Fixture information comes from third-party providers and may be delayed, incomplete or incorrect. Soccer Radar is an independent app and is not affiliated with, endorsed by, or an official partner of any competition, club, broadcaster or data provider. Club and competition names are the trademarks of their respective owners.
+Fixture information comes from third-party providers and may be delayed, incomplete or incorrect. Soccer Radar is an independent app and is not affiliated with, endorsed by, or an official partner of any competition, club, broadcaster or data provider. Club and competition names are trademarks of their respective owners.
 
-Soccer Radar does not stream matches and does not provide access to match footage.
+Soccer Radar does not stream matches or provide access to match footage.
+
+Questions or feedback: support@trequa.io

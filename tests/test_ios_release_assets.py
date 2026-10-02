@@ -256,6 +256,7 @@ def test_store_metadata_fits_app_store_connect_limits():
         'subtitle.txt': 30,
         'keywords.txt': 100,
         'promotional_text.txt': 170,
+        'description.txt': 4000,
     }
     for filename, limit in limits.items():
         content = (metadata / filename).read_text(encoding='utf-8').strip()
