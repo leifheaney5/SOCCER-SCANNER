@@ -210,6 +210,19 @@ def test_release_dispatch_runs_cannot_be_cancelled_by_pushes():
     assert 'cancel-in-progress: true' not in workflow
 
 
+def test_screenshot_workflow_is_manual_and_has_no_release_access():
+    workflow = (ROOT / '.github' / 'workflows' / 'ios-screenshots.yml').read_text(encoding='utf-8')
+
+    assert 'on:\n  workflow_dispatch:\n\n' in workflow
+    assert 'push:' not in workflow and 'pull_request' not in workflow
+    assert 'secrets.' not in workflow
+    assert 'fastlane' not in workflow
+    assert '-only-testing:SoccerScannerUITests/AppStoreScreenshotTests/testCaptureAppStoreScreenshots' in workflow
+    assert "TEST_RUNNER_CAPTURE_APP_STORE_SCREENSHOTS: '1'" in workflow
+    test = (IOS_ROOT / 'SoccerScannerUITests' / 'AppStoreScreenshotTests.swift').read_text(encoding='utf-8')
+    assert 'XCTSkipUnless' in test and 'CAPTURE_APP_STORE_SCREENSHOTS' in test
+
+
 def test_native_testflight_metadata_templates_are_present_and_nonempty():
     metadata = IOS_ROOT / 'fastlane' / 'metadata' / 'en-US'
     required_templates = (
