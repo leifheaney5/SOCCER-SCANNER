@@ -124,13 +124,16 @@ final class FixtureFlowUITests: XCTestCase {
         _ identifier: String,
         timeout: TimeInterval = 10
     ) -> XCUIElement {
-        let target = element(app, identifier)
+        // Re-resolve every pass: `element` picks a fallback query when the
+        // identified element is not there yet (e.g. a sheet still animating in),
+        // and a fallback chosen too early can never match once it appears.
         let deadline = Date().addingTimeInterval(timeout)
         while Date() < deadline {
+            let target = element(app, identifier)
             if target.exists { return target }
             scrollContent(app, for: identifier)
         }
-        return target
+        return element(app, identifier)
     }
 
     private func waitForHittable(
@@ -138,13 +141,29 @@ final class FixtureFlowUITests: XCTestCase {
         _ identifier: String,
         timeout: TimeInterval = 10
     ) -> XCUIElement {
-        let target = element(app, identifier)
         let deadline = Date().addingTimeInterval(timeout)
         while Date() < deadline {
+            let target = element(app, identifier)
             if target.isHittable { return target }
             scrollContent(app, for: identifier)
         }
-        return target
+        return element(app, identifier)
+    }
+
+    /// Waits for a labelled control (e.g. a menu item that is still animating
+    /// in), re-resolving each pass for the same reason as `waitForElement`.
+    private func waitForLabelled(
+        _ app: XCUIApplication,
+        equalTo label: String,
+        timeout: TimeInterval = 10
+    ) -> XCUIElement {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            let target = labelledElement(app, equalTo: label)
+            if target.exists && target.isHittable { return target }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.2))
+        }
+        return labelledElement(app, equalTo: label)
     }
 
     private func tapFixture(_ app: XCUIApplication, id: String) {
@@ -658,8 +677,9 @@ final class FixtureFlowUITests: XCTestCase {
         XCTAssertEqual(datePicker.value as? String, datePickerTargetDay)
 
         waitForHittable(app, "status-filter").tap()
-        XCTAssertTrue(labelledElement(app, equalTo: "Upcoming").waitForExistence(timeout: 10))
-        labelledElement(app, equalTo: "Upcoming").tap()
+        let upcoming = waitForLabelled(app, equalTo: "Upcoming")
+        XCTAssertTrue(upcoming.exists)
+        upcoming.tap()
 
         let longFixture = waitForHittable(app, "fixture-row-\(accessibilityFixtureID)")
         XCTAssertTrue(longFixture.exists)
@@ -730,8 +750,9 @@ final class FixtureFlowUITests: XCTestCase {
 
         XCTAssertTrue(element(app, "status-filter").exists)
         waitForHittable(app, "status-filter").tap()
-        XCTAssertTrue(labelledElement(app, equalTo: "Upcoming").waitForExistence(timeout: 10))
-        labelledElement(app, equalTo: "Upcoming").tap()
+        let upcoming = waitForLabelled(app, equalTo: "Upcoming")
+        XCTAssertTrue(upcoming.exists)
+        upcoming.tap()
 
         let longFixture = waitForHittable(app, "fixture-row-fx_0123456789abcdef01234567")
         XCTAssertTrue(longFixture.exists)
