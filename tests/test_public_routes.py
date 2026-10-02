@@ -62,6 +62,25 @@ class TermsRouteTest(unittest.TestCase):
         self.assertIn('href="/data-sources"', html)
 
 
+class SupportRouteTest(unittest.TestCase):
+    def setUp(self):
+        self.client = create_app({'TESTING': True}).test_client()
+
+    def test_support_route_serves_a_contact_email(self):
+        response = self.client.get('/support')
+        html = response.get_data(as_text=True)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('<h1>Support</h1>', html)
+        self.assertIn('href="mailto:support@trequa.io"', html)
+        self.assertNotIn('noindex', html)
+
+    def test_footer_links_support(self):
+        html = self.client.get('/').get_data(as_text=True)
+
+        self.assertIn('href="/support"', html)
+
+
 class RobotsAndSitemapTest(unittest.TestCase):
     def setUp(self):
         # Only production advertises itself to crawlers.
@@ -109,6 +128,7 @@ class RobotsAndSitemapTest(unittest.TestCase):
         self.assertIn('<urlset', body)
         self.assertIn('<loc>https://soccer-radar.com/</loc>', body)
         self.assertIn('<loc>https://soccer-radar.com/privacy</loc>', body)
+        self.assertIn('<loc>https://soccer-radar.com/support</loc>', body)
         # /terms is a labelled draft (noindex) and must never be advertised
         # to crawlers via the sitemap, though the route itself stays live.
         self.assertNotIn('<loc>https://soccer-radar.com/terms</loc>', body)

@@ -61,7 +61,9 @@ command output where applicable.
   these release notes. The metadata is still subject to human content/legal
   review.
 - [ ] Add and review final beta notes and a verified support URL/owner in the
-  App Store metadata. No support destination is currently configured.
+  App Store metadata. `metadata/en-US/support_url.txt` now points at
+  `https://soccer-radar.com/support` (contact `support@trequa.io`); beta notes
+  and the owner's review remain.
 - [ ] Add and review final App Store screenshots for the required device
   families, or add a repeatable capture asset/automation path. Repository
   browser screenshots or simulator captures are not, by themselves, accepted
@@ -139,9 +141,10 @@ the values below when they are credentials or environment-specific secrets.
   replaced or explicitly resolved by the legal owner before submission. Do
   not fill these values with guesses.
 - [ ] A real support destination and accountable support owner are approved
-  and added to the App Store metadata and native Settings surface. There is
-  currently no verified support URL or contact in this repository; the native
-  client must not claim support is available until one exists.
+  and added to the App Store metadata and native Settings surface. Current
+  state: native Settings links `support@trequa.io` (#27), the public page is
+  `/support`, and `support_url.txt` points at it. The release owner still
+  confirms who answers that inbox before ticking this.
 - [ ] Final App Store screenshots are captured from the release build for all
   required device sizes, reviewed for spoiler leakage, and uploaded to App
   Store Connect.

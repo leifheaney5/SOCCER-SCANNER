@@ -47,6 +47,11 @@ def privacy():
     return render_template('privacy.html')
 
 
+@pages.get('/support')
+def support():
+    return render_template('support.html')
+
+
 @pages.get('/data-sources')
 def data_sources():
     registry = current_app.extensions.get('broadcast_sources')
@@ -79,6 +84,7 @@ _SITEMAP_ROUTES = (
     ('/league-tables', 'weekly', '0.6'),
     ('/data-sources', 'monthly', '0.3'),
     ('/privacy', 'yearly', '0.2'),
+    ('/support', 'yearly', '0.2'),
     # /terms is a labelled engineering draft (see templates/terms.html) and
     # carries its own noindex meta tag; it stays reachable via the route and
     # footer link but is deliberately excluded from the sitemap.

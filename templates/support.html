@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}Support | Soccer Radar{% endblock %}
+{% block content %}
+<article class="content-page">
+    <p class="eyebrow">Product information</p>
+    <h1>Support</h1>
+    <p>Questions, problems, or feedback about the Soccer Radar website or iOS app: email <a href="mailto:support@trequa.io">support@trequa.io</a>.</p>
+    <h2>What to include</h2>
+    <ul>
+        <li>Whether you are using the website or the iOS app, and your device and browser or iOS version.</li>
+        <li>For the iOS app, the version and build shown in Settings.</li>
+        <li>The fixture link (use Copy fixture link) or the date, timezone, and teams involved.</li>
+        <li>What you expected to see and what you saw instead.</li>
+    </ul>
+    <h2>Common questions</h2>
+    <h3>Why are scores hidden?</h3>
+    <p>Scores start hidden so you can browse fixtures without spoilers. Use Reveal scores when you want to see them. On the website they hide again in each new browser-tab session; in the iOS app they hide again each time the app launches.</p>
+    <h3>Why does a match say "Not verified yet" under Where to watch?</h3>
+    <p>No data provider has reported a verified TV or streaming listing for that match and region. It does not mean the match is not being shown.</p>
+    <h3>Why is a kickoff time or status wrong?</h3>
+    <p>Check the selected timezone first; kickoff times are shown in that timezone. Schedules and statuses come from the providers listed on the <a href="/data-sources">data sources page</a> and can be delayed or incorrect. If a fixture still looks wrong, email us with the fixture link.</p>
+    <h2>Policies</h2>
+    <p>See the <a href="/privacy">Privacy</a> and <a href="/terms">Terms of Service</a> pages.</p>
+</article>
+{% endblock %}
