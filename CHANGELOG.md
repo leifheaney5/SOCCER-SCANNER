@@ -4,6 +4,10 @@
 
 ### Added
 
+- Public `/support` page with the `support@trequa.io` contact, what to include
+  in a report, and answers about hidden scores, unverified watch listings, and
+  kickoff times; linked from the footer, listed in the sitemap, and used as the
+  App Store support URL (`clients/ios/fastlane/metadata/en-US/support_url.txt`).
 - Feature-gated global search across bounded upcoming/recent fixtures, teams,
   and competitions with score-free results, keyboard navigation, and a
   mobile full-screen surface.

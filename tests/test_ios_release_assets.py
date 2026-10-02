@@ -206,6 +206,7 @@ def test_native_testflight_metadata_templates_are_present_and_nonempty():
         'primary_category.txt',
         'marketing_url.txt',
         'privacy_url.txt',
+        'support_url.txt',
         'terms_of_service_url.txt',
         'release_notes.txt',
         'beta_notes.txt',
@@ -213,6 +214,12 @@ def test_native_testflight_metadata_templates_are_present_and_nonempty():
     for filename in required_templates:
         content = (metadata / filename).read_text(encoding='utf-8').strip()
         assert content
+
+
+def test_support_url_metadata_points_at_the_public_support_page():
+    support_url = (IOS_ROOT / 'fastlane' / 'metadata' / 'en-US' / 'support_url.txt').read_text(encoding='utf-8').strip()
+
+    assert support_url == 'https://soccer-radar.com/support'
 
 
 def test_beta_lane_wires_canonical_testflight_changelog():
