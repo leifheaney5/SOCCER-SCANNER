@@ -1,0 +1,144 @@
+name: iOS App Store screenshots
+
+# Boots the real app on App Store screenshot-size simulators, runs only
+# AppStoreScreenshotTests against live production data, and uploads the
+# captures as artifacts. Manual only; no secrets, no signing, no release lanes.
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ['ci/ios-app-store-screenshots']
+
+concurrency:
+  group: ios-screenshots-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  capture:
+    runs-on: macos-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # App Store 6.5" display: 1242x2688 or 1284x2778.
+          - slug: iphone-6.5
+            devices: 'iPhone 11 Pro Max|iPhone 14 Plus|iPhone 13 Pro Max|iPhone 12 Pro Max'
+          # App Store 13" display: 2064x2752 or 2048x2732.
+          - slug: ipad-13
+            devices: 'iPad Pro 13-inch (M4)|iPad Air 13-inch (M3)|iPad Air 13-inch (M2)|iPad Pro (12.9-inch) (6th generation)'
+    defaults:
+      run:
+        working-directory: clients/ios
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate the Xcode project
+        run: xcodegen generate --spec project.yml
+        env:
+          APPLE_BUNDLE_ID: com.leifheaney.soccerradar
+          APPLE_TEAM_ID: ''
+          APPLE_BUNDLE_PREFIX: com.leifheaney
+
+      - name: Create and boot the screenshot simulator
+        id: sim
+        env:
+          CANDIDATES: ${{ matrix.devices }}
+        run: |
+          read -r TYPE RUNTIME NAME < <(python3 - <<'PY'
+          import json, os, subprocess, sys
+          def simctl(*args):
+              return json.loads(subprocess.check_output(['xcrun', 'simctl', 'list', *args, '-j']))
+          types = simctl('devicetypes')['devicetypes']
+          runtimes = [r for r in simctl('runtimes')['runtimes']
+                      if r.get('isAvailable') and r['identifier'].startswith('com.apple.CoreSimulator.SimRuntime.iOS')]
+          runtimes.sort(key=lambda r: tuple(int(x) for x in r['version'].split('.')), reverse=True)
+          for name in os.environ['CANDIDATES'].split('|'):
+              device_type = next((t for t in types if t['name'] == name), None)
+              if device_type is None:
+                  continue
+              for runtime in runtimes:
+                  supported = {d['identifier'] for d in runtime.get('supportedDeviceTypes', [])}
+                  if device_type['identifier'] in supported:
+                      print(device_type['identifier'], runtime['identifier'], name.replace(' ', '_'))
+                      sys.exit(0)
+          sys.exit('no candidate simulator for ' + os.environ['CANDIDATES'])
+          PY
+          )
+          UDID=$(xcrun simctl create "AppStore-${{ matrix.slug }}" "$TYPE" "$RUNTIME")
+          echo "selected ${NAME//_/ } on $RUNTIME ($UDID)"
+          xcrun simctl boot "$UDID"
+          xcrun simctl bootstatus "$UDID" -b
+          xcrun simctl status_bar "$UDID" override --time "9:41" --dataNetwork wifi \
+            --wifiMode active --wifiBars 3 --cellularMode active --cellularBars 4 \
+            --batteryState charged --batteryLevel 100
+          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
+
+      - name: Capture screenshots
+        env:
+          TEST_RUNNER_CAPTURE_APP_STORE_SCREENSHOTS: '1'
+        run: |
+          set -o pipefail
+          mkdir -p build
+          set +e
+          xcodebuild test \
+            -project SoccerScanner.xcodeproj \
+            -scheme SoccerScanner \
+            -destination "id=${{ steps.sim.outputs.udid }}" \
+            -only-testing:SoccerScannerUITests/AppStoreScreenshotTests/testCaptureAppStoreScreenshots \
+            -resultBundlePath build/screenshots.xcresult \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY="" \
+            2>&1 | tee build/xcodebuild.log
+          echo "xcodebuild exit: ${PIPESTATUS[0]}"
+
+      - name: Export, flatten and check screenshots
+        run: |
+          xcrun xcresulttool export attachments --path build/screenshots.xcresult --output-path build/raw
+          mkdir -p "build/shots/${{ matrix.slug }}"
+          python3 - <<'PY'
+          import json, pathlib, shutil
+          raw = pathlib.Path('build/raw')
+          out = pathlib.Path('build/shots/${{ matrix.slug }}')
+          for test in json.loads((raw / 'manifest.json').read_text()):
+              for item in test.get('attachments', []):
+                  name = item.get('suggestedHumanReadableName', '').split('_')[0]
+                  if name and item['exportedFileName'].lower().endswith('.png'):
+                      shutil.copy(raw / item['exportedFileName'], out / f'{name}.png')
+          PY
+          cd "build/shots/${{ matrix.slug }}"
+          shopt -s nullglob
+          shots=(*.png)
+          if [ ${#shots[@]} -eq 0 ]; then echo "::error::no screenshots were captured"; exit 1; fi
+          for f in "${shots[@]}"; do
+            sips -s format jpeg -s formatOptions best "$f" --out "${f%.png}.jpg" >/dev/null
+            rm "$f"
+            sips -g pixelWidth -g pixelHeight "${f%.png}.jpg" | tr '\n' ' '; echo
+          done
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-store-screenshots-${{ matrix.slug }}
+          path: clients/ios/build/shots/${{ matrix.slug }}
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload test results on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshot-test-results-${{ matrix.slug }}
+          path: |
+            clients/ios/build/xcodebuild.log
+            clients/ios/build/screenshots.xcresult
+          retention-days: 7
