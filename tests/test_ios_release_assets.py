@@ -236,6 +236,23 @@ def test_support_url_metadata_points_at_the_public_support_page():
     assert support_url == 'https://soccer-radar.com/support'
 
 
+def test_store_metadata_fits_app_store_connect_limits():
+    metadata = IOS_ROOT / 'fastlane' / 'metadata' / 'en-US'
+    limits = {
+        'name.txt': 30,
+        'subtitle.txt': 30,
+        'keywords.txt': 100,
+        'promotional_text.txt': 170,
+    }
+    for filename, limit in limits.items():
+        content = (metadata / filename).read_text(encoding='utf-8').strip()
+        assert content, filename
+        assert len(content) <= limit, f'{filename} is {len(content)} characters; limit {limit}'
+    # copyright is non-localized, so deliver reads it from the metadata root.
+    copyright_path = IOS_ROOT / 'fastlane' / 'metadata' / 'copyright.txt'
+    assert copyright_path.read_text(encoding='utf-8').strip() == '© 2026 Trequa'
+
+
 def test_beta_lane_wires_canonical_testflight_changelog():
     fastfile = (IOS_ROOT / 'fastlane' / 'Fastfile').read_text(encoding='utf-8')
 
