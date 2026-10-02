@@ -219,14 +219,24 @@ final class FixtureFlowUITests: XCTestCase {
         let collection = app.collectionViews["fixtures-list"]
         let list = app.tables.firstMatch
         let controlsScroll = app.scrollViews["fixture-controls-scroll"]
+        let advancedFilterScroll = app.scrollViews["advanced-filter-scroll"]
         let scrollView = app.scrollViews.firstMatch
         let isSettingsElement = identifier?.hasPrefix("settings-") == true
+        let isAdvancedFilterElement = [
+            "advanced-filter-reset", "advanced-filter-close", "advanced-filter-apply",
+            "advanced-competition", "advanced-country", "advanced-time-window",
+            "advanced-sort", "advanced-hide-finished",
+        ].contains(identifier ?? "")
         let isControlElement = [
             "previous-day", "today-day", "next-day", "date-picker", "timezone-menu",
             "selected-day", "status-filter", "advanced-filter-button",
         ].contains(identifier ?? "")
         if identifier == nil, scrollView.exists {
             scrollView.swipeUp()
+        } else if isAdvancedFilterElement {
+            if advancedFilterScroll.exists {
+                advancedFilterScroll.swipeUp()
+            }
         } else if isControlElement, controlsScroll.exists {
             controlsScroll.swipeUp()
         } else if isControlElement, scrollView.exists {

@@ -545,12 +545,14 @@ private struct AdvancedFixtureFilterSheet: View {
                 .padding(.top, Theme.Spacing.lg)
                 .padding(.bottom, Theme.Spacing.xl)
             }
+                .accessibilityIdentifier("advanced-filter-scroll")
                 .scrollDismissesKeyboard(.interactively)
 
                 actionBar
             }
             .navigationTitle(String(localized: "Advanced filters"))
             .navigationBarTitleDisplayMode(.inline)
+            .accessibilityElement(children: .contain)
             .accessibilityIdentifier("advanced-filter-sheet")
         }
         .onChange(of: competitionOptions) { _, options in
