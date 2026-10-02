@@ -174,21 +174,30 @@ Paste each URL into Notes and tap it:
 
 `soccer-radar-reel.mp4`: 1080×1920, 30 fps, H.264 High / AAC (silent track),
 29.6 s, about 3.4 MB. Captured from live https://soccer-radar.com on
-2026-10-01 at a 405×720 phone viewport, rendered at 2.67× for full resolution.
+2026-10-01 at 21:57 EDT at a 405×720 phone viewport, rendered at 2.67× for
+full resolution. No CSS overrides: it shows the production layout, including
+the #29 venue/competition fix (`aa8a556`).
 
 Storyboard: title card → today's fixtures → scroll with hidden scores →
-Live/Upcoming tabs → search "Real Madrid" → Match context → filter sheet →
-end card (`soccer-radar.com`).
+Live/Upcoming tabs → search "Nicaragua" → Match context (Nicaragua v Costa
+Rica) → filter sheet → end card (`soccer-radar.com`).
 
 - Copy stays within `marketing/README.md` "safe claims". It makes no
   completeness, streaming-guarantee or real-time claims; "Where to watch" shows
   "Not verified yet" because that's what the provider reported.
-- **Capture-only CSS override:** on phone widths the live site draws venue and
-  competition text on top of each other in fixture cards (both are placed in
-  grid-area `meta`, `static/css/fixtures.css:1622` with
-  `fixture-renderer.js:373`). The reel hides the venue line in list cards to
-  avoid showing that bug. The site itself is unchanged.
 - The silent audio track exists for platform compatibility. Add licensed
   music in Instagram or TikTok.
 - The reel shows the **website**, not the native app. Don't use it as an
   App Store app preview video; Apple requires those to show the app itself.
+
+### Files
+
+- `images/title.png`, `images/end.png`: 1080×1920 title and end cards.
+- `images/captions/c1–c6.png`: transparent caption overlays, in reel order.
+- `images/storyboard/`: `reel-storyboard.png` (8 frames from the final cut),
+  `frame-0…7.png` (the same frames individually), and `site-states.png`
+  (exploration captures of the live tabs, search, detail and filter states).
+- `images/fix-evidence/`: the overlap bug before the fix
+  (`before-overlap-390.png`), the fixed card in local tests
+  (`after-local-390.png`), and on production (`after-live-390.png`).
+- `reel-tools/`: scripts that rebuild the reel; see its README.
