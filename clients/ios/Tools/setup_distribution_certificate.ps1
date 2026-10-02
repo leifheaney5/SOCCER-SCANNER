@@ -74,7 +74,11 @@ if ($subject -notmatch 'Apple Distribution|iPhone Distribution') {
     throw "Not an Apple Distribution certificate: $subject"
 }
 
-$password = -join ((48..57) + (65..90) + (97..122) | Get-Random -Count 32 | ForEach-Object { [char]$_ })
+# 256 bits from the OS cryptographic RNG; PowerShell's random cmdlet is not cryptographically secure.
+$passwordBytes = New-Object byte[] 32
+$rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+try { $rng.GetBytes($passwordBytes) } finally { $rng.Dispose() }
+$password = [BitConverter]::ToString($passwordBytes).Replace('-', '')
 $env:SOCCER_RADAR_P12_PASS = $password
 try {
     # SHA1/3DES PBE keeps the .p12 importable by macOS `security` on CI runners.

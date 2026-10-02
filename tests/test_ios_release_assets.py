@@ -293,6 +293,14 @@ def test_release_signing_imports_one_persistent_distribution_certificate():
     assert 'APPLE_DISTRIBUTION_CERT_PASSWORD: ${{ secrets.APPLE_DISTRIBUTION_CERT_PASSWORD }}' in workflow
 
 
+def test_distribution_certificate_setup_uses_a_cryptographic_password():
+    script = (IOS_ROOT / 'Tools' / 'setup_distribution_certificate.ps1').read_text(encoding='utf-8')
+
+    # The .p12 password protects the long-lived signing key and its backups.
+    assert '[System.Security.Cryptography.RandomNumberGenerator]::Create()' in script
+    assert 'Get-Random' not in script.split('#>', 1)[1]
+
+
 def test_submission_lanes_leave_screenshots_portal_managed():
     fastfile = (IOS_ROOT / 'fastlane' / 'Fastfile').read_text(encoding='utf-8')
 
