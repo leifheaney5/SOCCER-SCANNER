@@ -54,28 +54,10 @@ jobs:
         env:
           CANDIDATES: ${{ matrix.devices }}
         run: |
-          read -r TYPE RUNTIME NAME < <(python3 - <<'PY'
-          import json, os, subprocess, sys
-          def simctl(*args):
-              return json.loads(subprocess.check_output(['xcrun', 'simctl', 'list', *args, '-j']))
-          types = simctl('devicetypes')['devicetypes']
-          runtimes = [r for r in simctl('runtimes')['runtimes']
-                      if r.get('isAvailable') and r['identifier'].startswith('com.apple.CoreSimulator.SimRuntime.iOS')]
-          runtimes.sort(key=lambda r: tuple(int(x) for x in r['version'].split('.')), reverse=True)
-          for name in os.environ['CANDIDATES'].split('|'):
-              device_type = next((t for t in types if t['name'] == name), None)
-              if device_type is None:
-                  continue
-              for runtime in runtimes:
-                  supported = {d['identifier'] for d in runtime.get('supportedDeviceTypes', [])}
-                  if device_type['identifier'] in supported:
-                      print(device_type['identifier'], runtime['identifier'], name.replace(' ', '_'))
-                      sys.exit(0)
-          sys.exit('no candidate simulator for ' + os.environ['CANDIDATES'])
-          PY
-          )
+          SELECTION=$(python3 Tools/select_screenshot_simulator.py "$CANDIDATES")
+          IFS=$'\t' read -r TYPE RUNTIME NAME <<< "$SELECTION"
           UDID=$(xcrun simctl create "AppStore-${{ matrix.slug }}" "$TYPE" "$RUNTIME")
-          echo "selected ${NAME//_/ } on $RUNTIME ($UDID)"
+          echo "selected $NAME on $RUNTIME ($UDID)"
           xcrun simctl boot "$UDID"
           xcrun simctl bootstatus "$UDID" -b
           xcrun simctl status_bar "$UDID" override --time "9:41" --dataNetwork wifi \
